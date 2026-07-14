@@ -25,6 +25,15 @@ function uid(prefix: string): string {
   return `${prefix}_${seq}`;
 }
 
+/** アカウントだけの user を作る（つながり未接続）。招待テスト用。 */
+export async function seedUser(db: Db, prefix = 'user'): Promise<string> {
+  const id = uid(prefix);
+  await db
+    .insert(schema.user)
+    .values({ id, name: id, email: `${id}@example.test` });
+  return id;
+}
+
 /** 本人（被見守り）を作る。subjectSettings も同時に用意。 */
 export async function seedSubject(
   db: Db,
