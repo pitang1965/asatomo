@@ -27,6 +27,8 @@ export interface DomainConfig {
   stage1to2DelayHours: number;
   /** 投票成立の床（段階2からの最低経過h）。既定12。 */
   voteFloorHours: number;
+  /** 旅行モードの上限日数（本人でも外せない）。既定30。 */
+  travelMaxDays?: number;
   /** テスト用に現在時刻を注入可能。 */
   now?: Date;
 }
@@ -35,18 +37,22 @@ export const DEFAULT_DOMAIN_CONFIG: DomainConfig = {
   dormantDays: 14,
   stage1to2DelayHours: 12,
   voteFloorHours: 12,
+  travelMaxDays: 30,
 };
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 type Presence = 'eating' | 'sleeping' | null;
 
+/** 生存シグナルの種別（本人が発する直接証拠）。 */
+export type SignalKind = (typeof signals.kind.enumValues)[number];
+
 // ─── 生存シグナル記録（不変条件A） ──────────────────────────────────────────
 export async function recordSignal(
   db: Db,
   input: {
     subjectUserId: string;
-    kind: (typeof signals.kind.enumValues)[number];
+    kind: SignalKind;
     occurredAt?: Date;
   },
   config: DomainConfig,
@@ -315,6 +321,40 @@ export async function attest(
     }
   }
   return { ok: true, resolved, notifyWatchers: true };
+}
+
+// ─── 旅行モード（期限付き・上限あり・自動復帰） ─────────────────────────────
+export async function setTravelMode(
+  db: Db,
+  input: { subjectUserId: string; until: Date },
+  config: DomainConfig,
+): Promise<
+  { ok: false; reason: 'past' | 'too_long' } | { ok: true; until: Date }
+> {
+  const now = config.now ?? new Date();
+  if (input.until <= now) return { ok: false, reason: 'past' };
+  const maxUntil = new Date(
+    now.getTime() + (config.travelMaxDays ?? 30) * DAY_MS,
+  );
+  if (input.until > maxUntil) return { ok: false, reason: 'too_long' };
+  await db
+    .update(subjectSettings)
+    .set({ travelUntil: input.until, travelStartedAt: now, updatedAt: now })
+    .where(eq(subjectSettings.userId, input.subjectUserId));
+  return { ok: true, until: input.until };
+}
+
+export async function clearTravelMode(
+  db: Db,
+  subjectUserId: string,
+  config: DomainConfig,
+): Promise<{ ok: true }> {
+  const now = config.now ?? new Date();
+  await db
+    .update(subjectSettings)
+    .set({ travelUntil: null, travelStartedAt: null, updatedAt: now })
+    .where(eq(subjectSettings.userId, subjectUserId));
+  return { ok: true };
 }
 
 // ─── 本人のワンタップ取消（A'） ─────────────────────────────────────────────

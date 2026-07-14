@@ -30,6 +30,11 @@ export interface Notifications extends Notifier {
   notifyWatchers(subjectUserId: string, event: WatcherEvent): Promise<void>;
   /** ルート層: 見守り者2人未満で開示がロックされたことを本人へ（不変条件D）。 */
   notifySubjectDisclosureLocked(subjectUserId: string): Promise<void>;
+  /** ルート層: 見守り招待を受けた相手へ。 */
+  notifyWatchInvite(
+    subjectUserId: string,
+    inviteeUserId: string,
+  ): Promise<void>;
 }
 
 export function createNotifications(
@@ -137,6 +142,16 @@ export function createNotifications(
         config.appName,
         '最後のメッセージの開示には見守り者が2人必要です。もう1人招待しましょう。',
       );
+    },
+
+    async notifyWatchInvite(subjectUserId, inviteeUserId) {
+      const name = (await getUserName(db, subjectUserId)) ?? '知り合い';
+      const email = await getUserEmail(db, inviteeUserId);
+      if (!email) return;
+      await senders.email.send(email, {
+        subject: tag('見守りのお願い'),
+        text: `${name}さんが、あなたに見守りをお願いしています。\n${config.webBaseUrl}`,
+      });
     },
   };
 }
