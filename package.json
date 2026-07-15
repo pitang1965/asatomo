@@ -15,12 +15,17 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.6.23",
-    "drizzle-orm": "latest"
+    "drizzle-orm": "latest",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.3",
     "@electric-sql/pglite": "^0.5.4",
     "@types/node": "latest",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "drizzle-kit": "latest",
     "typescript": "latest",
     "vitest": "^4.1.10"

@@ -1,0 +1,415 @@
+/* 見守りWeb スタイル。モックアップと同じ「夜明け」トークン。ライト/ダーク両対応。 */
+:root {
+  --bg: #f4f7fb;
+  --surface: #fff;
+  --surface-2: #eef2f8;
+  --ink: #1f2733;
+  --ink-2: #55606f;
+  --ink-3: #8b94a2;
+  --line: #e1e7f0;
+  --accent: #e0912f;
+  --accent-soft: #fbe6cf;
+  --good: #4f9e7f;
+  --good-soft: #dcefe6;
+  --warn: #d0842f;
+  --warn-soft: #f9e7cf;
+  --night: #5a659a;
+  --shadow-sm: 0 8px 22px -14px rgba(31, 39, 51, 0.4);
+  --font-jp:
+    "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI",
+    "Noto Sans JP", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171f;
+    --surface: #1c202b;
+    --surface-2: #232838;
+    --ink: #eaeef5;
+    --ink-2: #a7b0bf;
+    --ink-3: #6e7787;
+    --line: #2c3242;
+    --accent: #e8a44c;
+    --accent-soft: #3a2f1d;
+    --good: #6fbe9c;
+    --good-soft: #22352e;
+    --warn: #e0a052;
+    --warn-soft: #37301f;
+    --night: #8b95c8;
+    --shadow-sm: 0 10px 26px -16px rgba(0, 0, 0, 0.6);
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f7fb;
+  --surface: #fff;
+  --surface-2: #eef2f8;
+  --ink: #1f2733;
+  --ink-2: #55606f;
+  --ink-3: #8b94a2;
+  --line: #e1e7f0;
+  --accent: #e0912f;
+  --accent-soft: #fbe6cf;
+  --good: #4f9e7f;
+  --good-soft: #dcefe6;
+  --warn: #d0842f;
+  --warn-soft: #f9e7cf;
+  --night: #5a659a;
+}
+:root[data-theme="dark"] {
+  --bg: #14171f;
+  --surface: #1c202b;
+  --surface-2: #232838;
+  --ink: #eaeef5;
+  --ink-2: #a7b0bf;
+  --ink-3: #6e7787;
+  --line: #2c3242;
+  --accent: #e8a44c;
+  --accent-soft: #3a2f1d;
+  --good: #6fbe9c;
+  --good-soft: #22352e;
+  --warn: #e0a052;
+  --warn-soft: #37301f;
+  --night: #8b95c8;
+}
+
+.watch {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 22px 18px 60px;
+  font-family: var(--font-jp);
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100vh;
+  line-height: 1.7;
+}
+.watch__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.watch__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.watch__sun {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, var(--accent), var(--warn));
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.watch__empty {
+  text-align: center;
+  color: var(--ink-3);
+  padding: 60px 20px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill__d {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.pill--good {
+  color: var(--good);
+  background: var(--good-soft);
+}
+.pill--good .pill__d {
+  background: var(--good);
+}
+.pill--night {
+  color: var(--night);
+  background: color-mix(in oklab, var(--night) 15%, transparent);
+}
+.pill--night .pill__d {
+  background: var(--night);
+}
+.pill--travel {
+  color: var(--ink-3);
+  background: var(--surface-2);
+}
+.pill--travel .pill__d {
+  background: var(--ink-3);
+}
+.pill--warn {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+.pill--warn .pill__d {
+  background: var(--warn);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px;
+  border-radius: 15px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  margin-bottom: 11px;
+  box-shadow: var(--shadow-sm);
+}
+.card__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.card__who {
+  flex: 1;
+  min-width: 0;
+}
+.card__name {
+  font-weight: 600;
+  font-size: 15px;
+}
+.card__status {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.alert {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid color-mix(in oklab, var(--warn) 40%, var(--line));
+  background: var(--surface);
+  margin-bottom: 14px;
+}
+.alert__stripe {
+  height: 4px;
+  background: var(--warn);
+}
+.alert__in {
+  padding: 17px;
+}
+.alert__title {
+  margin: 0 0 6px;
+  font-size: 15.5px;
+  font-weight: 700;
+}
+.alert__body {
+  margin: 0 0 15px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.alert__acts {
+  display: grid;
+  gap: 9px;
+}
+
+.btn {
+  appearance: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 14.5px;
+  font-weight: 600;
+  border-radius: 13px;
+  padding: 13px 16px;
+  width: 100%;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn--calm {
+  background: var(--good);
+  color: #fff;
+}
+.btn--ghost {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* 抑えた薔薇色（重い操作用）。警告赤は使わない。 */
+:root {
+  --crit: #b16478;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --crit: #ca8598;
+  }
+}
+:root[data-theme="light"] {
+  --crit: #b16478;
+}
+:root[data-theme="dark"] {
+  --crit: #ca8598;
+}
+
+.btn--grave {
+  background: transparent;
+  color: var(--crit);
+  border: 1px solid color-mix(in oklab, var(--crit) 45%, var(--line));
+}
+
+/* 死亡確認 */
+.grave {
+  border-radius: 16px;
+  border: 1px solid color-mix(in oklab, var(--crit) 35%, var(--line));
+  background: var(--surface);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+}
+.grave__kicker {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--crit);
+  margin-bottom: 10px;
+}
+.grave__title {
+  margin: 0 0 12px;
+  font-size: 19px;
+  line-height: 1.5;
+}
+.grave__body {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.quorum {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  background: var(--surface-2);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.quorum__track {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.quorum__track i {
+  display: block;
+  height: 100%;
+  background: var(--crit);
+  border-radius: 999px;
+}
+.quorum__n {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.reassure {
+  display: flex;
+  gap: 9px;
+  font-size: 12.5px;
+  color: color-mix(in oklab, var(--good) 80%, var(--ink));
+  background: var(--good-soft);
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin: 14px 0 18px;
+}
+
+/* 開示（受取人） */
+.unlock {
+  text-align: center;
+  max-width: 380px;
+  margin: 20px auto;
+}
+.unlock__ico {
+  font-size: 44px;
+}
+.unlock__title {
+  margin: 10px 0 8px;
+  font-size: 20px;
+}
+.unlock__sub {
+  color: var(--ink-2);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+.unlock__input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 16px;
+  padding: 13px 15px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.unlock__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.unlock__hint {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 0 0 12px;
+}
+.unlock__err {
+  font-size: 13px;
+  color: var(--crit);
+  margin: 0 0 12px;
+}
+.unlock__fine {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 16px;
+}
+
+/* 復号後の手紙 */
+.letter {
+  max-width: 420px;
+  margin: 26px auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px 26px;
+  box-shadow: var(--shadow-sm);
+}
+.letter__from {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-bottom: 16px;
+  letter-spacing: 0.04em;
+}
+.letter__body {
+  font-size: 16px;
+  line-height: 2;
+  white-space: pre-wrap;
+  color: var(--ink);
+}
+.letter__note {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
