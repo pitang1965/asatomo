@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build:web": "vite build",
+    "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -26,8 +29,10 @@
     "@types/node": "latest",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "drizzle-kit": "latest",
     "typescript": "latest",
+    "vite": "^8.1.4",
     "vitest": "^4.1.10"
   }
 }
