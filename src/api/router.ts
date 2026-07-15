@@ -1,5 +1,6 @@
 import type { ApiResult } from './context';
 import type { Handlers } from './handlers';
+import { SCHEMAS } from './schemas';
 
 /**
  * Web 標準（Request → Response）の API ルーター。Cloudflare Workers / TanStack Start の
@@ -54,11 +55,16 @@ export async function dispatch(
   if (!name) return json({ error: 'not_found' }, 404);
   if (!actorUserId) return json({ error: 'unauthorized' }, 401);
 
+  // 入力検証＋日付の型変換（JSON の文字列 → Date）。
+  const parsed = SCHEMAS[name].safeParse(body ?? {});
+  if (!parsed.success)
+    return json({ error: 'invalid_input', issues: parsed.error.issues }, 400);
+
   const handler = handlers[name] as unknown as (
     actor: string,
     input: unknown,
   ) => Promise<ApiResult>;
-  const result = await handler(actorUserId, body ?? {});
+  const result = await handler(actorUserId, parsed.data);
   return result.ok
     ? json(result.data, 200)
     : json({ error: result.error }, result.status);
