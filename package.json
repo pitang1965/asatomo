@@ -4,9 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build:web": "vite build",
-    "preview": "vite preview",
+    "dev": "vite dev",
+    "build": "vite build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -17,6 +16,8 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "@tanstack/react-router": "^1.170.18",
+    "@tanstack/react-start": "^1.168.28",
     "better-auth": "^1.6.23",
     "drizzle-orm": "latest",
     "react": "^19.2.7",

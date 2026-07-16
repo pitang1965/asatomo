@@ -1,17 +1,19 @@
-import { StrictMode, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createFileRoute } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 import type { DashboardRow } from '../domain/queries';
-import { encryptText, generateDek, wrapDek } from './crypto';
-import { DeathConfirm } from './DeathConfirm';
-import { MessageDisclosure } from './MessageDisclosure';
-import './watch.css';
-import { WatchDashboard } from './WatchDashboard';
+import { encryptText, generateDek, wrapDek } from '../web/crypto';
+import { DeathConfirm } from '../web/DeathConfirm';
+import { MessageDisclosure } from '../web/MessageDisclosure';
+import { WatchDashboard } from '../web/WatchDashboard';
 
 /**
- * 見守りWeb の開発プレビュー入口（`npm run dev`）。モックデータで実コンポーネントを表示。
+ * 見守りWeb のプレビュー画面（モックデータ、DB不要）。デザイン確認用に残す。
+ * 実データ画面はトップ（/）で、こちらはログインせずに全画面を見られる。
  * 「最後のメッセージ」は実際に暗号化 → 合言葉「ポチ」で本物の復号が走る（ゼロ知識のデモ）。
- * 本番は TanStack Start のサーバー関数で実APIに接続する。
  */
+export const Route = createFileRoute('/preview')({
+  component: App,
+});
 
 const NOW = new Date();
 const ago = (h: number) => new Date(NOW.getTime() - h * 3_600_000);
@@ -171,11 +173,3 @@ function App() {
     </div>
   );
 }
-
-const el = document.getElementById('root');
-if (el)
-  createRoot(el).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
