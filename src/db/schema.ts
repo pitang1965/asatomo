@@ -87,10 +87,10 @@ export const certificationOutcome = pgEnum('certification_outcome', [
 ]);
 
 // ────────────────────────────────────────────────────────────────────────────
-// 認証（Better Auth 管理）— ⚠ プレースホルダ / 手編集禁止
-//   実物は `@better-auth/cli generate` で生成し、なふだの既存 Better Auth スキーマに揃える。
-//   下記は参照用の最小定義で、genericOAuth(LINE)/Credential Manager 等で必要な列
-//   （account.scope / password / accessTokenExpiresAt など）が欠けている場合がある。
+// 認証（Better Auth 管理）— ⚠ 手編集禁止
+//   `@better-auth/cli generate`（scripts/auth-cli-config.ts）の出力を反映した正式版。
+//   プロジェクト方針として timestamp は withTimezone（生成時の差はこの点のみ意図的）。
+//   auth 設定を変えたら再生成して差分をここに写すこと。
 //   アサトモは DB 分離（ADR-0003）のため、自前の auth テーブルを持つ。
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -105,50 +105,80 @@ export const user = pgTable('user', {
     .defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
-    .defaultNow(),
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
-export const session = pgTable('session', {
-  id: text('id').primaryKey(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  token: text('token').notNull().unique(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  ipAddress: text('ip_address'),
-  userAgent: text('user_agent'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const session = pgTable(
+  'session',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    token: text('token').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index('session_userId_idx').on(t.userId)],
+);
 
-export const account = pgTable('account', {
-  id: text('id').primaryKey(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  providerId: text('provider_id').notNull(), // google / facebook / line(genericOAuth) …
-  accountId: text('account_id').notNull(), // プロバイダ側のユーザーID（sub）
-  accessToken: text('access_token'),
-  refreshToken: text('refresh_token'),
-  idToken: text('id_token'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const account = pgTable(
+  'account',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    providerId: text('provider_id').notNull(), // google / facebook / line(genericOAuth) …
+    accountId: text('account_id').notNull(), // プロバイダ側のユーザーID（sub）
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    idToken: text('id_token'),
+    accessTokenExpiresAt: timestamp('access_token_expires_at', {
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', {
+      withTimezone: true,
+    }),
+    scope: text('scope'),
+    password: text('password'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index('account_userId_idx').on(t.userId)],
+);
 
-export const verification = pgTable('verification', {
-  id: text('id').primaryKey(),
-  identifier: text('identifier').notNull(),
-  value: text('value').notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const verification = pgTable(
+  'verification',
+  {
+    id: text('id').primaryKey(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index('verification_identifier_idx').on(t.identifier)],
+);
 
 // ────────────────────────────────────────────────────────────────────────────
 // 本人の見守り設定 + 状態（subjectSettings）
