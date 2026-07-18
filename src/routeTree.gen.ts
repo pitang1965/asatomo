@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PreviewRouteImport } from './routes/preview'
+import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DeathSubjectIdRouteImport } from './routes/death.$subjectId'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 
@@ -19,9 +21,19 @@ const PreviewRoute = PreviewRouteImport.update({
   path: '/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeathSubjectIdRoute = DeathSubjectIdRouteImport.update({
+  id: '/death/$subjectId',
+  path: '/death/$subjectId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -37,35 +49,62 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
   '/api/$': typeof ApiSplatRoute
+  '/death/$subjectId': typeof DeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
   '/api/$': typeof ApiSplatRoute
+  '/death/$subjectId': typeof DeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
   '/api/$': typeof ApiSplatRoute
+  '/death/$subjectId': typeof DeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/preview' | '/api/$' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/messages'
+    | '/preview'
+    | '/api/$'
+    | '/death/$subjectId'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/preview' | '/api/$' | '/api/auth/$'
-  id: '__root__' | '/' | '/preview' | '/api/$' | '/api/auth/$'
+  to:
+    | '/'
+    | '/messages'
+    | '/preview'
+    | '/api/$'
+    | '/death/$subjectId'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/messages'
+    | '/preview'
+    | '/api/$'
+    | '/death/$subjectId'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MessagesRoute: typeof MessagesRoute
   PreviewRoute: typeof PreviewRoute
   ApiSplatRoute: typeof ApiSplatRoute
+  DeathSubjectIdRoute: typeof DeathSubjectIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -78,11 +117,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/death/$subjectId': {
+      id: '/death/$subjectId'
+      path: '/death/$subjectId'
+      fullPath: '/death/$subjectId'
+      preLoaderRoute: typeof DeathSubjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/$': {
@@ -104,8 +157,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MessagesRoute: MessagesRoute,
   PreviewRoute: PreviewRoute,
   ApiSplatRoute: ApiSplatRoute,
+  DeathSubjectIdRoute: DeathSubjectIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

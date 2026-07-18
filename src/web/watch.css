@@ -368,6 +368,13 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+/* プレースホルダーはテーマの淡色トークンで明示（ブラウザ既定だとダーク背景に沈んで
+   空の入力欄が無題のボタンに見えてしまう）。 */
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
 .unlock__hint {
   font-size: 12.5px;
   color: var(--ink-3);

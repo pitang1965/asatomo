@@ -53,6 +53,39 @@ export async function decryptText(
   return dec.decode(pt);
 }
 
+/**
+ * iv(12)+暗号文 を1つの base64 に収めた自己完結形式。見出し（encryptedLabel）など、
+ * 本文と同じ DEK で暗号化するが iv 列を共有できない（GCM の iv 再利用禁止）短文用。
+ */
+export async function encryptPacked(
+  plaintext: string,
+  dek: CryptoKey,
+): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    dek,
+    enc.encode(plaintext),
+  );
+  const out = new Uint8Array(12 + ct.byteLength);
+  out.set(iv, 0);
+  out.set(new Uint8Array(ct), 12);
+  return toB64(out.buffer);
+}
+
+export async function decryptPacked(
+  packed: string,
+  dek: CryptoKey,
+): Promise<string> {
+  const buf = fromB64(packed);
+  const pt = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: buf.slice(0, 12) },
+    dek,
+    buf.slice(12),
+  );
+  return dec.decode(pt);
+}
+
 async function deriveWrapKey(
   passphrase: string,
   salt: Uint8Array<ArrayBuffer>,

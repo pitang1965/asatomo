@@ -1,4 +1,9 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+  useRouter,
+} from '@tanstack/react-router';
 import { type CSSProperties, useState } from 'react';
 import type { DashboardRow } from '../domain/queries';
 import { fetchDashboard } from '../server/functions';
@@ -163,6 +168,7 @@ function Dashboard({
   rows: DashboardRow[];
 }) {
   const router = useRouter();
+  const navigate = useNavigate();
   const [notice, setNotice] = useState('');
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
 
@@ -204,6 +210,9 @@ function Dashboard({
           color: 'var(--ink-2)',
         }}
       >
+        <Link to="/messages" style={{ color: 'var(--accent)' }}>
+          最後のメッセージ
+        </Link>
         <span>{userName} さん</span>
         <button
           type="button"
@@ -237,10 +246,11 @@ function Dashboard({
         now={new Date()}
         actions={{
           onConfirmAlive: confirmAlive,
-          onCannotReach: () =>
-            setNotice(
-              '死亡確認フローの接続は準備中です（画面はプレビューで確認できます）',
-            ),
+          onCannotReach: (subjectUserId) =>
+            navigate({
+              to: '/death/$subjectId',
+              params: { subjectId: subjectUserId },
+            }),
           pendingSubjectId,
         }}
       />

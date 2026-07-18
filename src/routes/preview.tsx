@@ -155,6 +155,11 @@ function App() {
           votesFor={1}
           livingWatchers={2}
           graceHours={48}
+          onAlive={() => setNotice('無事の報告（代理確認）が全員に届きます')}
+          onUnknown={() => {
+            setScreen('dash');
+            setNotice('');
+          }}
           onConfirm={() => setNotice('この先に、慎重な確認ステップが続きます')}
         />
       ) : null}

@@ -182,6 +182,7 @@ export async function listMessages(db: Db, subjectUserId: string) {
     .select({
       messageId: messageRecipients.messageId,
       connectionId: messageRecipients.connectionId,
+      wrappedDek: messageRecipients.wrappedDek,
     })
     .from(messageRecipients)
     .where(
@@ -191,12 +192,18 @@ export async function listMessages(db: Db, subjectUserId: string) {
       ),
     );
 
-  return msgs.map((m) => ({
-    ...m,
-    recipientConnectionIds: rec
-      .filter((r) => r.messageId === m.id)
-      .map((r) => r.connectionId),
-  }));
+  return msgs.map((m) => {
+    const mine = rec.filter((r) => r.messageId === m.id);
+    return {
+      ...m,
+      recipientConnectionIds: mine.map((r) => r.connectionId),
+      // 宛先の後から編集用: 既存宛先は wrappedDek を再利用する（合言葉の再入力を要求しない）。
+      recipients: mine.map((r) => ({
+        connectionId: r.connectionId,
+        wrappedDek: r.wrappedDek,
+      })),
+    };
+  });
 }
 
 // ─── 開示解決（T5）: 受取人ごとの配信ペイロードを集める ──────────────────────

@@ -168,6 +168,30 @@ async function main() {
     )
     .onConflictDoNothing();
 
+  // 逆向き: 実ユーザー本人のつながり（最後のメッセージの宛先候補）。
+  //   田中=見守り者（相互見守り）、山本=純粋な受取人。
+  await db
+    .insert(connections)
+    .values([
+      {
+        subjectUserId: watcher.id,
+        otherUserId: 'seed-subject-tanaka',
+        displayName: '田中 みなみ（テスト）',
+        isWatcher: true,
+        watcherStatus: 'accepted' as const,
+        watcherLastSeenAt: new Date(),
+        invitedAt: hoursAgo(24 * 7),
+        respondedAt: hoursAgo(24 * 7),
+      },
+      {
+        subjectUserId: watcher.id,
+        otherUserId: 'seed-subject-yamamoto',
+        displayName: '山本 涼（テスト）',
+        isWatcher: false,
+      },
+    ])
+    .onConflictDoNothing();
+
   const seeded = await db
     .select({ id: user.id })
     .from(user)

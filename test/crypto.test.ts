@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  decryptPacked,
+  encryptPacked,
   encryptText,
   generateDek,
   openMessage,
@@ -62,5 +64,13 @@ describe('最後のメッセージの暗号（ADR-0002）', () => {
     const b = await encryptText(PLAIN, dek);
     expect(a.ciphertext).not.toBe(b.ciphertext);
     expect(a.iv).not.toBe(b.iv);
+  });
+
+  it('見出し用の自己完結形式（iv内包）が往復し、本文と iv を共有しない', async () => {
+    const dek = await generateDek();
+    const packed = await encryptPacked('みなみへ', dek);
+    expect(await decryptPacked(packed, dek)).toBe('みなみへ');
+    // 同じ平文でも毎回異なる（iv がランダムに内包される）。
+    expect(await encryptPacked('みなみへ', dek)).not.toBe(packed);
   });
 });

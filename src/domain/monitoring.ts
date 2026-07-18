@@ -556,7 +556,7 @@ async function getActiveCertification(
   return row ?? null;
 }
 
-async function countActiveVotes(
+export async function countActiveVotes(
   db: Db,
   certificationId: string,
 ): Promise<number> {
@@ -573,7 +573,7 @@ async function countActiveVotes(
 }
 
 /** 承諾済み かつ 休眠しきい値以内の見守り者数（定足数の分母）。 */
-async function countLivingWatchers(
+export async function countLivingWatchers(
   db: Db,
   subjectUserId: string,
   now: Date,
