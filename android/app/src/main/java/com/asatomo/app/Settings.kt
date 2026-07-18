@@ -11,8 +11,13 @@ class Settings(context: Context) {
     private val prefs = context.getSharedPreferences("asatomo", Context.MODE_PRIVATE)
 
     var baseUrl: String
-        get() = prefs.getString("baseUrl", "http://localhost:5173") ?: ""
+        get() = prefs.getString("baseUrl", DEFAULT_BASE_URL) ?: ""
         set(v) = prefs.edit().putString("baseUrl", v).apply()
+
+    companion object {
+        /** 既定は本番（Workers）。開発時はメイン画面の接続設定で localhost:5173 に切り替える。 */
+        const val DEFAULT_BASE_URL = "https://asatomo.pitang1965.workers.dev"
+    }
 
     var devSecret: String
         get() = prefs.getString("devSecret", "") ?: ""

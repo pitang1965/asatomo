@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "asatomo",
+  // カスタムエントリ: TanStack Start の fetch に加え、監視tick（scheduled）を持つ。
+  "main": "src/server/worker.ts",
+  "compatibility_date": "2026-07-01",
+  // nodejs_compat: vars/secrets が process.env に写る前提（src/server/env.ts）。
+  "compatibility_flags": ["nodejs_compat"],
+  // 監視tick（時間駆動の状態遷移 T1/T2/T5）。約15分間隔（ADR-0001）。
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  // 非シークレット。シークレット（DATABASE_URL / BETTER_AUTH_SECRET /
+  // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET）は wrangler secret put で登録する。
+  // ⚠ DEV_BEARER_SECRET は本番に絶対に設定しない（開発専用バイパス）。
+  "vars": {
+    "BETTER_AUTH_URL": "https://asatomo.pitang1965.workers.dev"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

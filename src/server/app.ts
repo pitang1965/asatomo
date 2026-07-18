@@ -64,5 +64,5 @@ export function createRequestApp(env: ServerEnv) {
     config: DEFAULT_DOMAIN_CONFIG,
   });
 
-  return { db, auth, handlers };
+  return { db, auth, handlers, notify };
 }
