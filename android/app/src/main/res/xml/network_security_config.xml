@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 開発時のみ平文HTTPを許可する宛先（adb reverse の localhost と、エミュレータのホスト 10.0.2.2）。
+     本番 API は HTTPS のみ（既定で平文禁止のまま）。 -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>
