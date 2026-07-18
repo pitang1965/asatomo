@@ -13,6 +13,11 @@ export interface ServerEnv extends AuthEnv {
   OPERATOR_EMAIL: string;
   /** 見守りWeb の公開URL（通知文面のリンクに使う）。未設定なら BETTER_AUTH_URL。 */
   WEB_BASE_URL: string;
+  /**
+   * 開発専用の認証バイパス（Authorization: Bearer <secret>:<userId>）。
+   * ⚠ 本番では絶対に設定しない。Android 実験（OAuth 配線前）用。
+   */
+  DEV_BEARER_SECRET: string;
 }
 
 export function getServerEnv(): ServerEnv {
@@ -31,5 +36,6 @@ export function getServerEnv(): ServerEnv {
     EMAIL_FROM: e.EMAIL_FROM ?? '',
     OPERATOR_EMAIL: e.OPERATOR_EMAIL ?? '',
     WEB_BASE_URL: e.WEB_BASE_URL ?? '',
+    DEV_BEARER_SECRET: e.DEV_BEARER_SECRET ?? '',
   };
 }

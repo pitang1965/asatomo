@@ -12,9 +12,10 @@ export const Route = createFileRoute('/api/$')({
   server: {
     handlers: {
       ANY: async ({ request }) => {
+        const env = getServerEnv();
         let app: ReturnType<typeof createRequestApp>;
         try {
-          app = createRequestApp(getServerEnv());
+          app = createRequestApp(env);
         } catch (e) {
           if (e instanceof ConfigError)
             return Response.json(
@@ -24,7 +25,9 @@ export const Route = createFileRoute('/api/$')({
           throw e;
         }
 
-        const actorUserId = await getActorUserId(request, app.auth);
+        const actorUserId = await getActorUserId(request, app.auth, {
+          devBearerSecret: env.DEV_BEARER_SECRET || undefined,
+        });
         const path = new URL(request.url).pathname.replace(/^\/api/, '');
         const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
         const body = hasBody

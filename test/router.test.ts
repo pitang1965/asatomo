@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createHandlers } from '../src/api/handlers';
 import { dispatch } from '../src/api/router';
+import { devActorFromHeader } from '../src/api/session';
 import type { Db } from '../src/db';
 import { DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
 import type { Notifications } from '../src/notify/notifier';
@@ -76,5 +77,20 @@ describe('router dispatch（検証・認可・写像）', () => {
     const s = await seedSubject(db, { state: 'normal' });
     const res = await dispatch(handlers, 'POST', '/disclosure/cancel', s, {});
     expect(res.status).toBe(409);
+  });
+});
+
+describe('開発用認証バイパス（devActorFromHeader）', () => {
+  it('secret 一致で userId を返す（userId に : を含んでもよい）', () => {
+    expect(devActorFromHeader('Bearer s3cret:user-1', 's3cret')).toBe('user-1');
+    expect(devActorFromHeader('Bearer s3cret:a:b', 's3cret')).toBe('a:b');
+  });
+
+  it('secret 未設定・不一致・形式不正は null（経路が存在しない）', () => {
+    expect(devActorFromHeader('Bearer s3cret:user-1', undefined)).toBeNull();
+    expect(devActorFromHeader('Bearer s3cret:user-1', '')).toBeNull();
+    expect(devActorFromHeader('Bearer wrong:user-1', 's3cret')).toBeNull();
+    expect(devActorFromHeader('Bearer s3cretuser-1', 's3cret')).toBeNull();
+    expect(devActorFromHeader(null, 's3cret')).toBeNull();
   });
 });

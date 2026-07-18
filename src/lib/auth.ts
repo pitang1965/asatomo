@@ -33,20 +33,27 @@ export interface AuthEnv {
 export function createAuth(env: AuthEnv) {
   const db = createDb(env.DATABASE_URL);
 
+  // 資格情報が揃っているプロバイダだけ登録する（未設定分の毎リクエスト警告を避ける）。
+  const socialProviders: Record<
+    string,
+    { clientId: string; clientSecret: string }
+  > = {};
+  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
+    socialProviders.google = {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    };
+  if (env.FACEBOOK_CLIENT_ID && env.FACEBOOK_CLIENT_SECRET)
+    socialProviders.facebook = {
+      clientId: env.FACEBOOK_CLIENT_ID,
+      clientSecret: env.FACEBOOK_CLIENT_SECRET,
+    };
+
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, { provider: 'pg', schema }),
-    socialProviders: {
-      google: {
-        clientId: env.GOOGLE_CLIENT_ID,
-        clientSecret: env.GOOGLE_CLIENT_SECRET,
-      },
-      facebook: {
-        clientId: env.FACEBOOK_CLIENT_ID,
-        clientSecret: env.FACEBOOK_CLIENT_SECRET,
-      },
-    },
+    socialProviders,
     plugins: [
       genericOAuth({
         config: [
