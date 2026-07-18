@@ -12,6 +12,9 @@ const VERB: Record<SignalKind, string> = {
   app_open: 'アプリを開きました',
   device_unlock: 'スマホを使いました',
   web_checkin: 'チェックインしました',
+  // 「いってきます」は留守（家が無人）の開示になるためぼかす（記録は outing のまま。CONTEXT.md 近況）。
+  outing: '元気にしていました',
+  homecoming: '帰ってきました',
 };
 
 export function relativeJa(from: Date, now: Date): string {

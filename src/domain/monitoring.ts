@@ -56,16 +56,32 @@ export async function recordSignal(
     occurredAt?: Date;
   },
   config: DomainConfig,
-): Promise<{ cancelledEpisode: boolean; resumedFromDisclosed: boolean }> {
+): Promise<{
+  cancelledEpisode: boolean;
+  resumedFromDisclosed: boolean;
+  /** 発生時刻基準で検知窓外＝記録のみ（進行中エピソードを覆さない）。 */
+  stale: boolean;
+}> {
   const now = config.now ?? new Date();
-  const occurredAt = input.occurredAt ?? now;
+  // 未来の occurredAt は now へクランプ（時計ずれ・改ざんが生存時計を先回りで汚さないように）。
+  const claimed = input.occurredAt ?? now;
+  const occurredAt = claimed > now ? now : claimed;
 
   const [before] = await db
-    .select({ state: subjectSettings.state })
+    .select({
+      state: subjectSettings.state,
+      detectionWindowHours: subjectSettings.detectionWindowHours,
+    })
     .from(subjectSettings)
     .where(eq(subjectSettings.userId, input.subjectUserId))
     .limit(1);
   const prevState = before?.state ?? 'normal';
+
+  // 覆し（不変条件A）の資格は発生時刻基準: 経過時間が検知窓内に戻るシグナルのみ。
+  // 遅延到着した古いシグナルは発生時点の証拠であって現在の生存証拠ではない
+  // （端末の稼働 ≠ 本人の生存。ADR-0001 精緻化 2026-07-18）。
+  const windowMs = (before?.detectionWindowHours ?? 30) * HOUR_MS;
+  const stale = now.getTime() - occurredAt.getTime() >= windowMs;
 
   await db.insert(signals).values({
     subjectUserId: input.subjectUserId,
@@ -81,14 +97,22 @@ export async function recordSignal(
         : null;
 
   // last_signal_at は前進のみ（古いオフラインキュー分が新しい値を巻き戻さないよう greatest）。
+  // stale でも前進はさせる（発生時点の真実の記録）。T1 判定は lastSignalAt 基準なので、
+  // これだけで「段階の再評価」は自然に済む（窓内に戻るなら下の fresh 経路が normal 化する）。
   await db
     .update(subjectSettings)
     .set({
       lastSignalAt: sql`greatest(${subjectSettings.lastSignalAt}, ${occurredAt.toISOString()}::timestamptz)`,
-      ...(presence ? { currentPresence: presence, presenceSince: now } : {}),
+      ...(presence && !stale
+        ? { currentPresence: presence, presenceSince: now }
+        : {}),
       updatedAt: now,
     })
     .where(eq(subjectSettings.userId, input.subjectUserId));
+
+  if (stale) {
+    return { cancelledEpisode: false, resumedFromDisclosed: false, stale };
+  }
 
   // 不変条件A: 進行中エピソードがあれば即キャンセル。
   const cancelled = await db
@@ -121,6 +145,7 @@ export async function recordSignal(
   return {
     cancelledEpisode: cancelled.length > 0,
     resumedFromDisclosed: prevState === 'disclosed',
+    stale,
   };
 }
 

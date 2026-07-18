@@ -17,6 +17,10 @@ import androidx.core.app.NotificationCompat
  */
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // setAlarmClock は単発。毎日繰り返すため、鳴った時点で翌日分を張り直す
+        //（止めなくても翌日また鳴る＝見守りの要を途切れさせない）。
+        AlarmScheduler.scheduleNext(context)
+
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val channel =

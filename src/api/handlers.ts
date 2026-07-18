@@ -47,7 +47,7 @@ export function createHandlers(ctx: ApiContext) {
     async signal(
       actor: string,
       input: { kind: SignalKind; occurredAt?: Date },
-    ): Promise<ApiResult<{ cancelledEpisode: boolean }>> {
+    ): Promise<ApiResult<{ cancelledEpisode: boolean; stale: boolean }>> {
       const r = await recordSignal(
         db,
         {
@@ -57,7 +57,10 @@ export function createHandlers(ctx: ApiContext) {
         },
         config,
       );
-      return { ok: true, data: { cancelledEpisode: r.cancelledEpisode } };
+      return {
+        ok: true,
+        data: { cancelledEpisode: r.cancelledEpisode, stale: r.stale },
+      };
     },
 
     async setTravel(

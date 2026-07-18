@@ -17,22 +17,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.asatomo.app.ui.theme.AsatomoTheme
-import kotlinx.coroutines.launch
 
 /**
  * アラーム停止画面。「起きました」＝ alarm_dismiss シグナル送信（本アプリの核となる一手）。
  * ロック画面の上にも表示する（アラーム停止は開錠より先に行いたい）。
- * 送信失敗時はアラームだけ止める逃げ道を残す（ネットワーク不調で鳴りやまないのは最悪のため）。
+ * 停止は即時、送信は SignalQueue（WorkManager）に任せる — ネットワーク不調で鳴りやまない・
+ * 送信失敗でシグナルが失われる、の両方をこれで消す。
  */
 class AlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,11 +40,10 @@ class AlarmActivity : ComponentActivity() {
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .cancel(AlarmReceiver.NOTIFICATION_ID)
 
-        val settings = Settings(this)
         setContent {
             AsatomoTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AlarmScreen(settings = settings, finish = { finish() })
+                    AlarmScreen(finish = { finish() })
                 }
             }
         }
@@ -56,10 +51,8 @@ class AlarmActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AlarmScreen(settings: Settings, finish: () -> Unit) {
-    val scope = rememberCoroutineScope()
-    var sending by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+private fun AlarmScreen(finish: () -> Unit) {
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -75,36 +68,13 @@ private fun AlarmScreen(settings: Settings, finish: () -> Unit) {
         )
         Spacer(Modifier.size(32.dp))
         Button(
-            enabled = !sending,
             onClick = {
-                sending = true
-                error = null
-                scope.launch {
-                    ApiClient.postSignal(settings, ApiClient.SignalKind.ALARM_DISMISS)
-                        .fold(
-                            onSuccess = { finish() },
-                            onFailure = {
-                                error = it.message ?: "送信失敗"
-                                sending = false
-                            },
-                        )
-                }
+                // 押した瞬間に止める。届ける方はキューが保証する（圏外でも後で届く）。
+                SignalQueue.enqueue(context, ApiClient.SignalKind.ALARM_DISMISS)
+                finish()
             },
         ) {
-            Text(
-                if (sending) "送信中…" else "起きました",
-                style = MaterialTheme.typography.titleLarge,
-            )
-        }
-        error?.let {
-            Spacer(Modifier.size(16.dp))
-            Text(
-                "送信できませんでした: $it",
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.size(8.dp))
-            Button(onClick = finish) { Text("あとで（アラームだけ止める）") }
+            Text("起きました", style = MaterialTheme.typography.titleLarge)
         }
     }
 }

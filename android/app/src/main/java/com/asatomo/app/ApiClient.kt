@@ -2,6 +2,7 @@ package com.asatomo.app
 
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -18,21 +19,44 @@ object ApiClient {
         MEAL("meal"),
         SLEEP("sleep"),
         APP_OPEN("app_open"),
+        OUTING("outing"),
+        HOMECOMING("homecoming"),
     }
 
-    suspend fun postSignal(settings: Settings, kind: SignalKind): Result<String> =
+    /** 再試行しても無駄な失敗（入力不正など4xx）。キューはこれで諦める。 */
+    class PermanentFailure(message: String) : Exception(message)
+
+    /**
+     * 生存シグナルを送る。occurredAtMs は端末側の発生時刻（キュー再送で遅延しても
+     * 「いつの証拠か」をサーバへ正しく伝える。ADR-0001 精緻化）。
+     */
+    suspend fun postSignal(
+        settings: Settings,
+        kind: SignalKind,
+        occurredAtMs: Long? = null,
+    ): Result<String> =
         withContext(Dispatchers.IO) {
             // adb reverse 経由では keep-alive の古い接続が「unexpected end of stream」で
             // 死ぬことがある。接続を使い回さず（Connection: close）、1回だけリトライする。
             var last: Throwable? = null
             repeat(2) {
-                runCatching { postOnce(settings, kind) }
-                    .fold(onSuccess = { return@withContext Result.success(it) }, onFailure = { last = it })
+                runCatching { postOnce(settings, kind, occurredAtMs) }
+                    .fold(
+                        onSuccess = { return@withContext Result.success(it) },
+                        onFailure = {
+                            if (it is PermanentFailure) return@withContext Result.failure(it)
+                            last = it
+                        },
+                    )
             }
             Result.failure(last ?: IllegalStateException("unreachable"))
         }
 
-    private fun postOnce(settings: Settings, kind: SignalKind): String {
+    private fun postOnce(
+        settings: Settings,
+        kind: SignalKind,
+        occurredAtMs: Long?,
+    ): String {
         val url = URL("${settings.baseUrl.trimEnd('/')}/api/signals")
         val conn = url.openConnection() as HttpURLConnection
         try {
@@ -46,15 +70,27 @@ object ApiClient {
                 "authorization",
                 "Bearer ${settings.devSecret}:${settings.userId}",
             )
-            val body = JSONObject().put("kind", kind.wire).toString()
+            val body =
+                JSONObject()
+                    .put("kind", kind.wire)
+                    .apply {
+                        if (occurredAtMs != null) {
+                            put("occurredAt", Instant.ofEpochMilli(occurredAtMs).toString())
+                        }
+                    }
+                    .toString()
             conn.outputStream.use { it.write(body.toByteArray()) }
 
             val code = conn.responseCode
             val text =
                 (if (code in 200..299) conn.inputStream else conn.errorStream)
                     ?.bufferedReader()?.use { it.readText() } ?: ""
-            if (code !in 200..299) error("HTTP $code: $text")
-            return text
+            if (code in 200..299) return text
+            // 401 は「ログインし直せば直る」ため一時失敗扱い（キューが再送する）。
+            if (code in 400..499 && code != 401 && code != 408 && code != 429) {
+                throw PermanentFailure("HTTP $code: $text")
+            }
+            error("HTTP $code: $text")
         } finally {
             conn.disconnect()
         }

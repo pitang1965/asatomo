@@ -1,14 +1,9 @@
 package com.asatomo.app
 
 import android.Manifest
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.app.TimePickerDialog
-import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings as AndroidSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,24 +24,26 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.asatomo.app.ui.theme.AsatomoTheme
 import java.util.Calendar
-import kotlinx.coroutines.launch
+import java.util.UUID
 
 /**
- * 実験用メイン画面。
- *   - 接続設定（サーバーURL・開発シークレット・ユーザーID）
- *   - 生存シグナルの手動送信（元気です / ご飯 / おやすみ）
- *   - アラームのセット（AlarmManager.setAlarmClock → AlarmReceiver → AlarmActivity）
- * 本番では設定欄は消え、Better Auth ログインと定期アラームに置き換わる。
+ * メイン画面。
+ *   - 生存シグナルの手動送信（ごはん / おやすみ / いってきます / ただいま）
+ *   - 毎日アラームの設定（AlarmScheduler → AlarmReceiver → AlarmActivity）
+ *   - アプリ起動の自動シグナル（透明性の原則: 画面に明示する。CONTEXT.md 生存シグナル）
+ *   - 接続設定（開発Bearer。Better Auth ログインは後続で置き換える）
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,61 +55,64 @@ class MainActivity : ComponentActivity() {
                 .launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        // アプリを開いたこと自体が生存シグナル（自動 app_open）。連続起動は15分スロットル。
+        val settings = Settings(this)
+        val now = System.currentTimeMillis()
+        if (settings.devSecret.isNotEmpty() &&
+            now - settings.lastAppOpenSentAtMs > APP_OPEN_THROTTLE_MS
+        ) {
+            settings.lastAppOpenSentAtMs = now
+            SignalQueue.enqueue(this, ApiClient.SignalKind.APP_OPEN)
+        }
+
         setContent {
             AsatomoTheme {
                 Surface(modifier = Modifier.fillMaxSize()) { MainScreen() }
             }
         }
     }
-}
 
-/** 次の hour:minute の発生時刻（過ぎていれば明日）。 */
-private fun nextOccurrence(hour: Int, minute: Int): Calendar =
-    Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, hour)
-        set(Calendar.MINUTE, minute)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-        if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+    companion object {
+        const val APP_OPEN_THROTTLE_MS = 15 * 60_000L
     }
-
-private fun setAlarm(context: Context, hour: Int, minute: Int): String {
-    val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
-        // USE_EXACT_ALARM 宣言済みなら通常ここへ来ないが、来たら設定画面へ誘導。
-        context.startActivity(Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
-        return "正確なアラームの許可が必要です（設定画面を開きました）"
-    }
-    val fire =
-        PendingIntent.getBroadcast(
-            context,
-            1,
-            Intent(context, AlarmReceiver::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-    val show =
-        PendingIntent.getActivity(
-            context,
-            2,
-            Intent(context, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-    val at = nextOccurrence(hour, minute)
-    am.setAlarmClock(AlarmManager.AlarmClockInfo(at.timeInMillis, show), fire)
-    return "アラームをセットしました: %02d:%02d".format(hour, minute)
 }
 
 @Composable
 private fun MainScreen() {
     val context = LocalContext.current
     val settings = remember { Settings(context) }
-    val scope = rememberCoroutineScope()
 
     var baseUrl by remember { mutableStateOf(settings.baseUrl) }
     var devSecret by remember { mutableStateOf(settings.devSecret) }
     var userId by remember { mutableStateOf(settings.userId) }
     var status by remember { mutableStateOf("") }
-    var sending by remember { mutableStateOf(false) }
+    var trackedWork by remember { mutableStateOf<UUID?>(null) }
+    var trackedLabel by remember { mutableStateOf("") }
+    var alarmText by
+        remember {
+            mutableStateOf(
+                if (settings.hasAlarm) {
+                    "毎日 %02d:%02d に鳴ります".format(settings.alarmHour, settings.alarmMinute)
+                } else {
+                    ""
+                },
+            )
+        }
+
+    // キューに積んだシグナルの送信状態を観測して表示（圏外→接続時の自動送達も見える）。
+    LaunchedEffect(trackedWork) {
+        val id = trackedWork ?: return@LaunchedEffect
+        WorkManager.getInstance(context).getWorkInfoByIdFlow(id).collect { info ->
+            status =
+                when (info?.state) {
+                    WorkInfo.State.ENQUEUED -> "$trackedLabel: 送信待ち（接続したら届きます）"
+                    WorkInfo.State.RUNNING -> "$trackedLabel: 送信中…"
+                    WorkInfo.State.SUCCEEDED -> "✓ $trackedLabel が届きました"
+                    WorkInfo.State.FAILED -> "✗ $trackedLabel を受け付けられませんでした"
+                    else -> status
+                }
+        }
+    }
 
     fun saveSettings() {
         settings.baseUrl = baseUrl.trim()
@@ -122,16 +122,8 @@ private fun MainScreen() {
 
     fun send(kind: ApiClient.SignalKind, label: String) {
         saveSettings()
-        sending = true
-        status = "$label を送信中…"
-        scope.launch {
-            ApiClient.postSignal(settings, kind)
-                .fold(
-                    onSuccess = { status = "✓ $label が届きました（$it）" },
-                    onFailure = { status = "✗ 送信失敗: ${it.message}" },
-                )
-            sending = false
-        }
+        trackedLabel = label
+        trackedWork = SignalQueue.enqueue(context, kind)
     }
 
     Column(
@@ -139,9 +131,65 @@ private fun MainScreen() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Spacer(Modifier.size(16.dp))
-        Text("アサトモ（実験）", style = MaterialTheme.typography.headlineSmall)
+        Text("アサトモ", style = MaterialTheme.typography.headlineSmall)
 
-        Text("接続設定", style = MaterialTheme.typography.titleMedium)
+        Text("アラーム", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "セットした時刻に毎日鳴ります。止めるだけで、見守ってくれる人に今日の「元気」が伝わります。",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Button(
+            onClick = {
+                val now = Calendar.getInstance()
+                TimePickerDialog(
+                    context,
+                    { _, h, m ->
+                        saveSettings()
+                        alarmText = AlarmScheduler.setDailyAlarm(context, h, m)
+                    },
+                    if (settings.hasAlarm) settings.alarmHour else now.get(Calendar.HOUR_OF_DAY),
+                    if (settings.hasAlarm) settings.alarmMinute else now.get(Calendar.MINUTE),
+                    true,
+                ).show()
+            },
+        ) {
+            Text(if (settings.hasAlarm) "アラーム時刻を変える" else "アラームをセット")
+        }
+        if (alarmText.isNotEmpty()) {
+            Text(alarmText, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        Spacer(Modifier.size(4.dp))
+        Text("いまの様子を伝える", style = MaterialTheme.typography.titleMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { send(ApiClient.SignalKind.MEAL, "ごはん") }) {
+                Text("ごはん")
+            }
+            OutlinedButton(onClick = { send(ApiClient.SignalKind.SLEEP, "おやすみ") }) {
+                Text("おやすみ")
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { send(ApiClient.SignalKind.OUTING, "いってきます") }) {
+                Text("いってきます")
+            }
+            OutlinedButton(onClick = { send(ApiClient.SignalKind.HOMECOMING, "ただいま") }) {
+                Text("ただいま")
+            }
+        }
+        // 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。
+        Text(
+            "このアプリを開いたことも「元気」として自動で伝わります。",
+            style = MaterialTheme.typography.bodySmall,
+        )
+
+        if (status.isNotEmpty()) {
+            Spacer(Modifier.size(4.dp))
+            Text(status, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        Spacer(Modifier.size(12.dp))
+        Text("接続設定（開発用）", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = baseUrl,
             onValueChange = { baseUrl = it },
@@ -163,57 +211,6 @@ private fun MainScreen() {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-
-        Spacer(Modifier.size(4.dp))
-        Text("生存シグナルを送る", style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                enabled = !sending,
-                onClick = { send(ApiClient.SignalKind.APP_OPEN, "元気です") },
-            ) {
-                Text("元気です")
-            }
-            OutlinedButton(
-                enabled = !sending,
-                onClick = { send(ApiClient.SignalKind.MEAL, "ご飯") },
-            ) {
-                Text("ご飯")
-            }
-            OutlinedButton(
-                enabled = !sending,
-                onClick = { send(ApiClient.SignalKind.SLEEP, "おやすみ") },
-            ) {
-                Text("おやすみ")
-            }
-        }
-
-        Spacer(Modifier.size(4.dp))
-        Text("アラーム", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "セットした時刻にアラームが鳴り、「起きました」で今日の元気が届きます。",
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Button(
-            onClick = {
-                val now = Calendar.getInstance()
-                TimePickerDialog(
-                    context,
-                    { _, h, m ->
-                        saveSettings()
-                        status = setAlarm(context, h, m)
-                    },
-                    now.get(Calendar.HOUR_OF_DAY),
-                    now.get(Calendar.MINUTE),
-                    true,
-                ).show()
-            },
-        ) {
-            Text("アラームをセット")
-        }
-
-        if (status.isNotEmpty()) {
-            Spacer(Modifier.size(4.dp))
-            Text(status, style = MaterialTheme.typography.bodyMedium)
-        }
+        OutlinedButton(onClick = { saveSettings() }) { Text("接続設定を保存") }
     }
 }

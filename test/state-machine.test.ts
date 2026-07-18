@@ -108,6 +108,95 @@ describe('不変条件A: 生存シグナル', () => {
     expect(r.resumedFromDisclosed).toBe(true);
     expect((await stateOf(s))?.state).toBe('normal');
   });
+
+  // ADR-0001 精緻化（2026-07-18）: 覆しの基準は occurredAt。端末の稼働 ≠ 本人の生存。
+  it('検知窓外の遅延シグナルは投票中エピソードを覆さない（記録と時計前進のみ）', async () => {
+    const s = await seedSubject(db, {
+      state: 'voting',
+      detectionWindowHours: 30,
+    });
+    await seedCertification(db, s, { stage: 'voting' });
+
+    const occurredAt = hoursAgo(72, NOW);
+    const r = await recordSignal(
+      db,
+      { subjectUserId: s, kind: 'alarm_dismiss', occurredAt },
+      cfg,
+    );
+
+    expect(r.stale).toBe(true);
+    expect(r.cancelledEpisode).toBe(false);
+    const st = await stateOf(s);
+    expect(st?.state).toBe('voting');
+    expect(st?.lastSignalAt?.getTime()).toBe(occurredAt.getTime());
+    expect((await latestCert(s))?.outcome).toBe('in_progress');
+  });
+
+  it('遅延しても検知窓内に戻るシグナルは覆す', async () => {
+    const s = await seedSubject(db, {
+      state: 'watchers_alerted',
+      detectionWindowHours: 30,
+    });
+    await seedCertification(db, s, { stage: 'watchers_alerted' });
+
+    const r = await recordSignal(
+      db,
+      {
+        subjectUserId: s,
+        kind: 'alarm_dismiss',
+        occurredAt: hoursAgo(10, NOW),
+      },
+      cfg,
+    );
+
+    expect(r.stale).toBe(false);
+    expect(r.cancelledEpisode).toBe(true);
+    expect((await stateOf(s))?.state).toBe('normal');
+    expect((await latestCert(s))?.outcome).toBe('cancelled_by_signal');
+  });
+
+  it('検知窓外の遅延シグナルは disclosed も復帰させない', async () => {
+    const s = await seedSubject(db, { state: 'disclosed' });
+    const r = await recordSignal(
+      db,
+      { subjectUserId: s, kind: 'app_open', occurredAt: hoursAgo(100, NOW) },
+      cfg,
+    );
+    expect(r.stale).toBe(true);
+    expect(r.resumedFromDisclosed).toBe(false);
+    expect((await stateOf(s))?.state).toBe('disclosed');
+  });
+
+  it('未来の occurredAt は now へクランプされる（生存時計の先回り汚染防止）', async () => {
+    const s = await seedSubject(db, { state: 'normal' });
+    await recordSignal(
+      db,
+      {
+        subjectUserId: s,
+        kind: 'app_open',
+        occurredAt: new Date(NOW.getTime() + 2 * 3_600_000),
+      },
+      cfg,
+    );
+    expect((await stateOf(s))?.lastSignalAt?.getTime()).toBe(NOW.getTime());
+  });
+
+  it('新種別 outing/homecoming を記録できる', async () => {
+    const s = await seedSubject(db, { state: 'normal' });
+    const r1 = await recordSignal(
+      db,
+      { subjectUserId: s, kind: 'outing' },
+      cfg,
+    );
+    const r2 = await recordSignal(
+      db,
+      { subjectUserId: s, kind: 'homecoming' },
+      cfg,
+    );
+    expect(r1.stale).toBe(false);
+    expect(r2.stale).toBe(false);
+    expect((await stateOf(s))?.lastSignalAt?.getTime()).toBe(NOW.getTime());
+  });
 });
 
 // ─── §4 クォーラム判定 ──────────────────────────────────────────────────────

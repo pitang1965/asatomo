@@ -15,6 +15,13 @@
       "when": 1784185484594,
       "tag": "0001_huge_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784369157052,
+      "tag": "0002_signal-kind-outing-homecoming",
+      "breakpoints": true
     }
   ]
 }

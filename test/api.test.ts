@@ -58,7 +58,10 @@ describe('本人アクション', () => {
     await seedCertification(db, s, { stage: 'voting' });
     const { handlers } = makeCtx();
     const r = await handlers.signal(s, { kind: 'meal' });
-    expect(r).toEqual({ ok: true, data: { cancelledEpisode: true } });
+    expect(r).toEqual({
+      ok: true,
+      data: { cancelledEpisode: true, stale: false },
+    });
   });
 
   it('travel: 有効な期間はOK、上限超過は400', async () => {

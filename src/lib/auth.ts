@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { genericOAuth } from 'better-auth/plugins';
+import { bearer, genericOAuth } from 'better-auth/plugins';
 import { createDb } from '../db';
 import * as schema from '../db/schema';
 
@@ -55,6 +55,10 @@ export function createAuth(env: AuthEnv) {
     database: drizzleAdapter(db, { provider: 'pg', schema }),
     socialProviders,
     plugins: [
+      // 本人側 Android アプリはセッショントークンを Authorization: Bearer で送る
+      // （Cookie 管理はネイティブに不向き）。bearer が無いと getSession はヘッダ経由の
+      // トークンを検証できない（src/api/session.ts の前提）。
+      bearer(),
       genericOAuth({
         config: [
           {
