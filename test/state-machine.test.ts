@@ -17,6 +17,7 @@ import {
   makeTestDb,
   seedCertification,
   seedSubject,
+  seedUser,
   seedWatcher,
 } from './helpers';
 
@@ -179,6 +180,19 @@ describe('不変条件A: 生存シグナル', () => {
       cfg,
     );
     expect((await stateOf(s))?.lastSignalAt?.getTime()).toBe(NOW.getTime());
+  });
+
+  it('subjectSettings が無い新規ユーザーの初回シグナルで監視行を自動作成する', async () => {
+    const u = await seedUser(db);
+    const r = await recordSignal(
+      db,
+      { subjectUserId: u, kind: 'app_open' },
+      cfg,
+    );
+    expect(r.stale).toBe(false);
+    const st = await stateOf(u);
+    expect(st?.state).toBe('normal');
+    expect(st?.lastSignalAt?.getTime()).toBe(NOW.getTime());
   });
 
   it('新種別 outing/homecoming を記録できる', async () => {

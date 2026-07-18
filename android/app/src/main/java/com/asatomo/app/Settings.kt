@@ -22,6 +22,20 @@ class Settings(context: Context) {
         get() = prefs.getString("userId", "seed-subject-sato") ?: ""
         set(v) = prefs.edit().putString("userId", v).apply()
 
+    /** Better Auth のセッショントークン（Googleログイン後に保存。空 = 未ログイン）。 */
+    var sessionToken: String
+        get() = prefs.getString("sessionToken", "") ?: ""
+        set(v) = prefs.edit().putString("sessionToken", v).apply()
+
+    /** 表示用のユーザー名（ログイン応答から）。 */
+    var userName: String
+        get() = prefs.getString("userName", "") ?: ""
+        set(v) = prefs.edit().putString("userName", v).apply()
+
+    /** シグナルを送れる状態か（本ログイン済み、または開発Bearer設定済み）。 */
+    val isConfigured: Boolean
+        get() = sessionToken.isNotEmpty() || devSecret.isNotEmpty()
+
     /** 毎日アラームの時刻（-1 = 未設定）。1本のみ（グリル決定: 毎日同一時刻1本）。 */
     var alarmHour: Int
         get() = prefs.getInt("alarmHour", -1)

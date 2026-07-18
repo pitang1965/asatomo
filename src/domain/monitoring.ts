@@ -67,6 +67,12 @@ export async function recordSignal(
   const claimed = input.occurredAt ?? now;
   const occurredAt = claimed > now ? now : claimed;
 
+  // 初回シグナルで監視行を自動作成（ログイン直後の新規ユーザー）。既存行はそのまま。
+  await db
+    .insert(subjectSettings)
+    .values({ userId: input.subjectUserId })
+    .onConflictDoNothing();
+
   const [before] = await db
     .select({
       state: subjectSettings.state,

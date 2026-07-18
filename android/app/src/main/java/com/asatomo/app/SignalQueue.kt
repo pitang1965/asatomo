@@ -1,6 +1,11 @@
 package com.asatomo.app
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import androidx.core.app.NotificationCompat
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -62,8 +67,50 @@ class SignalWorker(context: Context, params: WorkerParameters) :
                 onFailure = { e ->
                     // 恒久的な拒否（入力不正等）だけ諦める。ネットワーク不調・認証切れは再試行
                     //（認証切れは本人がログインし直せば次の再試行で届く。沈黙より再送）。
-                    if (e is ApiClient.PermanentFailure) Result.failure() else Result.retry()
+                    when (e) {
+                        is ApiClient.PermanentFailure -> Result.failure()
+                        is ApiClient.AuthFailure -> {
+                            // 沈黙より通知: 静かに失敗し続けず、本人に再ログインを促す。
+                            notifyReloginNeeded(applicationContext)
+                            Result.retry()
+                        }
+                        else -> Result.retry()
+                    }
                 },
             )
+    }
+
+    private fun notifyReloginNeeded(context: Context) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(
+            NotificationChannel(
+                AUTH_CHANNEL_ID,
+                "ログイン",
+                NotificationManager.IMPORTANCE_HIGH,
+            ),
+        )
+        val open =
+            PendingIntent.getActivity(
+                context,
+                3,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        nm.notify(
+            AUTH_NOTIFICATION_ID,
+            NotificationCompat.Builder(context, AUTH_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("ログインし直してください")
+                .setContentText("「元気」が届かなくなっています。タップしてログインすると、たまった分もまとめて届きます。")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build(),
+        )
+    }
+
+    companion object {
+        const val AUTH_CHANNEL_ID = "asatomo_auth"
+        const val AUTH_NOTIFICATION_ID = 2
     }
 }

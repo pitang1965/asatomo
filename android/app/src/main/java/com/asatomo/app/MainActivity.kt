@@ -2,6 +2,7 @@ package com.asatomo.app
 
 import android.Manifest
 import android.app.TimePickerDialog
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -49,6 +50,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 未ログイン（開発Bearerも未設定）なら初回フローへ。
+        // EXTRA_DEV_SETUP はオンボーディングの「開発用設定を使う」からの跳ね返り抑止。
+        val settings = Settings(this)
+        if (!settings.isConfigured && !intent.getBooleanExtra(EXTRA_DEV_SETUP, false)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         // API 33+ は通知に実行時許可が要る（アラーム通知のため起動時に要求）。
         if (Build.VERSION.SDK_INT >= 33) {
             registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -56,11 +66,8 @@ class MainActivity : ComponentActivity() {
         }
 
         // アプリを開いたこと自体が生存シグナル（自動 app_open）。連続起動は15分スロットル。
-        val settings = Settings(this)
         val now = System.currentTimeMillis()
-        if (settings.devSecret.isNotEmpty() &&
-            now - settings.lastAppOpenSentAtMs > APP_OPEN_THROTTLE_MS
-        ) {
+        if (now - settings.lastAppOpenSentAtMs > APP_OPEN_THROTTLE_MS) {
             settings.lastAppOpenSentAtMs = now
             SignalQueue.enqueue(this, ApiClient.SignalKind.APP_OPEN)
         }
@@ -74,6 +81,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val APP_OPEN_THROTTLE_MS = 15 * 60_000L
+        const val EXTRA_DEV_SETUP = "devSetup"
     }
 }
 
@@ -132,6 +140,12 @@ private fun MainScreen() {
     ) {
         Spacer(Modifier.size(16.dp))
         Text("アサトモ", style = MaterialTheme.typography.headlineSmall)
+        if (settings.userName.isNotEmpty()) {
+            Text(
+                "${settings.userName} さんとしてログイン中",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
 
         Text("アラーム", style = MaterialTheme.typography.titleMedium)
         Text(

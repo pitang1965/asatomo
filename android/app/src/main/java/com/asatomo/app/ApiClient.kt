@@ -26,6 +26,9 @@ object ApiClient {
     /** 再試行しても無駄な失敗（入力不正など4xx）。キューはこれで諦める。 */
     class PermanentFailure(message: String) : Exception(message)
 
+    /** 認証切れ（401）。再ログインすれば直るため再試行しつつ、本人へ通知する（沈黙より通知）。 */
+    class AuthFailure(message: String) : Exception(message)
+
     /**
      * 生存シグナルを送る。occurredAtMs は端末側の発生時刻（キュー再送で遅延しても
      * 「いつの証拠か」をサーバへ正しく伝える。ADR-0001 精緻化）。
@@ -44,7 +47,9 @@ object ApiClient {
                     .fold(
                         onSuccess = { return@withContext Result.success(it) },
                         onFailure = {
-                            if (it is PermanentFailure) return@withContext Result.failure(it)
+                            if (it is PermanentFailure || it is AuthFailure) {
+                                return@withContext Result.failure(it)
+                            }
                             last = it
                         },
                     )
@@ -66,10 +71,14 @@ object ApiClient {
             conn.doOutput = true
             conn.setRequestProperty("content-type", "application/json")
             conn.setRequestProperty("connection", "close")
-            conn.setRequestProperty(
-                "authorization",
-                "Bearer ${settings.devSecret}:${settings.userId}",
-            )
+            // 本ログイン済みならセッショントークン、なければ開発Bearer（実験用の後方互換）。
+            val auth =
+                if (settings.sessionToken.isNotEmpty()) {
+                    "Bearer ${settings.sessionToken}"
+                } else {
+                    "Bearer ${settings.devSecret}:${settings.userId}"
+                }
+            conn.setRequestProperty("authorization", auth)
             val body =
                 JSONObject()
                     .put("kind", kind.wire)
@@ -86,8 +95,9 @@ object ApiClient {
                 (if (code in 200..299) conn.inputStream else conn.errorStream)
                     ?.bufferedReader()?.use { it.readText() } ?: ""
             if (code in 200..299) return text
-            // 401 は「ログインし直せば直る」ため一時失敗扱い（キューが再送する）。
-            if (code in 400..499 && code != 401 && code != 408 && code != 429) {
+            // 401 は「ログインし直せば直る」ため一時失敗扱い（キューが再送し、本人へ通知）。
+            if (code == 401) throw AuthFailure("HTTP 401: $text")
+            if (code in 400..499 && code != 408 && code != 429) {
                 throw PermanentFailure("HTTP $code: $text")
             }
             error("HTTP $code: $text")
