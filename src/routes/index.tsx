@@ -171,6 +171,39 @@ function Dashboard({
   const navigate = useNavigate();
   const [notice, setNotice] = useState('');
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  async function createInvite() {
+    setInviteBusy(true);
+    setNotice('');
+    try {
+      const res = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
+      if (!res.ok) throw new Error(`invite failed: ${res.status}`);
+      const { token } = (await res.json()) as { token: string };
+      setInviteLink(`${window.location.origin}/join/${token}`);
+      setInviteCopied(false);
+    } catch {
+      setNotice('招待リンクの作成に失敗しました。時間をおいてお試しください。');
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  async function copyInvite() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteCopied(true);
+    } catch {
+      setInviteCopied(false);
+    }
+  }
 
   async function confirmAlive(subjectUserId: string) {
     setPendingSubjectId(subjectUserId);
@@ -240,6 +273,84 @@ function Dashboard({
           {notice}
         </p>
       ) : null}
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '4px 16px 0' }}>
+        {inviteLink ? (
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 14,
+              padding: 14,
+              boxShadow: '0 4px 16px rgb(0 0 0 / 0.06)',
+            }}
+          >
+            <p
+              style={{
+                fontSize: 12,
+                color: 'var(--ink-2)',
+                lineHeight: 1.7,
+                margin: 0,
+              }}
+            >
+              このリンクを、見守り合いたい相手に送ってください（7日で失効）。
+            </p>
+            <input
+              readOnly
+              value={inviteLink}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{
+                width: '100%',
+                marginTop: 8,
+                padding: '8px 10px',
+                borderRadius: 8,
+                border: '1px solid var(--line)',
+                background: 'var(--surface-2)',
+                color: 'var(--ink)',
+                fontSize: 12,
+                boxSizing: 'border-box',
+              }}
+            />
+            <button
+              type="button"
+              onClick={copyInvite}
+              style={{
+                appearance: 'none',
+                border: 0,
+                cursor: 'pointer',
+                marginTop: 8,
+                padding: '8px 14px',
+                borderRadius: 10,
+                fontWeight: 600,
+                fontSize: 13,
+                background: 'var(--accent)',
+                color: '#fff',
+              }}
+            >
+              {inviteCopied ? 'コピーしました ✓' : 'リンクをコピー'}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={createInvite}
+            disabled={inviteBusy}
+            style={{
+              appearance: 'none',
+              border: '1px solid var(--line)',
+              cursor: 'pointer',
+              width: '100%',
+              padding: '10px 16px',
+              borderRadius: 12,
+              fontWeight: 600,
+              fontSize: 14,
+              background: 'var(--surface-2)',
+              color: 'var(--ink)',
+            }}
+          >
+            🤝 見守り合いに誘う
+          </button>
+        )}
+      </div>
 
       <WatchDashboard
         rows={rows}

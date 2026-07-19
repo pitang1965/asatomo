@@ -1,6 +1,10 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { z } from 'zod';
+import {
+  getInvitationPreview,
+  type InvitationInvalidReason,
+} from '../domain/invitations';
 import { listMessages } from '../domain/messages';
 import { DEFAULT_DOMAIN_CONFIG } from '../domain/monitoring';
 import {
@@ -82,6 +86,40 @@ export const fetchDeathConfirm = createServerFn({ method: 'GET' })
     );
     if (!info) return { status: 'forbidden' };
     return { status: 'ok', info };
+  });
+
+/**
+ * 招待の承諾ランディング（/join/$token）の材料。未ログインでも招待者名を見せたいので
+ * セッションは任意（signedIn で分岐）。実際の承諾は /api/invitations/accept（要認証）。
+ */
+export type InvitePreviewData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'invalid'; reason: InvitationInvalidReason }
+  | { status: 'ok'; inviterName: string; signedIn: boolean; isSelf: boolean };
+
+export const fetchInvitePreview = createServerFn({ method: 'GET' })
+  .validator(z.object({ token: z.string().min(1) }))
+  .handler(async ({ data }): Promise<InvitePreviewData> => {
+    let app: ReturnType<typeof createRequestApp>;
+    try {
+      app = createRequestApp(getServerEnv());
+    } catch (e) {
+      if (e instanceof ConfigError)
+        return { status: 'unconfigured', message: e.message };
+      throw e;
+    }
+
+    const preview = await getInvitationPreview(app.db, data.token, new Date());
+    if (!preview.valid) return { status: 'invalid', reason: preview.reason };
+
+    const request = getRequest();
+    const session = await app.auth.api.getSession({ headers: request.headers });
+    return {
+      status: 'ok',
+      inviterName: preview.inviterName,
+      signedIn: !!session,
+      isSelf: session?.user.id === preview.inviterUserId,
+    };
   });
 
 /** 最後のメッセージ管理画面（本人側）の材料。暗号材料は不透明なまま返す（復号は端末）。 */

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as DeathSubjectIdRouteImport } from './routes/death.$subjectId'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
@@ -29,6 +30,11 @@ const MessagesRoute = MessagesRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeathSubjectIdRoute = DeathSubjectIdRouteImport.update({
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/preview': typeof PreviewRoute
   '/api/$': typeof ApiSplatRoute
   '/death/$subjectId': typeof DeathSubjectIdRoute
+  '/join/$token': typeof JoinTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/preview': typeof PreviewRoute
   '/api/$': typeof ApiSplatRoute
   '/death/$subjectId': typeof DeathSubjectIdRoute
+  '/join/$token': typeof JoinTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/preview': typeof PreviewRoute
   '/api/$': typeof ApiSplatRoute
   '/death/$subjectId': typeof DeathSubjectIdRoute
+  '/join/$token': typeof JoinTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/api/$'
     | '/death/$subjectId'
+    | '/join/$token'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/api/$'
     | '/death/$subjectId'
+    | '/join/$token'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/preview'
     | '/api/$'
     | '/death/$subjectId'
+    | '/join/$token'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   PreviewRoute: typeof PreviewRoute
   ApiSplatRoute: typeof ApiSplatRoute
   DeathSubjectIdRoute: typeof DeathSubjectIdRoute
+  JoinTokenRoute: typeof JoinTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -129,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/death/$subjectId': {
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreviewRoute: PreviewRoute,
   ApiSplatRoute: ApiSplatRoute,
   DeathSubjectIdRoute: DeathSubjectIdRoute,
+  JoinTokenRoute: JoinTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
