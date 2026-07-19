@@ -5,7 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,8 +25,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.asatomo.app.ui.theme.AsatomoTheme
@@ -99,6 +106,20 @@ private fun LoginStep(
     var error by remember { mutableStateOf<String?>(null) }
 
     OnboardingPage {
+        Box(
+            modifier =
+                Modifier.size(72.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.mipmap.ic_launcher_fg),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Spacer(Modifier.size(16.dp))
         Text("アサトモ", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.size(12.dp))
         Text(
@@ -143,7 +164,19 @@ private fun LoginStep(
 @Composable
 private fun BridgeStep(next: () -> Unit) {
     OnboardingPage {
-        Text("🌅", style = MaterialTheme.typography.displayMedium)
+        Box(
+            modifier =
+                Modifier.size(72.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.mipmap.ic_launcher_fg),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Spacer(Modifier.size(16.dp))
         Text(
             "目覚ましを止めるだけで、\n見守ってくれる人に\n「今日も元気」が伝わります",

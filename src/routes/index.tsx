@@ -100,9 +100,14 @@ function Login() {
   return (
     <div style={page}>
       <div style={card}>
-        <p style={{ fontSize: 26, marginBottom: 4 }} aria-hidden>
-          🌅
-        </p>
+        <img
+          src="/apple-touch-icon.png"
+          alt=""
+          aria-hidden
+          width={56}
+          height={56}
+          style={{ display: 'block', margin: '0 auto 8px', borderRadius: 12 }}
+        />
         <h1 style={{ fontSize: 20, color: 'var(--ink)' }}>
           アサトモ 見守りWeb
         </h1>

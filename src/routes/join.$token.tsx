@@ -129,9 +129,14 @@ function JoinPage() {
   if (done)
     return (
       <Shell>
-        <p style={{ fontSize: 26, marginBottom: 4 }} aria-hidden>
-          🌅
-        </p>
+        <img
+          src="/apple-touch-icon.png"
+          alt=""
+          aria-hidden
+          width={56}
+          height={56}
+          style={{ display: 'block', margin: '0 auto 8px', borderRadius: 12 }}
+        />
         <h1 style={{ fontSize: 18, color: 'var(--ink)' }}>つながりました</h1>
         <p
           style={{
