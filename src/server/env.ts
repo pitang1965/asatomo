@@ -6,7 +6,10 @@ import type { AuthEnv } from '../lib/auth';
  * 未設定はここでは落とさず、使う側（createRequestApp）が明確なエラーにする。
  */
 export interface ServerEnv extends AuthEnv {
-  /** メール送信（Resend 互換）。未設定なら開発用コンソール出力にフォールバック。 */
+  /**
+   * メール送信（MailerSend）。EMAIL_FROM は検証済みドメイン over40web.club 上の
+   * アドレス（例: no-reply@over40web.club）。未設定なら開発用コンソール出力にフォールバック。
+   */
   EMAIL_API_KEY: string;
   EMAIL_FROM: string;
   /** 縮退運転の通報先（cron の operator 通知）。 */

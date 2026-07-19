@@ -11,10 +11,13 @@
     "crons": ["*/15 * * * *"]
   },
   // 非シークレット。シークレット（DATABASE_URL / BETTER_AUTH_SECRET /
-  // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET）は wrangler secret put で登録する。
+  // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / EMAIL_API_KEY / OPERATOR_EMAIL）は
+  // wrangler secret put で登録する。
   // ⚠ DEV_BEARER_SECRET は本番に絶対に設定しない（開発専用バイパス）。
   "vars": {
-    "BETTER_AUTH_URL": "https://asatomo.pitang1965.workers.dev"
+    "BETTER_AUTH_URL": "https://asatomo.pitang1965.workers.dev",
+    // メール差出人（MailerSend 検証済みドメイン over40web.club 上のアドレス）。非機密。
+    "EMAIL_FROM": "no-reply@over40web.club"
   },
   "observability": {
     "enabled": true

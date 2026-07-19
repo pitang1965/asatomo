@@ -4,7 +4,7 @@ import { DEFAULT_DOMAIN_CONFIG } from '../domain/monitoring';
 import { createAuth } from '../lib/auth';
 import { createNotifications } from '../notify/notifier';
 import {
-  createHttpEmailSender,
+  createMailerSendEmailSender,
   type EmailSender,
   type PushSender,
 } from '../notify/senders';
@@ -42,9 +42,10 @@ export function createRequestApp(env: ServerEnv) {
 
   const email =
     env.EMAIL_API_KEY && env.EMAIL_FROM
-      ? createHttpEmailSender({
+      ? createMailerSendEmailSender({
           apiKey: env.EMAIL_API_KEY,
           from: env.EMAIL_FROM,
+          fromName: 'アサトモ',
         })
       : devEmail;
 

@@ -8,6 +8,7 @@ import { createNotifications } from '../src/notify/notifier';
 import {
   createFcmPushSender,
   createHttpEmailSender,
+  createMailerSendEmailSender,
   type EmailMessage,
   type EmailSender,
   type PushMessage,
@@ -207,6 +208,47 @@ describe('送信チャネルのリクエスト組み立て', () => {
       subject: 'S',
       text: 'X',
     });
+  });
+
+  it('メール(MailerSend): from はオブジェクト・to は配列・202で成功', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      // MailerSend は 202 Accepted（本文なし）で成功を返す。
+      return new Response(null, { status: 202 });
+    }) as unknown as typeof fetch;
+
+    const sender = createMailerSendEmailSender({
+      apiKey: 'ms-key',
+      from: 'no-reply@over40web.club',
+      fromName: 'アサトモ',
+      fetchImpl,
+    });
+    await sender.send('to@example.test', { subject: 'S', text: 'X' });
+
+    expect(calls[0]?.url).toBe('https://api.mailersend.com/v1/email');
+    const headers = calls[0]?.init.headers as Record<string, string>;
+    expect(headers.authorization).toBe('Bearer ms-key');
+    const body = JSON.parse(calls[0]?.init.body as string);
+    expect(body).toMatchObject({
+      from: { email: 'no-reply@over40web.club', name: 'アサトモ' },
+      to: [{ email: 'to@example.test' }],
+      subject: 'S',
+      text: 'X',
+    });
+  });
+
+  it('メール(MailerSend): 非2xx は例外', async () => {
+    const fetchImpl = (async () =>
+      new Response('unauthorized', { status: 401 })) as unknown as typeof fetch;
+    const sender = createMailerSendEmailSender({
+      apiKey: 'bad',
+      from: 'no-reply@over40web.club',
+      fetchImpl,
+    });
+    await expect(
+      sender.send('to@example.test', { subject: 'a', text: 'b' }),
+    ).rejects.toThrow(/MailerSend/);
   });
 
   it('FCM: 非2xx は例外', async () => {

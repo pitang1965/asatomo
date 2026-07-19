@@ -94,3 +94,48 @@ export function createHttpEmailSender(config: EmailConfig): EmailSender {
     },
   };
 }
+
+// ─── メール（MailerSend REST。Cloudflare Workers 向き・本番採用） ──────────────
+// なふだと同じ over40web.club 検証済みドメインを使うが、アサトモは自前で直接叩く
+// （ADR-0003: 実行時になふだに依存しない。安全機能の通知を単一障害点にしない）。
+export interface MailerSendConfig {
+  apiKey: string;
+  /** 検証済みドメイン上の送信元アドレス（例: no-reply@over40web.club）。 */
+  from: string;
+  /** 差出人の表示名（例: アサトモ）。省略可。 */
+  fromName?: string;
+  /** 既定は MailerSend。互換APIに差し替え可。 */
+  endpoint?: string;
+  fetchImpl?: typeof fetch;
+}
+
+export function createMailerSendEmailSender(
+  config: MailerSendConfig,
+): EmailSender {
+  const doFetch = config.fetchImpl ?? fetch;
+  const endpoint = config.endpoint ?? 'https://api.mailersend.com/v1/email';
+  return {
+    async send(to, msg) {
+      // MailerSend は from をオブジェクト・to を配列で受ける（Resend の平坦形と異なる）。
+      // 成功は 202 Accepted（res.ok に含まれる）。text のみで可。
+      const res = await doFetch(endpoint, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${config.apiKey}`,
+          'content-type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify({
+          from: {
+            email: config.from,
+            ...(config.fromName ? { name: config.fromName } : {}),
+          },
+          to: [{ email: to }],
+          subject: msg.subject,
+          text: msg.text,
+        }),
+      });
+      if (!res.ok) throw new Error(`MailerSend send failed: ${res.status}`);
+    },
+  };
+}
