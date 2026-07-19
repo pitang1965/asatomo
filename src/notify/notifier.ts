@@ -35,6 +35,12 @@ export interface Notifications extends Notifier {
     subjectUserId: string,
     inviteeUserId: string,
   ): Promise<void>;
+  /** ルート層: 招待リンクが承諾され、相手が見守りに加わったことを招待者へ（ADR-0005）。 */
+  notifyInviteAccepted(
+    inviterUserId: string,
+    accepterUserId: string,
+    mutual: boolean,
+  ): Promise<void>;
 }
 
 export function createNotifications(
@@ -152,6 +158,14 @@ export function createNotifications(
         subject: tag('見守りのお願い'),
         text: `${name}さんが、あなたに見守りをお願いしています。\n${config.webBaseUrl}`,
       });
+    },
+
+    async notifyInviteAccepted(inviterUserId, accepterUserId, mutual) {
+      const name = (await getUserName(db, accepterUserId)) ?? '相手';
+      const body = mutual
+        ? `${name}さんと見守り合いを始めました。`
+        : `${name}さんがあなたの見守りに加わりました。`;
+      await notifySubject(inviterUserId, config.appName, body);
     },
   };
 }

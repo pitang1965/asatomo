@@ -22,6 +22,13 @@
       "when": 1784369157052,
       "tag": "0002_signal-kind-outing-homecoming",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784450415353,
+      "tag": "0003_moaning_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

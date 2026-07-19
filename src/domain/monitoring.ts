@@ -29,6 +29,8 @@ export interface DomainConfig {
   voteFloorHours: number;
   /** 旅行モードの上限日数（本人でも外せない）。既定30。 */
   travelMaxDays?: number;
+  /** 招待リンクの有効期限（日）。既定7（ADR-0005）。 */
+  inviteTtlDays?: number;
   /** テスト用に現在時刻を注入可能。 */
   now?: Date;
 }
@@ -38,6 +40,7 @@ export const DEFAULT_DOMAIN_CONFIG: DomainConfig = {
   stage1to2DelayHours: 12,
   voteFloorHours: 12,
   travelMaxDays: 30,
+  inviteTtlDays: 7,
 };
 
 const HOUR_MS = 3_600_000;

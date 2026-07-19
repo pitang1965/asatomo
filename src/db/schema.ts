@@ -15,6 +15,7 @@
  *   旅行モード(TravelMode)     → subjectSettings.travelUntil
  *   近況/プレゼンス            → signals から算出 / subjectSettings.currentPresence
  *   相互見守り(Mutual)         → 2 本の connections（双方向）
+ *   招待(Invitation)          → invitations（相手未確定の申し出。承諾で connections へ昇格。ADR-0005）
  *
  * 安全に関わる規則は「アプリ層で強制」する（DB制約ではない）:
  *   - クォーラム（見守り者2人以上・過半数）と休眠除外       … ADR-0001
@@ -294,6 +295,37 @@ export const connections = pgTable(
       t.isWatcher,
       t.watcherStatus,
     ),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────────────────
+// 招待（invitations）— 相手が未確定の「開いた申し出」（ADR-0005）
+//   トークン付きリンクで送る。承諾で connections（相互見守りなら2本）へ昇格する。
+//   使い切り（consumedAt）・期限付き（expiresAt）・取消可（revokedAt）。
+//   有効な招待 = consumedAt/revokedAt が null かつ expiresAt が未来。派生状態はアプリ層で判定。
+// ────────────────────────────────────────────────────────────────────────────
+
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    token: text('token').notNull().unique(), // URLセーフ乱数（アプリ生成）
+    inviterUserId: text('inviter_user_id') // 見守り者が欲しい本人（招待者）
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    // 使い切り: 承諾で設定。誰が承諾したかも記録（監査・重複承諾の冪等化）。
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    consumedByUserId: text('consumed_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }), // 招待者の取消
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    inviterIdx: index('invitations_inviter_idx').on(t.inviterUserId),
   }),
 );
 

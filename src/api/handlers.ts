@@ -8,6 +8,11 @@ import {
   setPassphraseHint,
 } from '../domain/connections';
 import {
+  acceptInvitation,
+  createInvitation,
+  revokeInvitation,
+} from '../domain/invitations';
+import {
   createMessage,
   deleteMessage,
   type EncryptedContent,
@@ -243,6 +248,48 @@ export function createHandlers(ctx: ApiContext) {
       );
       if (!r.ok) return { ok: false, status: 404, error: r.reason };
       return { ok: true, data: { disclosureEnabled: r.disclosureEnabled } };
+    },
+
+    // ── 招待（本人。ADR-0005） ──
+    async createInvitation(
+      actor: string,
+    ): Promise<ApiResult<{ token: string; expiresAt: Date }>> {
+      const r = await createInvitation(db, { inviterUserId: actor }, config);
+      return { ok: true, data: r };
+    },
+
+    async acceptInvitation(
+      actor: string,
+      input: { token: string; mutual: boolean },
+    ): Promise<ApiResult<{ mutual: boolean }>> {
+      const r = await acceptInvitation(
+        db,
+        { token: input.token, accepterUserId: actor, mutual: input.mutual },
+        config,
+      );
+      if (!r.ok) {
+        const status =
+          r.reason === 'self' ? 400 : r.reason === 'not_found' ? 404 : 409;
+        return { ok: false, status, error: r.reason };
+      }
+      // 招待者へ「見守りに加わりました」（黙って増えない透明性）。
+      await safe(() =>
+        notify.notifyInviteAccepted(r.inviterUserId, actor, r.mutual),
+      );
+      return { ok: true, data: { mutual: r.mutual } };
+    },
+
+    async revokeInvitation(
+      actor: string,
+      input: { token: string },
+    ): Promise<ApiResult<Record<string, never>>> {
+      const r = await revokeInvitation(
+        db,
+        { inviterUserId: actor, token: input.token },
+        config,
+      );
+      if (!r.ok) return { ok: false, status: 404, error: r.reason ?? 'error' };
+      return { ok: true, data: {} };
     },
 
     async addContact(

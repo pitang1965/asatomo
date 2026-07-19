@@ -51,6 +51,9 @@ export const SCHEMAS: Record<keyof Handlers, z.ZodType> = {
     displayName: z.string().optional(),
   }),
   revokeWatcher: z.object({ connectionId: id }),
+  createInvitation: z.object({}),
+  acceptInvitation: z.object({ token: id, mutual: z.boolean() }),
+  revokeInvitation: z.object({ token: id }),
   addContact: z.object({
     displayName: z.string().min(1),
     email: z.string().optional(),

@@ -13,25 +13,37 @@ import { type DomainConfig, recomputeDisclosureEnabled } from './monitoring';
  * なふだからの「昇格」も、この inviteWatcher → respondToWatchInvite の明示同意を通す（ADR-0003）。
  */
 
-// ─── 見守り者の招待（isWatcher=true, pending） ──────────────────────────────
-export async function inviteWatcher(
+// ─── 見守りエッジの作成/昇格（共通） ────────────────────────────────────────
+/**
+ * 見守りエッジ（isWatcher=true）を作る/昇格する共通処理。
+ *   - inviteWatcher: status='pending'（相手の承諾待ち）
+ *   - 招待リンクの承諾: status='accepted'（承諾者が今まさに同意。ADR-0005）
+ * 既に accepted の見守り者なら no-op（冪等）。displayName 未指定なら相手の user.name を使う。
+ * accepted で作る時は watcherLastSeenAt/respondedAt を now にする（休眠判定・定足数の起点）。
+ */
+export async function upsertWatcherConnection(
   db: Db,
-  input: { subjectUserId: string; watcherUserId: string; displayName?: string },
-  config: DomainConfig,
+  subjectUserId: string,
+  watcherUserId: string,
+  opts: { status: 'pending' | 'accepted'; displayName?: string; now: Date },
 ): Promise<
-  | { ok: false; reason: 'self' | 'user_not_found' }
-  | { ok: true; connectionId: string; status: 'pending' | 'accepted' }
+  | { ok: false; reason: 'user_not_found' }
+  | {
+      ok: true;
+      connectionId: string;
+      status: 'pending' | 'accepted';
+      alreadyAccepted: boolean;
+    }
 > {
-  const now = config.now ?? new Date();
-  if (input.subjectUserId === input.watcherUserId)
-    return { ok: false, reason: 'self' };
+  const { now } = opts;
+  const accepted = opts.status === 'accepted';
 
-  let displayName = input.displayName;
+  let displayName = opts.displayName;
   if (!displayName) {
     const [u] = await db
       .select({ name: user.name })
       .from(user)
-      .where(eq(user.id, input.watcherUserId))
+      .where(eq(user.id, watcherUserId))
       .limit(1);
     if (!u) return { ok: false, reason: 'user_not_found' };
     displayName = u.name;
@@ -46,41 +58,81 @@ export async function inviteWatcher(
     .from(connections)
     .where(
       and(
-        eq(connections.subjectUserId, input.subjectUserId),
-        eq(connections.otherUserId, input.watcherUserId),
+        eq(connections.subjectUserId, subjectUserId),
+        eq(connections.otherUserId, watcherUserId),
       ),
     )
     .limit(1);
 
   if (existing) {
-    // 既に承諾済みの見守り者なら再招待は無効。
+    // 既に承諾済みの見守り者なら no-op（冪等）。
     if (existing.isWatcher && existing.status === 'accepted')
-      return { ok: true, connectionId: existing.id, status: 'accepted' };
-    // 純粋な受取人だった相手を見守り者へ昇格（isWatcher を立てて pending）。
+      return {
+        ok: true,
+        connectionId: existing.id,
+        status: 'accepted',
+        alreadyAccepted: true,
+      };
+    // pending/declined/revoked or 純粋な受取人 → 見守り者へ昇格。
     await db
       .update(connections)
       .set({
         isWatcher: true,
-        watcherStatus: 'pending',
+        watcherStatus: opts.status,
         invitedAt: now,
+        ...(accepted ? { respondedAt: now, watcherLastSeenAt: now } : {}),
         updatedAt: now,
       })
       .where(eq(connections.id, existing.id));
-    return { ok: true, connectionId: existing.id, status: 'pending' };
+    return {
+      ok: true,
+      connectionId: existing.id,
+      status: opts.status,
+      alreadyAccepted: false,
+    };
   }
 
   const [row] = await db
     .insert(connections)
     .values({
-      subjectUserId: input.subjectUserId,
-      otherUserId: input.watcherUserId,
+      subjectUserId,
+      otherUserId: watcherUserId,
       displayName,
       isWatcher: true,
-      watcherStatus: 'pending',
+      watcherStatus: opts.status,
       invitedAt: now,
+      ...(accepted ? { respondedAt: now, watcherLastSeenAt: now } : {}),
     })
     .returning({ id: connections.id });
-  return { ok: true, connectionId: row.id, status: 'pending' };
+  return {
+    ok: true,
+    connectionId: row.id,
+    status: opts.status,
+    alreadyAccepted: false,
+  };
+}
+
+// ─── 見守り者の招待（isWatcher=true, pending） ──────────────────────────────
+export async function inviteWatcher(
+  db: Db,
+  input: { subjectUserId: string; watcherUserId: string; displayName?: string },
+  config: DomainConfig,
+): Promise<
+  | { ok: false; reason: 'self' | 'user_not_found' }
+  | { ok: true; connectionId: string; status: 'pending' | 'accepted' }
+> {
+  const now = config.now ?? new Date();
+  if (input.subjectUserId === input.watcherUserId)
+    return { ok: false, reason: 'self' };
+
+  const r = await upsertWatcherConnection(
+    db,
+    input.subjectUserId,
+    input.watcherUserId,
+    { status: 'pending', displayName: input.displayName, now },
+  );
+  if (!r.ok) return { ok: false, reason: r.reason };
+  return { ok: true, connectionId: r.connectionId, status: r.status };
 }
 
 // ─── 招待への応答（承諾/辞退） ──────────────────────────────────────────────

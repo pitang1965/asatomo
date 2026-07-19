@@ -5,9 +5,15 @@ import { devActorFromHeader } from '../src/api/session';
 import type { Db } from '../src/db';
 import { DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
 import type { Notifications } from '../src/notify/notifier';
-import { makeTestDb, seedSubject } from './helpers';
+import { makeTestDb, seedSubject, seedUser } from './helpers';
 
 const NOW = new Date('2026-07-14T12:00:00Z');
+
+const inviteAcceptedCalls: {
+  inviter: string;
+  accepter: string;
+  mutual: boolean;
+}[] = [];
 
 const notify = {
   async notifySubjectUnresponsive() {},
@@ -17,12 +23,16 @@ const notify = {
   async notifyWatchers() {},
   async notifySubjectDisclosureLocked() {},
   async notifyWatchInvite() {},
+  async notifyInviteAccepted(inviter, accepter, mutual) {
+    inviteAcceptedCalls.push({ inviter, accepter, mutual });
+  },
 } satisfies Notifications;
 
 let db: Db;
 let handlers: ReturnType<typeof createHandlers>;
 beforeEach(async () => {
   db = await makeTestDb();
+  inviteAcceptedCalls.length = 0;
   handlers = createHandlers({
     db,
     notify,
@@ -77,6 +87,65 @@ describe('router dispatch（検証・認可・写像）', () => {
     const s = await seedSubject(db, { state: 'normal' });
     const res = await dispatch(handlers, 'POST', '/disclosure/cancel', s, {});
     expect(res.status).toBe(409);
+  });
+});
+
+describe('招待ルート（ADR-0005）', () => {
+  it('作成→承諾が結線され、招待者へ通知が飛ぶ', async () => {
+    const inviter = await seedSubject(db);
+    const accepter = await seedUser(db, 'accepter');
+
+    const created = await dispatch(
+      handlers,
+      'POST',
+      '/invitations',
+      inviter,
+      {},
+    );
+    expect(created.status).toBe(200);
+    const { token } = (await created.json()) as { token: string };
+    expect(token.length).toBeGreaterThan(10);
+
+    const accepted = await dispatch(
+      handlers,
+      'POST',
+      '/invitations/accept',
+      accepter,
+      { token, mutual: true },
+    );
+    expect(accepted.status).toBe(200);
+    expect(inviteAcceptedCalls).toEqual([{ inviter, accepter, mutual: true }]);
+  });
+
+  it('存在しないトークンの承諾は404、使用済みは409', async () => {
+    const inviter = await seedSubject(db);
+    const a1 = await seedUser(db, 'a1');
+    const a2 = await seedUser(db, 'a2');
+
+    const nf = await dispatch(handlers, 'POST', '/invitations/accept', a1, {
+      token: 'ghost',
+      mutual: false,
+    });
+    expect(nf.status).toBe(404);
+
+    const created = await dispatch(
+      handlers,
+      'POST',
+      '/invitations',
+      inviter,
+      {},
+    );
+    const { token } = (await created.json()) as { token: string };
+    await dispatch(handlers, 'POST', '/invitations/accept', a1, {
+      token,
+      mutual: false,
+    });
+    // 使い切り: 二人目は409
+    const again = await dispatch(handlers, 'POST', '/invitations/accept', a2, {
+      token,
+      mutual: false,
+    });
+    expect(again.status).toBe(409);
   });
 });
 
