@@ -39,6 +39,8 @@ async function main() {
     .select({
       lastSignalAt: subjectSettings.lastSignalAt,
       state: subjectSettings.state,
+      travelUntil: subjectSettings.travelUntil,
+      travelStartedAt: subjectSettings.travelStartedAt,
     })
     .from(subjectSettings)
     .where(eq(subjectSettings.userId, subject))
@@ -47,9 +49,15 @@ async function main() {
   const fmt = (d: Date | null) =>
     d ? d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '—';
 
+  const now = Date.now();
+  const travelActive = !!s?.travelUntil && s.travelUntil.getTime() > now;
+
   console.log(`subject=${subject}`);
   console.log(
     `state=${s?.state}  lastSignalAt=${fmt(s?.lastSignalAt ?? null)}`,
+  );
+  console.log(
+    `旅行モード=${travelActive ? '有効' : '無効'}  travelUntil=${fmt(s?.travelUntil ?? null)}  開始=${fmt(s?.travelStartedAt ?? null)}`,
   );
   console.log('直近シグナル（新しい順）:');
   for (const r of rows) {

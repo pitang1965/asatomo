@@ -57,38 +57,77 @@ object ApiClient {
             Result.failure(last ?: IllegalStateException("unreachable"))
         }
 
+    /**
+     * 旅行モードを設定する。until は端末側で決めた復帰時刻（この時刻を過ぎたら見守り自動再開）。
+     * サーバーが上限日数（既定30日）を強制し、超過は 400 で PermanentFailure。
+     */
+    suspend fun setTravel(settings: Settings, untilMs: Long): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                request(
+                    settings,
+                    "POST",
+                    "/api/travel",
+                    JSONObject().put("until", Instant.ofEpochMilli(untilMs).toString()).toString(),
+                )
+                Unit
+            }
+        }
+
+    /** 旅行モードを解除して見守りを即再開する。 */
+    suspend fun clearTravel(settings: Settings): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                request(settings, "DELETE", "/api/travel", null)
+                Unit
+            }
+        }
+
     private fun postOnce(
         settings: Settings,
         kind: SignalKind,
         occurredAtMs: Long?,
     ): String {
-        val url = URL("${settings.baseUrl.trimEnd('/')}/api/signals")
+        val body =
+            JSONObject()
+                .put("kind", kind.wire)
+                .apply {
+                    if (occurredAtMs != null) {
+                        put("occurredAt", Instant.ofEpochMilli(occurredAtMs).toString())
+                    }
+                }
+                .toString()
+        return request(settings, "POST", "/api/signals", body)
+    }
+
+    /** 本ログイン済みならセッショントークン、なければ開発Bearer（実験用の後方互換）。 */
+    private fun authHeader(settings: Settings): String =
+        if (settings.sessionToken.isNotEmpty()) {
+            "Bearer ${settings.sessionToken}"
+        } else {
+            "Bearer ${settings.devSecret}:${settings.userId}"
+        }
+
+    /** 認証付き JSON リクエストの共通処理。非2xx は失敗種別に写して投げる。body=null は本文なし。 */
+    private fun request(
+        settings: Settings,
+        method: String,
+        path: String,
+        body: String?,
+    ): String {
+        val url = URL("${settings.baseUrl.trimEnd('/')}$path")
         val conn = url.openConnection() as HttpURLConnection
         try {
-            conn.requestMethod = "POST"
+            conn.requestMethod = method
             conn.connectTimeout = 5000
             conn.readTimeout = 10000
-            conn.doOutput = true
-            conn.setRequestProperty("content-type", "application/json")
             conn.setRequestProperty("connection", "close")
-            // 本ログイン済みならセッショントークン、なければ開発Bearer（実験用の後方互換）。
-            val auth =
-                if (settings.sessionToken.isNotEmpty()) {
-                    "Bearer ${settings.sessionToken}"
-                } else {
-                    "Bearer ${settings.devSecret}:${settings.userId}"
-                }
-            conn.setRequestProperty("authorization", auth)
-            val body =
-                JSONObject()
-                    .put("kind", kind.wire)
-                    .apply {
-                        if (occurredAtMs != null) {
-                            put("occurredAt", Instant.ofEpochMilli(occurredAtMs).toString())
-                        }
-                    }
-                    .toString()
-            conn.outputStream.use { it.write(body.toByteArray()) }
+            conn.setRequestProperty("authorization", authHeader(settings))
+            if (body != null) {
+                conn.doOutput = true
+                conn.setRequestProperty("content-type", "application/json")
+                conn.outputStream.use { it.write(body.toByteArray()) }
+            }
 
             val code = conn.responseCode
             val text =

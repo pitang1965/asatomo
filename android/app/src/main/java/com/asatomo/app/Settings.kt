@@ -57,4 +57,17 @@ class Settings(context: Context) {
     var lastAppOpenSentAtMs: Long
         get() = prefs.getLong("lastAppOpenSentAtMs", 0L)
         set(v) = prefs.edit().putLong("lastAppOpenSentAtMs", v).apply()
+
+    /**
+     * 旅行モードの期限（epoch ms、0 = 未設定）。サーバー（subjectSettings.travelUntil）が
+     * 監視抑制・自動復帰の真実源。ここは直近に本人が設定した値の端末側キャッシュで、表示用。
+     * 期限を過ぎたら自動で見守り再開なので、now を超えたら「旅行モードではない」と扱う。
+     */
+    var travelUntilMs: Long
+        get() = prefs.getLong("travelUntilMs", 0L)
+        set(v) = prefs.edit().putLong("travelUntilMs", v).apply()
+
+    /** 端末時計基準で現在も旅行モードが有効か（期限切れは自動復帰扱い）。 */
+    val isTravelActive: Boolean
+        get() = travelUntilMs > System.currentTimeMillis()
 }

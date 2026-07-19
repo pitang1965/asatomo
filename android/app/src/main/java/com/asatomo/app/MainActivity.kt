@@ -1,6 +1,7 @@
 package com.asatomo.app
 
 import android.Manifest
+import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Build
@@ -29,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +40,7 @@ import androidx.work.WorkManager
 import com.asatomo.app.ui.theme.AsatomoTheme
 import java.util.Calendar
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 /**
  * メイン画面。
@@ -89,6 +92,12 @@ class MainActivity : ComponentActivity() {
 private fun MainScreen() {
     val context = LocalContext.current
     val settings = remember { Settings(context) }
+    val scope = rememberCoroutineScope()
+
+    // 旅行モード（サーバーが真実源。ここは端末側キャッシュのミラーで表示用）。
+    var travelUntilMs by remember { mutableStateOf(settings.travelUntilMs) }
+    var travelBusy by remember { mutableStateOf(false) }
+    var travelMsg by remember { mutableStateOf("") }
 
     var baseUrl by remember { mutableStateOf(settings.baseUrl) }
     var devSecret by remember { mutableStateOf(settings.devSecret) }
@@ -132,6 +141,70 @@ private fun MainScreen() {
         saveSettings()
         trackedLabel = label
         trackedWork = SignalQueue.enqueue(context, kind)
+    }
+
+    fun formatMd(ms: Long): String {
+        val c = Calendar.getInstance().apply { timeInMillis = ms }
+        return "${c.get(Calendar.MONTH) + 1}/${c.get(Calendar.DAY_OF_MONTH)}"
+    }
+
+    fun enterTravel() {
+        saveSettings()
+        // 初期表示・最小は「明日」、上限はサーバーの travelMaxDays（30日）に合わせる。
+        val tomorrow = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
+        val dlg =
+            DatePickerDialog(
+                context,
+                { _, y, m, d ->
+                    // 復帰日の終わり（23:59）まで留守扱い。この時刻を過ぎたら見守り自動再開。
+                    val until =
+                        Calendar.getInstance().apply {
+                            set(y, m, d, 23, 59, 59)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                    travelBusy = true
+                    travelMsg = ""
+                    scope.launch {
+                        ApiClient.setTravel(settings, until)
+                            .fold(
+                                onSuccess = {
+                                    settings.travelUntilMs = until
+                                    travelUntilMs = until
+                                    travelMsg = "旅行モードにしました（${formatMd(until)} まで）"
+                                },
+                                onFailure = {
+                                    travelMsg = "設定できませんでした。期間が長すぎないか確認してください。"
+                                },
+                            )
+                        travelBusy = false
+                    }
+                },
+                tomorrow.get(Calendar.YEAR),
+                tomorrow.get(Calendar.MONTH),
+                tomorrow.get(Calendar.DAY_OF_MONTH),
+            )
+        val dayMs = 24L * 60 * 60 * 1000
+        dlg.datePicker.minDate = System.currentTimeMillis() + dayMs
+        // 29日後まで。選択日の 23:59 でも常にサーバー上限（now + 30日）内に収まる（弾かれ防止）。
+        dlg.datePicker.maxDate = System.currentTimeMillis() + 29 * dayMs
+        dlg.show()
+    }
+
+    fun exitTravel() {
+        travelBusy = true
+        travelMsg = ""
+        scope.launch {
+            ApiClient.clearTravel(settings)
+                .fold(
+                    onSuccess = {
+                        settings.travelUntilMs = 0L
+                        travelUntilMs = 0L
+                        travelMsg = "旅行モードを解除しました。見守りを再開します。"
+                    },
+                    onFailure = { travelMsg = "解除できませんでした。時間をおいてお試しください。" },
+                )
+            travelBusy = false
+        }
     }
 
     Column(
@@ -200,6 +273,30 @@ private fun MainScreen() {
         if (status.isNotEmpty()) {
             Spacer(Modifier.size(4.dp))
             Text(status, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        Spacer(Modifier.size(12.dp))
+        Text("旅行モード", style = MaterialTheme.typography.titleMedium)
+        val travelActive = travelUntilMs > System.currentTimeMillis()
+        if (travelActive) {
+            Text(
+                "見守りをお休み中です（${formatMd(travelUntilMs)} まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            OutlinedButton(onClick = { exitTravel() }, enabled = !travelBusy) {
+                Text("旅行モードを解除する")
+            }
+        } else {
+            Text(
+                "留守や生活リズムの変化で誤って通知が飛ばないよう、見守りを一時お休みします。期限が来たら自動で再開します（最長30日）。",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Button(onClick = { enterTravel() }, enabled = !travelBusy) {
+                Text("旅行モードにする")
+            }
+        }
+        if (travelMsg.isNotEmpty()) {
+            Text(travelMsg, style = MaterialTheme.typography.bodyMedium)
         }
 
         Spacer(Modifier.size(12.dp))
