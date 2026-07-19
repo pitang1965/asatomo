@@ -95,9 +95,10 @@ export function createHttpEmailSender(config: EmailConfig): EmailSender {
   };
 }
 
-// ─── メール（MailerSend REST。Cloudflare Workers 向き・本番採用） ──────────────
-// なふだと同じ over40web.club 検証済みドメインを使うが、アサトモは自前で直接叩く
-// （ADR-0003: 実行時になふだに依存しない。安全機能の通知を単一障害点にしない）。
+// ─── メール（MailerSend REST。Cloudflare Workers 向き） ───────────────────────
+// 予備の sender。現状の本番は Resend（createHttpEmailSender）を採用（MailerSend Free は
+// APIトークンを発行できないため）。MailerSend を Starter 以上にするなら再配線して使える。
+// いずれも over40web.club 検証済みドメインから自前で直接送る（ADR-0003: なふだ非依存）。
 export interface MailerSendConfig {
   apiKey: string;
   /** 検証済みドメイン上の送信元アドレス（例: no-reply@over40web.club）。 */

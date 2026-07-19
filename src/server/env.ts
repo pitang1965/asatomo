@@ -7,8 +7,9 @@ import type { AuthEnv } from '../lib/auth';
  */
 export interface ServerEnv extends AuthEnv {
   /**
-   * メール送信（MailerSend）。EMAIL_FROM は検証済みドメイン over40web.club 上の
-   * アドレス（例: no-reply@over40web.club）。未設定なら開発用コンソール出力にフォールバック。
+   * メール送信（Resend）。EMAIL_FROM は検証済みドメイン over40web.club 上のアドレス
+   * （例: no-reply@over40web.club）。表示名「アサトモ」は配線側で付す。
+   * 未設定なら開発用コンソール出力にフォールバック。
    */
   EMAIL_API_KEY: string;
   EMAIL_FROM: string;

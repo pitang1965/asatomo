@@ -1,17 +1,18 @@
 import { readFileSync } from 'node:fs';
-import { createMailerSendEmailSender } from '../src/notify/senders';
+import { createHttpEmailSender } from '../src/notify/senders';
 
 /**
- * 通知メール（MailerSend）配線のワンショット確認。
+ * 通知メール（Resend）配線のワンショット確認。
  * デプロイ前に「本物が届くか」だけを最短で検証する（DB もサーバーも通さない）。
  *
  * 実行:
- *   EMAIL_API_KEY=mlsn.xxx npx tsx scripts/dev-send-test.ts you@example.com
+ *   EMAIL_API_KEY=re_xxx npx tsx scripts/dev-send-test.ts you@example.com
  *   （または .env に EMAIL_API_KEY / EMAIL_FROM を置いて）
  *   npx tsx scripts/dev-send-test.ts you@example.com
  *
- * ⚠ 使うのは MailerSend の "Production API" トークン（tns-web と共用）。
- *    確認後、.env に一時的に置いた場合はコミットしないこと（.env は .gitignore 済み）。
+ * ⚠ ドメイン未検証の Resend では、宛先はアカウント所有者のメールに限られる。
+ *    over40web.club を検証すれば任意の相手へ送れる。
+ *    .env に一時的に置いた場合はコミットしないこと（.env は .gitignore 済み）。
  */
 
 // .env の簡易読み込み（他の dev スクリプトと同じ方式）。
@@ -45,20 +46,16 @@ async function main() {
     );
   }
 
-  const sender = createMailerSendEmailSender({
-    apiKey,
-    from,
-    fromName: 'アサトモ',
-  });
+  const sender = createHttpEmailSender({ apiKey, from: `アサトモ <${from}>` });
   await sender.send(to, {
     subject: '[アサトモ] 通知テスト',
     text: [
-      'これは MailerSend 配線のテスト送信です。',
+      'これは Resend 配線のテスト送信です。',
       'このメールが届いていれば、本番の見守り通知（エスカレーション・開示）が',
       '実際に相手へ届く状態になっています。',
     ].join('\n'),
   });
-  console.log(`送信しました（202受理）: ${from} → ${to}`);
+  console.log(`送信しました: アサトモ <${from}> → ${to}`);
 }
 
 main().then(() => process.exit(0));

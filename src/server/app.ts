@@ -4,7 +4,7 @@ import { DEFAULT_DOMAIN_CONFIG } from '../domain/monitoring';
 import { createAuth } from '../lib/auth';
 import { createNotifications } from '../notify/notifier';
 import {
-  createMailerSendEmailSender,
+  createHttpEmailSender,
   type EmailSender,
   type PushSender,
 } from '../notify/senders';
@@ -42,10 +42,10 @@ export function createRequestApp(env: ServerEnv) {
 
   const email =
     env.EMAIL_API_KEY && env.EMAIL_FROM
-      ? createMailerSendEmailSender({
+      ? createHttpEmailSender({
           apiKey: env.EMAIL_API_KEY,
-          from: env.EMAIL_FROM,
-          fromName: 'アサトモ',
+          // Resend は from に表示名を含められる（受信者には「アサトモ」名義で届く）。
+          from: `アサトモ <${env.EMAIL_FROM}>`,
         })
       : devEmail;
 
