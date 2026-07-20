@@ -33,7 +33,11 @@ import {
   setTravelMode,
   withdrawVote,
 } from '../domain/monitoring';
-import { getWatcherOverview, type OverviewRow } from '../domain/queries';
+import {
+  getWatcherOverview,
+  hasAcceptedWatcher,
+  type OverviewRow,
+} from '../domain/queries';
 import { type ApiContext, type ApiResult, safe } from './context';
 
 /**
@@ -54,7 +58,13 @@ export function createHandlers(ctx: ApiContext) {
     async signal(
       actor: string,
       input: { kind: SignalKind; occurredAt?: Date; source?: 'app' | 'web' },
-    ): Promise<ApiResult<{ cancelledEpisode: boolean; stale: boolean }>> {
+    ): Promise<
+      ApiResult<{
+        cancelledEpisode: boolean;
+        stale: boolean;
+        youAreWatched: boolean;
+      }>
+    > {
       const r = await recordSignal(
         db,
         {
@@ -65,9 +75,14 @@ export function createHandlers(ctx: ApiContext) {
         },
         config,
       );
+      // アプリのコピー分岐用（見守り者ゼロ時に「伝わります」と言わない）。送信のたびに最新化。
       return {
         ok: true,
-        data: { cancelledEpisode: r.cancelledEpisode, stale: r.stale },
+        data: {
+          cancelledEpisode: r.cancelledEpisode,
+          stale: r.stale,
+          youAreWatched: await hasAcceptedWatcher(db, actor),
+        },
       };
     },
 
@@ -112,10 +127,14 @@ export function createHandlers(ctx: ApiContext) {
     /** 見守り対象の整形済み一覧。表示文はサーバー側で確定し、クライアントは表示するだけ。 */
     async watchOverview(
       actor: string,
-    ): Promise<ApiResult<{ subjects: OverviewRow[] }>> {
+    ): Promise<ApiResult<{ subjects: OverviewRow[]; youAreWatched: boolean }>> {
+      // youAreWatched はアプリの本人コピー分岐用（見守り対象一覧とは別軸）。
       return {
         ok: true,
-        data: { subjects: await getWatcherOverview(db, actor, config) },
+        data: {
+          subjects: await getWatcherOverview(db, actor, config),
+          youAreWatched: await hasAcceptedWatcher(db, actor),
+        },
       };
     },
 

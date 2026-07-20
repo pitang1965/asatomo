@@ -55,13 +55,39 @@ const content = {
 describe('本人アクション', () => {
   it('signal: 進行中エピソードをキャンセル', async () => {
     const s = await seedSubject(db, { state: 'voting' });
+    await seedWatcher(db, s);
     await seedCertification(db, s, { stage: 'voting' });
     const { handlers } = makeCtx();
     const r = await handlers.signal(s, { kind: 'meal' });
     expect(r).toEqual({
       ok: true,
-      data: { cancelledEpisode: true, stale: false },
+      data: { cancelledEpisode: true, stale: false, youAreWatched: true },
     });
+  });
+
+  it('signal: youAreWatched は承諾済み見守り者の有無を返す', async () => {
+    const { handlers } = makeCtx();
+    // 見守り者あり: true。
+    const watched = await seedSubject(db);
+    await seedWatcher(db, watched);
+    const a = await handlers.signal(watched, { kind: 'app_open' });
+    expect(a.ok && a.data.youAreWatched).toBe(true);
+    // 見守り者なし（監視行はあるが承諾済み見守り者ゼロ）: false。
+    const lonely = await seedSubject(db);
+    const b = await handlers.signal(lonely, { kind: 'app_open' });
+    expect(b.ok && b.data.youAreWatched).toBe(false);
+  });
+
+  it('watchOverview: youAreWatched を含む', async () => {
+    const { handlers } = makeCtx();
+    const watched = await seedSubject(db);
+    await seedWatcher(db, watched);
+    const r1 = await handlers.watchOverview(watched);
+    expect(r1.ok && r1.data.youAreWatched).toBe(true);
+
+    const lonely = await seedSubject(db);
+    const r2 = await handlers.watchOverview(lonely);
+    expect(r2.ok && r2.data.youAreWatched).toBe(false);
   });
 
   it('travel: 有効な期間はOK、上限超過は400', async () => {
