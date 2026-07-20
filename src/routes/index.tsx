@@ -30,6 +30,7 @@ function reviveRows(rows: DashboardRow[]): DashboardRow[] {
     travelUntil: d(r.travelUntil),
     lastSignalAt: d(r.lastSignalAt),
     latestAt: d(r.latestAt),
+    appLoggedOutAt: d(r.appLoggedOutAt),
   }));
 }
 

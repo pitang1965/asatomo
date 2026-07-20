@@ -69,6 +69,11 @@ function SubjectCard({ row, now }: { row: DashboardRow; now: Date }) {
       <div className="card__who">
         <div className="card__name">{row.name}</div>
         <div className="card__status">{statusText}</div>
+        {row.appLoggedOutAt ? (
+          <div className="card__note">
+            スマホアプリからログアウトしています（「元気」が届かない状態です）
+          </div>
+        ) : null}
       </div>
       <StatusPill row={row} now={now} />
     </div>
@@ -97,7 +102,9 @@ function AlertCard({
           {hours != null ? `、${hours}時間` : ''} 応答がありません
         </p>
         <p className="alert__body">
-          急かすものではありません。まずは一声かけてみてください。
+          {row.appLoggedOutAt
+            ? 'アプリからログアウトしているため「元気」は届きません。まずは一声かけてみてください。'
+            : '急かすものではありません。まずは一声かけてみてください。'}
         </p>
         <div className="alert__acts">
           <button

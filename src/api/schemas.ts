@@ -40,6 +40,7 @@ export const SCHEMAS: Record<keyof Handlers, z.ZodType> = {
   }),
   setTravel: z.object({ until: z.coerce.date() }),
   clearTravel: z.object({}),
+  appLogout: z.object({}),
   cancelDisclosure: z.object({}),
   vote: z.object({ subjectUserId: id }),
   withdrawVote: z.object({ subjectUserId: id }),

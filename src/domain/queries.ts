@@ -28,6 +28,8 @@ export interface DashboardRow {
   lastSignalAt: Date | null;
   latestKind: SignalKind | null;
   latestAt: Date | null;
+  /** 本人アプリからログアウト中（null 以外）。沈黙の説明として表示する。監視は継続。 */
+  appLoggedOutAt: Date | null;
   /** normal 以外＝要確認（エスカレーション中）。 */
   isAlert: boolean;
 }
@@ -48,6 +50,7 @@ export async function getWatcherDashboard(
       travelUntil: subjectSettings.travelUntil,
       currentPresence: subjectSettings.currentPresence,
       lastSignalAt: subjectSettings.lastSignalAt,
+      appLoggedOutAt: subjectSettings.appLoggedOutAt,
     })
     .from(connections)
     .innerJoin(user, eq(connections.subjectUserId, user.id))

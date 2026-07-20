@@ -108,6 +108,8 @@ export async function recordSignal(
   // last_signal_at は前進のみ（古いオフラインキュー分が新しい値を巻き戻さないよう greatest）。
   // stale でも前進はさせる（発生時点の真実の記録）。T1 判定は lastSignalAt 基準なので、
   // これだけで「段階の再評価」は自然に済む（窓内に戻るなら下の fresh 経路が normal 化する）。
+  // アプリ発のシグナル（web_checkin 以外）は「ログインし直して使っている」証拠なので
+  // appLoggedOutAt をクリアする（ログアウト表示の解除）。
   await db
     .update(subjectSettings)
     .set({
@@ -115,6 +117,7 @@ export async function recordSignal(
       ...(presence && !stale
         ? { currentPresence: presence, presenceSince: now }
         : {}),
+      ...(input.kind !== 'web_checkin' ? { appLoggedOutAt: null } : {}),
       updatedAt: now,
     })
     .where(eq(subjectSettings.userId, input.subjectUserId));
@@ -388,6 +391,30 @@ export async function clearTravelMode(
     .update(subjectSettings)
     .set({ travelUntil: null, travelStartedAt: null, updatedAt: now })
     .where(eq(subjectSettings.userId, subjectUserId));
+  return { ok: true };
+}
+
+// ─── 本人アプリからのログアウト記録 ─────────────────────────────────────────
+/**
+ * 「アプリからログアウトした」事実を記録する（端末からのベストエフォート通知）。
+ * ログアウトは期限のない沈黙を作るため、見守り者へ状態として可視化する（沈黙より通知）。
+ * 監視・エスカレーションは一切抑制しない（期限なしの盲点を作らない）。
+ * 解除はアプリ発シグナルの受信時（recordSignal）。
+ */
+export async function recordAppLogout(
+  db: Db,
+  subjectUserId: string,
+  config: DomainConfig,
+): Promise<{ ok: true }> {
+  const now = config.now ?? new Date();
+  // 一度もシグナルを送っていない本人でも記録できるよう upsert。
+  await db
+    .insert(subjectSettings)
+    .values({ userId: subjectUserId, appLoggedOutAt: now })
+    .onConflictDoUpdate({
+      target: subjectSettings.userId,
+      set: { appLoggedOutAt: now, updatedAt: now },
+    });
   return { ok: true };
 }
 

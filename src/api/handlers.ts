@@ -27,6 +27,7 @@ import {
   castVote,
   clearTravelMode,
   raiseConcern,
+  recordAppLogout,
   recordSignal,
   type SignalKind,
   setTravelMode,
@@ -85,6 +86,15 @@ export function createHandlers(ctx: ApiContext) {
       actor: string,
     ): Promise<ApiResult<Record<string, never>>> {
       await clearTravelMode(db, actor, config);
+      return { ok: true, data: {} };
+    },
+
+    /**
+     * 本人アプリからのログアウト記録（セッション破棄自体は Better Auth の sign-out）。
+     * 見守り者への状態可視化のみで、監視は抑制しない。
+     */
+    async appLogout(actor: string): Promise<ApiResult<Record<string, never>>> {
+      await recordAppLogout(db, actor, config);
       return { ok: true, data: {} };
     },
 

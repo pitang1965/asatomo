@@ -28,6 +28,7 @@ const rows: DashboardRow[] = [
     lastSignalAt: ago(32),
     latestKind: 'meal',
     latestAt: ago(32),
+    appLoggedOutAt: ago(30),
     isAlert: true,
   },
   {
@@ -39,6 +40,7 @@ const rows: DashboardRow[] = [
     lastSignalAt: ago(2),
     latestKind: 'meal',
     latestAt: ago(2),
+    appLoggedOutAt: null,
     isAlert: false,
   },
   {
@@ -50,6 +52,7 @@ const rows: DashboardRow[] = [
     lastSignalAt: ago(8),
     latestKind: 'sleep',
     latestAt: ago(8),
+    appLoggedOutAt: null,
     isAlert: false,
   },
   {
@@ -61,6 +64,7 @@ const rows: DashboardRow[] = [
     lastSignalAt: ago(20),
     latestKind: 'app_open',
     latestAt: ago(20),
+    appLoggedOutAt: null,
     isAlert: false,
   },
 ];

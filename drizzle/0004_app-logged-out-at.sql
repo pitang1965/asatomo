@@ -1,0 +1,1 @@
+ALTER TABLE "subject_settings" ADD COLUMN "app_logged_out_at" timestamp with time zone;

@@ -220,6 +220,11 @@ export const subjectSettings = pgTable(
     travelUntil: timestamp('travel_until', { withTimezone: true }),
     travelStartedAt: timestamp('travel_started_at', { withTimezone: true }),
 
+    // 本人アプリからのログアウト。null = ログイン中（または未使用）。
+    // 沈黙を情報に変えるための可視化であり、監視・エスカレーションは抑制しない（ADR-0006 の文脈）。
+    // アプリ発のシグナル受信でクリア（ログインし直して使い始めた証拠）。
+    appLoggedOutAt: timestamp('app_logged_out_at', { withTimezone: true }),
+
     // 開示可否のキャッシュ（= 承諾済み見守り者が2人以上か。ADR-0001）。権威はアプリ層の再計算。
     disclosureEnabled: boolean('disclosure_enabled').notNull().default(false),
 

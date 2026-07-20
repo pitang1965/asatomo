@@ -186,6 +186,11 @@
   font-size: 13px;
   color: var(--ink-2);
 }
+.card__note {
+  font-size: 12px;
+  color: var(--warn);
+  margin-top: 2px;
+}
 
 .alert {
   border-radius: 16px;
