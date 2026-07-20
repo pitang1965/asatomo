@@ -182,8 +182,9 @@ describe('不変条件A: 生存シグナル', () => {
     expect((await stateOf(s))?.lastSignalAt?.getTime()).toBe(NOW.getTime());
   });
 
-  it('subjectSettings が無い新規ユーザーの初回シグナルで監視行を自動作成する', async () => {
+  it('見守られている本人は subjectSettings が無くても初回シグナルで監視行を自動作成する', async () => {
     const u = await seedUser(db);
+    await seedWatcher(db, u); // 承諾済み見守り者がいる＝正規の本人
     const r = await recordSignal(
       db,
       { subjectUserId: u, kind: 'app_open' },
@@ -210,6 +211,42 @@ describe('不変条件A: 生存シグナル', () => {
     expect(r1.stale).toBe(false);
     expect(r2.stale).toBe(false);
     expect((await stateOf(s))?.lastSignalAt?.getTime()).toBe(NOW.getTime());
+  });
+});
+
+// ─── 監視行の自動作成ゲート: 純粋な見守り者を監視対象にしない ────────────────
+describe('監視行ゲート: 見守られていない人は本人化しない', () => {
+  it('承諾済み見守り者がいない人のシグナルは no-op（行を作らない）', async () => {
+    const w = await seedUser(db); // 誰にも見守られていない（純粋な見守り者/一般ユーザー）
+    const r = await recordSignal(
+      db,
+      { subjectUserId: w, kind: 'web_checkin' },
+      cfg,
+    );
+    expect(r).toEqual({
+      cancelledEpisode: false,
+      resumedFromDisclosed: false,
+      stale: false,
+    });
+    expect(await stateOf(w)).toBeUndefined();
+  });
+
+  it('source は境界にならない（source=app の直接POSTでも作らない）', async () => {
+    const w = await seedUser(db);
+    await recordSignal(
+      db,
+      { subjectUserId: w, kind: 'meal', source: 'app' },
+      cfg,
+    );
+    expect(await stateOf(w)).toBeUndefined();
+  });
+
+  it('承諾済み見守り者がいれば、行が無くてもシグナルで作成する（iPhone本人の初回）', async () => {
+    const s = await seedUser(db);
+    await seedWatcher(db, s); // s を見守る承諾済み見守り者を1人
+    expect(await stateOf(s)).toBeUndefined(); // まだ監視行なし
+    await recordSignal(db, { subjectUserId: s, kind: 'web_checkin' }, cfg);
+    expect((await stateOf(s))?.state).toBe('normal'); // 作成された
   });
 });
 

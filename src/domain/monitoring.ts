@@ -74,12 +74,7 @@ export async function recordSignal(
   // 発信元。未指定の web_checkin は Web とみなす（アプリは web_checkin を送らない）。
   const source = input.source ?? (input.kind === 'web_checkin' ? 'web' : 'app');
 
-  // 初回シグナルで監視行を自動作成（ログイン直後の新規ユーザー）。既存行はそのまま。
-  await db
-    .insert(subjectSettings)
-    .values({ userId: input.subjectUserId })
-    .onConflictDoNothing();
-
+  // 監視行の有無を先に確認（自動作成の可否判定に使う）。
   const [before] = await db
     .select({
       state: subjectSettings.state,
@@ -88,6 +83,26 @@ export async function recordSignal(
     .from(subjectSettings)
     .where(eq(subjectSettings.userId, input.subjectUserId))
     .limit(1);
+
+  // 監視行が無い人からのシグナルは、承諾済み見守り者がいる時だけ受理する。
+  // 純粋な見守り者（誰にも見守られていない人）を、直接 POST でも監視対象へ引き込まない
+  // （UI ゲート isSubject の裏取り。source はクライアント任意なので source では判定しない）。
+  // 正規の本人は招待承諾時に ensureSubjectSettings で行が作られる（invitations.ts）ため、
+  // ここで作るのは「行はまだ無いが確かに見守られている」端境のケースのみ。
+  if (!before) {
+    if (!(await hasAnyAcceptedWatcher(db, input.subjectUserId))) {
+      return {
+        cancelledEpisode: false,
+        resumedFromDisclosed: false,
+        stale: false,
+      };
+    }
+    await db
+      .insert(subjectSettings)
+      .values({ userId: input.subjectUserId })
+      .onConflictDoNothing();
+  }
+
   const prevState = before?.state ?? 'normal';
 
   // 覆し（不変条件A）の資格は発生時刻基準: 経過時間が検知窓内に戻るシグナルのみ。
@@ -559,6 +574,25 @@ async function evaluateQuorum(
 }
 
 // ─── ヘルパ ─────────────────────────────────────────────────────────────────
+/** この本人に承諾済みの見守り者が1人でもいるか（監視行の自動作成ゲート）。 */
+async function hasAnyAcceptedWatcher(
+  db: Db,
+  subjectUserId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(
+      and(
+        eq(connections.subjectUserId, subjectUserId),
+        eq(connections.isWatcher, true),
+        eq(connections.watcherStatus, 'accepted'),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 async function isAcceptedWatcher(
   db: Db,
   subjectUserId: string,
