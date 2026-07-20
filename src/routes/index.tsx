@@ -4,7 +4,7 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 import type { DashboardRow } from '../domain/queries';
 import { fetchDashboard } from '../server/functions';
 import { authClient } from '../web/auth-client';
@@ -40,7 +40,13 @@ function Home() {
   if (data.status === 'unconfigured')
     return <SetupNotice message={data.message} />;
   if (data.status === 'signed_out') return <Login />;
-  return <Dashboard userName={data.userName} rows={reviveRows(data.rows)} />;
+  return (
+    <Dashboard
+      userName={data.userName}
+      rows={reviveRows(data.rows)}
+      isSubject={data.isSubject}
+    />
+  );
 }
 
 const page: CSSProperties = {
@@ -169,13 +175,47 @@ function Login() {
 function Dashboard({
   userName,
   rows,
+  isSubject,
 }: {
   userName: string;
   rows: DashboardRow[];
+  /** 閲覧者が見守られている本人なら、手動シグナルと自動チェックインを有効化。 */
+  isSubject: boolean;
 }) {
   const router = useRouter();
   const navigate = useNavigate();
   const [notice, setNotice] = useState('');
+  const [signalNotice, setSignalNotice] = useState('');
+
+  // 見守られている本人がこのページを開いたこと自体が生存シグナル（自動 web_checkin）。
+  // アプリの app_open と同じ15分スロットル。透明性の原則で下のセクションに明記する。
+  useEffect(() => {
+    if (!isSubject) return;
+    const key = 'asatomo.webCheckinSentAt';
+    const last = Number(localStorage.getItem(key) ?? 0);
+    if (Date.now() - last < 15 * 60_000) return;
+    localStorage.setItem(key, String(Date.now()));
+    fetch('/api/signals', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'web_checkin', source: 'web' }),
+    }).catch(() => {});
+  }, [isSubject]);
+
+  async function sendSignal(kind: string, label: string) {
+    setSignalNotice('');
+    try {
+      const res = await fetch('/api/signals', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind, source: 'web' }),
+      });
+      if (!res.ok) throw new Error(`signal failed: ${res.status}`);
+      setSignalNotice(`✓ 「${label}」が届きました`);
+    } catch {
+      setSignalNotice('送信できませんでした。時間をおいてお試しください。');
+    }
+  }
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
@@ -281,6 +321,86 @@ function Dashboard({
       ) : null}
 
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '4px 16px 0' }}>
+        {isSubject ? (
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 14,
+              padding: 14,
+              marginBottom: 10,
+              boxShadow: '0 4px 16px rgb(0 0 0 / 0.06)',
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--ink)',
+              }}
+            >
+              いまの様子を伝える
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
+                marginTop: 10,
+              }}
+            >
+              {(
+                [
+                  ['meal', 'ごはん'],
+                  ['sleep', 'おやすみ'],
+                  ['outing', 'いってきます'],
+                  ['homecoming', 'ただいま'],
+                ] as const
+              ).map(([kind, label]) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => sendSignal(kind, label)}
+                  style={{
+                    appearance: 'none',
+                    border: '1px solid var(--line)',
+                    cursor: 'pointer',
+                    padding: '8px 14px',
+                    borderRadius: 999,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    background: 'var(--surface-2)',
+                    color: 'var(--ink)',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。 */}
+            <p
+              style={{
+                margin: '10px 0 0',
+                fontSize: 11,
+                color: 'var(--ink-2)',
+                lineHeight: 1.6,
+              }}
+            >
+              このページを開いたことも「元気」として自動で伝わります。
+            </p>
+            {signalNotice ? (
+              <p
+                style={{
+                  margin: '8px 0 0',
+                  fontSize: 12,
+                  color: 'var(--good)',
+                }}
+              >
+                {signalNotice}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {inviteLink ? (
           <div
             style={{

@@ -37,6 +37,7 @@ export const SCHEMAS: Record<keyof Handlers, z.ZodType> = {
   signal: z.object({
     kind: signalKind,
     occurredAt: z.coerce.date().optional(),
+    source: z.enum(['app', 'web']).optional(),
   }),
   setTravel: z.object({ until: z.coerce.date() }),
   clearTravel: z.object({}),

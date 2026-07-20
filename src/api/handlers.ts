@@ -53,7 +53,7 @@ export function createHandlers(ctx: ApiContext) {
     // ── 本人（本人側アプリ） ──
     async signal(
       actor: string,
-      input: { kind: SignalKind; occurredAt?: Date },
+      input: { kind: SignalKind; occurredAt?: Date; source?: 'app' | 'web' },
     ): Promise<ApiResult<{ cancelledEpisode: boolean; stale: boolean }>> {
       const r = await recordSignal(
         db,
@@ -61,6 +61,7 @@ export function createHandlers(ctx: ApiContext) {
           subjectUserId: actor,
           kind: input.kind,
           occurredAt: input.occurredAt,
+          source: input.source,
         },
         config,
       );

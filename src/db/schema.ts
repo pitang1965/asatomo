@@ -49,7 +49,7 @@ export const signalKind = pgEnum('signal_kind', [
   'sleep', // 「寝る」ボタン
   'app_open', // アプリ起動
   'device_unlock', // 端末ロック解除（任意）
-  'web_checkin', // Web能動チェックイン（Android非所持の本人）
+  'web_checkin', // Webからのチェックイン（Android非所持の本人。ダッシュボード表示で自動記録）
   'outing', // 「いってきます」ボタン（外出。近況ではぼかして見せる — CONTEXT.md 近況）
   'homecoming', // 「ただいま」ボタン（帰宅）
 ]);

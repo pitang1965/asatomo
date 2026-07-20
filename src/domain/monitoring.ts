@@ -57,6 +57,8 @@ export async function recordSignal(
     subjectUserId: string;
     kind: SignalKind;
     occurredAt?: Date;
+    /** 発信元。省略時は app（Android）。web は「ログアウト中」表示をクリアしない。 */
+    source?: 'app' | 'web';
   },
   config: DomainConfig,
 ): Promise<{
@@ -69,6 +71,8 @@ export async function recordSignal(
   // 未来の occurredAt は now へクランプ（時計ずれ・改ざんが生存時計を先回りで汚さないように）。
   const claimed = input.occurredAt ?? now;
   const occurredAt = claimed > now ? now : claimed;
+  // 発信元。未指定の web_checkin は Web とみなす（アプリは web_checkin を送らない）。
+  const source = input.source ?? (input.kind === 'web_checkin' ? 'web' : 'app');
 
   // 初回シグナルで監視行を自動作成（ログイン直後の新規ユーザー）。既存行はそのまま。
   await db
@@ -96,6 +100,7 @@ export async function recordSignal(
     subjectUserId: input.subjectUserId,
     kind: input.kind,
     occurredAt,
+    source,
   });
 
   const presence: Presence =
@@ -108,8 +113,9 @@ export async function recordSignal(
   // last_signal_at は前進のみ（古いオフラインキュー分が新しい値を巻き戻さないよう greatest）。
   // stale でも前進はさせる（発生時点の真実の記録）。T1 判定は lastSignalAt 基準なので、
   // これだけで「段階の再評価」は自然に済む（窓内に戻るなら下の fresh 経路が normal 化する）。
-  // アプリ発のシグナル（web_checkin 以外）は「ログインし直して使っている」証拠なので
-  // appLoggedOutAt をクリアする（ログアウト表示の解除）。
+  // アプリ発のシグナルは「ログインし直して使っている」証拠なので appLoggedOutAt を
+  // クリアする（ログアウト表示の解除）。Web 発（種別問わず）はアプリのログイン状態と
+  // 無関係なのでクリアしない（source で判定。kind の重複実装はしない）。
   await db
     .update(subjectSettings)
     .set({
@@ -117,7 +123,7 @@ export async function recordSignal(
       ...(presence && !stale
         ? { currentPresence: presence, presenceSince: now }
         : {}),
-      ...(input.kind !== 'web_checkin' ? { appLoggedOutAt: null } : {}),
+      ...(source !== 'web' ? { appLoggedOutAt: null } : {}),
       updatedAt: now,
     })
     .where(eq(subjectSettings.userId, input.subjectUserId));

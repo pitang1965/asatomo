@@ -157,6 +157,31 @@ export async function getWatcherOverview(
 
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * この人は「見守られている本人」か（承諾済み見守り者が1人以上いるか）。
+ * Web の本人機能（手動シグナル・自動チェックイン）のゲート。純粋な見守り者まで
+ * 監視対象（subjectSettings）に引き込まない（グリル決定: ノイズ本人を作らない）。
+ */
+export async function hasAcceptedWatcher(
+  db: Db,
+  userId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(
+      and(
+        eq(connections.subjectUserId, userId),
+        eq(connections.isWatcher, true),
+        eq(connections.watcherStatus, 'accepted'),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 export interface SubjectConnection {
   id: string;
   displayName: string;

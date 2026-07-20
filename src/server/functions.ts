@@ -13,6 +13,7 @@ import {
   getDeathConfirmInfo,
   getSubjectConnections,
   getWatcherDashboard,
+  hasAcceptedWatcher,
   type SubjectConnection,
 } from '../domain/queries';
 import { ConfigError, createRequestApp } from './app';
@@ -25,7 +26,13 @@ import { getServerEnv } from './env';
 export type DashboardData =
   | { status: 'unconfigured'; message: string }
   | { status: 'signed_out' }
-  | { status: 'ok'; userName: string; rows: DashboardRow[] };
+  | {
+      status: 'ok';
+      userName: string;
+      rows: DashboardRow[];
+      /** 閲覧者が「見守られている本人」か。Web の本人機能（手動/自動シグナル）のゲート。 */
+      isSubject: boolean;
+    };
 
 export const fetchDashboard = createServerFn({ method: 'GET' }).handler(
   async (): Promise<DashboardData> => {
@@ -48,6 +55,7 @@ export const fetchDashboard = createServerFn({ method: 'GET' }).handler(
       status: 'ok',
       userName: session.user.name,
       rows: await getWatcherDashboard(app.db, session.user.id),
+      isSubject: await hasAcceptedWatcher(app.db, session.user.id),
     };
   },
 );
