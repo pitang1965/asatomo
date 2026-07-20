@@ -38,7 +38,20 @@ android {
     }
 
     buildTypes {
+        // サーバーURLはビルド種別で固定（グリル決定: 実行時の接続設定UIは持たない）。
+        // debug は adb reverse tcp:5173 tcp:5173 で PC の Vite dev サーバーへ届く。
+        debug {
+            buildConfigField("String", "BASE_URL", "\"http://127.0.0.1:5173\"")
+        }
         release {
+            buildConfigField(
+                "String",
+                "BASE_URL",
+                "\"https://asatomo.pitang1965.workers.dev\"",
+            )
+            // 自分専用段階の暫定: debug 鍵で署名して実機に入れられるようにする
+            // （日常利用は本番を向く release を使う。Play 公開時に正式署名へ差し替え）。
+            signingConfig = signingConfigs.getByName("debug")
             optimization {
                 enable = false
             }
@@ -52,6 +65,11 @@ android {
         compose = true
         buildConfig = true
     }
+    lint {
+        // Fragment 非使用（ComponentActivity + Compose のみ）のため、release の
+        // lintVital が出す InvalidFragmentVersionForActivityResult は誤検知。
+        disable += "InvalidFragmentVersionForActivityResult"
+    }
 }
 
 dependencies {
@@ -64,6 +82,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.browser)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.googleid)

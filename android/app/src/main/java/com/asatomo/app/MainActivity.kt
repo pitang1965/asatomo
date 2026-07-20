@@ -4,11 +4,13 @@ import android.Manifest
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,11 +22,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.asatomo.app.ui.theme.AsatomoTheme
@@ -43,20 +49,21 @@ import java.util.UUID
 import kotlinx.coroutines.launch
 
 /**
- * メイン画面。
- *   - 生存シグナルの手動送信（ごはん / おやすみ / いってきます / ただいま）
- *   - 毎日アラームの設定（AlarmScheduler → AlarmReceiver → AlarmActivity）
+ * メイン画面（グリル決定: 未来スロット型）。
+ *   - 毎朝の目覚まし（AlarmScheduler → AlarmReceiver → AlarmActivity）
+ *   - いまの様子を伝える（ごはん / おやすみ / いってきます / ただいま）
+ *   - 見守っている人（今回は Web リンク。次フェーズで近況一瞥に育つスロット。ADR-0006）
+ *   - 旅行モード
+ *   - 右上 ⚙ → 設定画面（ログアウト等）
  *   - アプリ起動の自動シグナル（透明性の原則: 画面に明示する。CONTEXT.md 生存シグナル）
- *   - 接続設定（開発Bearer。Better Auth ログインは後続で置き換える）
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 未ログイン（開発Bearerも未設定）なら初回フローへ。
-        // EXTRA_DEV_SETUP はオンボーディングの「開発用設定を使う」からの跳ね返り抑止。
+        // 未ログインなら初回フロー（ログイン → 橋渡し → アラーム設定）へ。
         val settings = Settings(this)
-        if (!settings.isConfigured && !intent.getBooleanExtra(EXTRA_DEV_SETUP, false)) {
+        if (!settings.isConfigured) {
             startActivity(Intent(this, OnboardingActivity::class.java))
             finish()
             return
@@ -76,18 +83,16 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            AsatomoTheme {
-                Surface(modifier = Modifier.fillMaxSize()) { MainScreen() }
-            }
+            AsatomoTheme { MainScreen() }
         }
     }
 
     companion object {
         const val APP_OPEN_THROTTLE_MS = 15 * 60_000L
-        const val EXTRA_DEV_SETUP = "devSetup"
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreen() {
     val context = LocalContext.current
@@ -99,9 +104,6 @@ private fun MainScreen() {
     var travelBusy by remember { mutableStateOf(false) }
     var travelMsg by remember { mutableStateOf("") }
 
-    var baseUrl by remember { mutableStateOf(settings.baseUrl) }
-    var devSecret by remember { mutableStateOf(settings.devSecret) }
-    var userId by remember { mutableStateOf(settings.userId) }
     var status by remember { mutableStateOf("") }
     var trackedWork by remember { mutableStateOf<UUID?>(null) }
     var trackedLabel by remember { mutableStateOf("") }
@@ -131,14 +133,7 @@ private fun MainScreen() {
         }
     }
 
-    fun saveSettings() {
-        settings.baseUrl = baseUrl.trim()
-        settings.devSecret = devSecret.trim()
-        settings.userId = userId.trim()
-    }
-
     fun send(kind: ApiClient.SignalKind, label: String) {
-        saveSettings()
         trackedLabel = label
         trackedWork = SignalQueue.enqueue(context, kind)
     }
@@ -149,7 +144,6 @@ private fun MainScreen() {
     }
 
     fun enterTravel() {
-        saveSettings()
         // 初期表示・最小は「明日」、上限はサーバーの travelMaxDays（30日）に合わせる。
         val tomorrow = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
         val dlg =
@@ -207,121 +201,142 @@ private fun MainScreen() {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Spacer(Modifier.size(16.dp))
-        Text("アサトモ", style = MaterialTheme.typography.headlineSmall)
-        if (settings.userName.isNotEmpty()) {
-            Text(
-                "${settings.userName} さんとしてログイン中",
-                style = MaterialTheme.typography.bodySmall,
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("アサトモ") },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            context.startActivity(Intent(context, SettingsActivity::class.java))
+                        },
+                    ) {
+                        Text("⚙", fontSize = 22.sp)
+                    }
+                },
             )
-        }
-
-        Text("アラーム", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "セットした時刻に毎日鳴ります。止めるだけで、見守ってくれる人に今日の「元気」が伝わります。",
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Button(
-            onClick = {
-                val now = Calendar.getInstance()
-                TimePickerDialog(
-                    context,
-                    { _, h, m ->
-                        saveSettings()
-                        alarmText = AlarmScheduler.setDailyAlarm(context, h, m)
-                    },
-                    if (settings.hasAlarm) settings.alarmHour else now.get(Calendar.HOUR_OF_DAY),
-                    if (settings.hasAlarm) settings.alarmMinute else now.get(Calendar.MINUTE),
-                    true,
-                ).show()
-            },
+        },
+    ) { inner ->
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(inner)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(if (settings.hasAlarm) "アラーム時刻を変える" else "アラームをセット")
-        }
-        if (alarmText.isNotEmpty()) {
-            Text(alarmText, style = MaterialTheme.typography.bodyMedium)
-        }
+            // ── 毎朝の目覚まし ──
+            SectionCard(title = "☀ 毎朝の目覚まし") {
+                Text(
+                    "セットした時刻に毎日鳴ります。止めるだけで、見守ってくれる人に今日の「元気」が伝わります。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                if (alarmText.isNotEmpty()) {
+                    Text(alarmText, style = MaterialTheme.typography.bodyMedium)
+                }
+                Button(
+                    onClick = {
+                        val now = Calendar.getInstance()
+                        TimePickerDialog(
+                            context,
+                            { _, h, m ->
+                                alarmText = AlarmScheduler.setDailyAlarm(context, h, m)
+                            },
+                            if (settings.hasAlarm) settings.alarmHour else now.get(Calendar.HOUR_OF_DAY),
+                            if (settings.hasAlarm) settings.alarmMinute else now.get(Calendar.MINUTE),
+                            true,
+                        ).show()
+                    },
+                ) {
+                    Text(if (settings.hasAlarm) "アラーム時刻を変える" else "アラームをセット")
+                }
+            }
 
-        Spacer(Modifier.size(4.dp))
-        Text("いまの様子を伝える", style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { send(ApiClient.SignalKind.MEAL, "ごはん") }) {
-                Text("ごはん")
+            // ── いまの様子を伝える ──
+            SectionCard(title = "いまの様子を伝える") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { send(ApiClient.SignalKind.MEAL, "ごはん") }) {
+                        Text("ごはん")
+                    }
+                    OutlinedButton(onClick = { send(ApiClient.SignalKind.SLEEP, "おやすみ") }) {
+                        Text("おやすみ")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { send(ApiClient.SignalKind.OUTING, "いってきます") }) {
+                        Text("いってきます")
+                    }
+                    OutlinedButton(onClick = { send(ApiClient.SignalKind.HOMECOMING, "ただいま") }) {
+                        Text("ただいま")
+                    }
+                }
+                // 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。
+                Text(
+                    "このアプリを開いたことも「元気」として自動で伝わります。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                if (status.isNotEmpty()) {
+                    Text(status, style = MaterialTheme.typography.bodyMedium)
+                }
             }
-            OutlinedButton(onClick = { send(ApiClient.SignalKind.SLEEP, "おやすみ") }) {
-                Text("おやすみ")
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { send(ApiClient.SignalKind.OUTING, "いってきます") }) {
-                Text("いってきます")
-            }
-            OutlinedButton(onClick = { send(ApiClient.SignalKind.HOMECOMING, "ただいま") }) {
-                Text("ただいま")
-            }
-        }
-        // 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。
-        Text(
-            "このアプリを開いたことも「元気」として自動で伝わります。",
-            style = MaterialTheme.typography.bodySmall,
-        )
 
-        if (status.isNotEmpty()) {
-            Spacer(Modifier.size(4.dp))
-            Text(status, style = MaterialTheme.typography.bodyMedium)
-        }
-
-        Spacer(Modifier.size(12.dp))
-        Text("旅行モード", style = MaterialTheme.typography.titleMedium)
-        val travelActive = travelUntilMs > System.currentTimeMillis()
-        if (travelActive) {
-            Text(
-                "見守りをお休み中です（${formatMd(travelUntilMs)} まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            OutlinedButton(onClick = { exitTravel() }, enabled = !travelBusy) {
-                Text("旅行モードを解除する")
+            // ── 見守っている人（今回は Web リンク。次フェーズで近況一瞥に育つ。ADR-0006） ──
+            SectionCard(title = "見守っている人") {
+                Text(
+                    "あなたが見守っている人の様子は、Webで見られます。",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedButton(
+                    onClick = {
+                        CustomTabsIntent.Builder()
+                            .build()
+                            .launchUrl(context, Uri.parse(BuildConfig.BASE_URL))
+                    },
+                ) {
+                    Text("様子をWebで見る ↗")
+                }
             }
-        } else {
-            Text(
-                "留守や生活リズムの変化で誤って通知が飛ばないよう、見守りを一時お休みします。期限が来たら自動で再開します（最長30日）。",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Button(onClick = { enterTravel() }, enabled = !travelBusy) {
-                Text("旅行モードにする")
-            }
-        }
-        if (travelMsg.isNotEmpty()) {
-            Text(travelMsg, style = MaterialTheme.typography.bodyMedium)
-        }
 
-        Spacer(Modifier.size(12.dp))
-        Text("接続設定（開発用）", style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = baseUrl,
-            onValueChange = { baseUrl = it },
-            label = { Text("サーバーURL") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        OutlinedTextField(
-            value = devSecret,
-            onValueChange = { devSecret = it },
-            label = { Text("開発シークレット（DEV_BEARER_SECRET）") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        OutlinedTextField(
-            value = userId,
-            onValueChange = { userId = it },
-            label = { Text("ユーザーID（この本人として振る舞う）") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        OutlinedButton(onClick = { saveSettings() }) { Text("接続設定を保存") }
+            // ── 旅行モード ──
+            SectionCard(title = "旅行モード") {
+                val travelActive = travelUntilMs > System.currentTimeMillis()
+                if (travelActive) {
+                    Text(
+                        "見守りをお休み中です（${formatMd(travelUntilMs)} まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedButton(onClick = { exitTravel() }, enabled = !travelBusy) {
+                        Text("旅行モードを解除する")
+                    }
+                } else {
+                    Text(
+                        "留守や生活リズムの変化で誤って通知が飛ばないよう、見守りを一時お休みします。期限が来たら自動で再開します（最長30日）。",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedButton(onClick = { enterTravel() }, enabled = !travelBusy) {
+                        Text("旅行モードにする")
+                    }
+                }
+                if (travelMsg.isNotEmpty()) {
+                    Text(travelMsg, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            Spacer(Modifier.size(8.dp))
+        }
+    }
+}
+
+/** セクション1枚ぶんのカード（見出し + 内容）。 */
+@Composable
+private fun SectionCard(title: String, content: @Composable () -> Unit) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            content()
+        }
     }
 }

@@ -42,6 +42,12 @@
             android:exported="false"
             android:theme="@style/Theme.Asatomo" />
 
+        <!-- 設定（ログアウト等）。 -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Asatomo" />
+
         <!-- アラーム停止画面（ロック画面の上に表示・履歴に残さない）。 -->
         <activity
             android:name=".AlarmActivity"

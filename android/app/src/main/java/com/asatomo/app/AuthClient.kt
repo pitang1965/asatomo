@@ -53,7 +53,7 @@ object AuthClient {
     }
 
     private fun exchangeForSession(settings: Settings, idToken: String): String {
-        val url = URL("${settings.baseUrl.trimEnd('/')}/api/auth/sign-in/social")
+        val url = URL("${BuildConfig.BASE_URL.trimEnd('/')}/api/auth/sign-in/social")
         val conn = url.openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "POST"

@@ -54,14 +54,6 @@ class OnboardingActivity : ComponentActivity() {
                             startActivity(Intent(this, MainActivity::class.java))
                             finish()
                         },
-                        devSkip = {
-                            // 未ログインのまま開発用設定へ（MainActivity の跳ね返りを抑止）。
-                            startActivity(
-                                Intent(this, MainActivity::class.java)
-                                    .putExtra(MainActivity.EXTRA_DEV_SETUP, true),
-                            )
-                            finish()
-                        },
                     )
                 }
             }
@@ -75,7 +67,6 @@ private enum class Step { Login, Bridge, Alarm }
 private fun OnboardingFlow(
     activity: ComponentActivity,
     done: () -> Unit,
-    devSkip: () -> Unit,
 ) {
     val settings = remember { Settings(activity) }
     var step by remember {
@@ -87,7 +78,6 @@ private fun OnboardingFlow(
                 activity = activity,
                 settings = settings,
                 next = { step = Step.Bridge },
-                devSkip = devSkip,
             )
         Step.Bridge -> BridgeStep(next = { step = Step.Alarm })
         Step.Alarm -> AlarmStep(activity = activity, done = done)
@@ -99,7 +89,6 @@ private fun LoginStep(
     activity: ComponentActivity,
     settings: Settings,
     next: () -> Unit,
-    devSkip: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
@@ -156,8 +145,6 @@ private fun LoginStep(
                 textAlign = TextAlign.Center,
             )
         }
-        Spacer(Modifier.size(24.dp))
-        TextButton(onClick = devSkip) { Text("開発用設定を使う") }
     }
 }
 

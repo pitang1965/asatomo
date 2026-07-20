@@ -64,6 +64,22 @@ object AlarmScheduler {
         return true
     }
 
+    /**
+     * セット済みアラームを解除する（ログアウト時。保存済み時刻の削除は Settings.clearForLogout）。
+     * シグナルを送れない目覚ましは「見守りが生きている」錯覚を本人に与えるため鳴らさない。
+     */
+    fun cancel(context: Context) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        am.cancel(
+            PendingIntent.getBroadcast(
+                context,
+                1,
+                Intent(context, AlarmReceiver::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ),
+        )
+    }
+
     /** 次の hour:minute の発生時刻（過ぎていれば明日）。 */
     private fun nextOccurrence(hour: Int, minute: Int): Calendar =
         Calendar.getInstance().apply {

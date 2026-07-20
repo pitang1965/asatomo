@@ -3,29 +3,12 @@ package com.asatomo.app
 import android.content.Context
 
 /**
- * 接続設定と毎日アラームの永続化（SharedPreferences）。
- * 開発中は adb reverse tcp:5173 tcp:5173 により端末の localhost:5173 が PC の dev サーバーへ届く。
- * 認証は開発用バイパス（Authorization: Bearer <secret>:<userId>）。Better Auth ログインは後続で置き換える。
+ * ログイン状態と毎日アラームの永続化（SharedPreferences）。
+ * サーバーURLはビルド種別で固定（BuildConfig.BASE_URL。debug=adb reverse 経由の
+ * 127.0.0.1:5173 / release=本番Workers）。実行時の接続設定は持たない。
  */
 class Settings(context: Context) {
     private val prefs = context.getSharedPreferences("asatomo", Context.MODE_PRIVATE)
-
-    var baseUrl: String
-        get() = prefs.getString("baseUrl", DEFAULT_BASE_URL) ?: ""
-        set(v) = prefs.edit().putString("baseUrl", v).apply()
-
-    companion object {
-        /** 既定は本番（Workers）。開発時はメイン画面の接続設定で localhost:5173 に切り替える。 */
-        const val DEFAULT_BASE_URL = "https://asatomo.pitang1965.workers.dev"
-    }
-
-    var devSecret: String
-        get() = prefs.getString("devSecret", "") ?: ""
-        set(v) = prefs.edit().putString("devSecret", v).apply()
-
-    var userId: String
-        get() = prefs.getString("userId", "seed-subject-sato") ?: ""
-        set(v) = prefs.edit().putString("userId", v).apply()
 
     /** Better Auth のセッショントークン（Googleログイン後に保存。空 = 未ログイン）。 */
     var sessionToken: String
@@ -37,9 +20,9 @@ class Settings(context: Context) {
         get() = prefs.getString("userName", "") ?: ""
         set(v) = prefs.edit().putString("userName", v).apply()
 
-    /** シグナルを送れる状態か（本ログイン済み、または開発Bearer設定済み）。 */
+    /** シグナルを送れる状態か（ログイン済みか）。 */
     val isConfigured: Boolean
-        get() = sessionToken.isNotEmpty() || devSecret.isNotEmpty()
+        get() = sessionToken.isNotEmpty()
 
     /** 毎日アラームの時刻（-1 = 未設定）。1本のみ（グリル決定: 毎日同一時刻1本）。 */
     var alarmHour: Int
@@ -70,4 +53,19 @@ class Settings(context: Context) {
     /** 端末時計基準で現在も旅行モードが有効か（期限切れは自動復帰扱い）。 */
     val isTravelActive: Boolean
         get() = travelUntilMs > System.currentTimeMillis()
+
+    /**
+     * ログアウト時の端末状態クリア。アラーム時刻も消す
+     * （グリル決定: シグナルを送れない目覚ましは「見守りが生きている」錯覚を与えるため）。
+     */
+    fun clearForLogout() {
+        prefs.edit()
+            .remove("sessionToken")
+            .remove("userName")
+            .remove("alarmHour")
+            .remove("alarmMinute")
+            .remove("lastAppOpenSentAtMs")
+            .remove("travelUntilMs")
+            .apply()
+    }
 }

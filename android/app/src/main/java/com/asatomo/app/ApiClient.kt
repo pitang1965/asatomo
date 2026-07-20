@@ -83,6 +83,27 @@ object ApiClient {
             }
         }
 
+    /**
+     * ログアウトの事実をサーバーへ記録する（見守り者への状態可視化。監視は止まらない）。
+     * ベストエフォート: 圏外などで失敗してもログアウト自体は続行してよい。
+     */
+    suspend fun recordLogout(settings: Settings): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                request(settings, "POST", "/api/app-logout", "{}")
+                Unit
+            }
+        }
+
+    /** Better Auth のセッションを失効させる（ベストエフォート）。 */
+    suspend fun signOut(settings: Settings): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                request(settings, "POST", "/api/auth/sign-out", "{}")
+                Unit
+            }
+        }
+
     private fun postOnce(
         settings: Settings,
         kind: SignalKind,
@@ -100,14 +121,6 @@ object ApiClient {
         return request(settings, "POST", "/api/signals", body)
     }
 
-    /** 本ログイン済みならセッショントークン、なければ開発Bearer（実験用の後方互換）。 */
-    private fun authHeader(settings: Settings): String =
-        if (settings.sessionToken.isNotEmpty()) {
-            "Bearer ${settings.sessionToken}"
-        } else {
-            "Bearer ${settings.devSecret}:${settings.userId}"
-        }
-
     /** 認証付き JSON リクエストの共通処理。非2xx は失敗種別に写して投げる。body=null は本文なし。 */
     private fun request(
         settings: Settings,
@@ -115,14 +128,14 @@ object ApiClient {
         path: String,
         body: String?,
     ): String {
-        val url = URL("${settings.baseUrl.trimEnd('/')}$path")
+        val url = URL("${BuildConfig.BASE_URL.trimEnd('/')}$path")
         val conn = url.openConnection() as HttpURLConnection
         try {
             conn.requestMethod = method
             conn.connectTimeout = 5000
             conn.readTimeout = 10000
             conn.setRequestProperty("connection", "close")
-            conn.setRequestProperty("authorization", authHeader(settings))
+            conn.setRequestProperty("authorization", "Bearer ${settings.sessionToken}")
             if (body != null) {
                 conn.doOutput = true
                 conn.setRequestProperty("content-type", "application/json")
