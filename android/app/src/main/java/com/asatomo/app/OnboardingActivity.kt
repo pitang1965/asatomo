@@ -125,7 +125,14 @@ private fun LoginStep(
                 scope.launch {
                     AuthClient.signInWithGoogle(activity, settings)
                         .fold(
-                            onSuccess = { next() },
+                            onSuccess = {
+                                // ログイン成功自体がアプリ利用の生存証拠。ここで app_open を
+                                // 送ることで、サーバーの「ログアウト中」表示も即クリアされる
+                                // （メイン画面到達を待たない）。スロットルも更新して二重送信を防ぐ。
+                                settings.lastAppOpenSentAtMs = System.currentTimeMillis()
+                                SignalQueue.enqueue(activity, ApiClient.SignalKind.APP_OPEN)
+                                next()
+                            },
                             onFailure = {
                                 error = it.message ?: "ログインできませんでした"
                                 busy = false
