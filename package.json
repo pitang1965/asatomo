@@ -14,7 +14,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "biome check",
-    "lint:fix": "biome check --write"
+    "lint:fix": "biome check --write",
+    "android:install": "android\\gradlew.bat -p android installDebug",
+    "android:reinstall": "adb uninstall com.asatomo.app & android\\gradlew.bat -p android installDebug"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
