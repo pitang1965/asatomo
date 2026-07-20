@@ -6,7 +6,7 @@ import {
   getDeathConfirmInfo,
   getWatcherDashboard,
 } from '../src/domain/queries';
-import { recentActivityText, relativeJa } from '../src/web/recent-activity';
+import { recentActivityText, relativeJa } from '../src/domain/recent-activity';
 import {
   hoursAgo,
   makeTestDb,

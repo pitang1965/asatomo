@@ -1,8 +1,9 @@
-import type { SignalKind } from '../domain/monitoring';
+import type { SignalKind } from './monitoring';
 
 /**
  * 「近況」の文言整形。見守り者に見せるのは過去形＋相対的な経過時間だけ（近況の定義）。
  * リアルタイムの「今〇〇中」や絶対時刻は使わない＝監視感を出さない。
+ * Web とアプリ（/api/watch/overview）で共用する単一実装（ADR-0006: ぼかしの二重実装回避）。
  */
 
 const VERB: Record<SignalKind, string> = {

@@ -83,6 +83,57 @@ object ApiClient {
             }
         }
 
+    /** 「見守っている人」一瞥の1行（サーバー整形済み。表示するだけ。ADR-0006）。 */
+    data class WatchSubject(
+        val subjectUserId: String,
+        val name: String,
+        /** 状態ラベル（例: 元気そう / 旅行 / 就寝中 / 要確認）。 */
+        val label: String,
+        /** 色分け用: good / travel / night / warn。 */
+        val level: String,
+        /** 近況または旅行中の一行。 */
+        val statusText: String,
+        /** ログアウト中の注記（null = なし）。 */
+        val note: String?,
+        /** 要確認の説明（null = 通常）。非 null なら「無事です」を出す。 */
+        val alertText: String?,
+    )
+
+    /** 自分が見守っている人の一覧（整形済み）を取得する。 */
+    suspend fun watchOverview(settings: Settings): Result<List<WatchSubject>> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val text = request(settings, "GET", "/api/watch/overview", null)
+                val arr = JSONObject(text).getJSONArray("subjects")
+                (0 until arr.length()).map { i ->
+                    val o = arr.getJSONObject(i)
+                    WatchSubject(
+                        subjectUserId = o.getString("subjectUserId"),
+                        name = o.getString("name"),
+                        label = o.getString("label"),
+                        level = o.getString("level"),
+                        statusText = o.getString("statusText"),
+                        note = if (o.isNull("note")) null else o.getString("note"),
+                        alertText = if (o.isNull("alertText")) null else o.getString("alertText"),
+                    )
+                }
+            }
+        }
+
+    /** 代理確認「連絡がついた・無事です」。エスカレーションの解決アクション（CONTEXT.md 代理確認）。 */
+    suspend fun attest(settings: Settings, subjectUserId: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                request(
+                    settings,
+                    "POST",
+                    "/api/watch/attest",
+                    JSONObject().put("subjectUserId", subjectUserId).toString(),
+                )
+                Unit
+            }
+        }
+
     /**
      * ログアウトの事実をサーバーへ記録する（見守り者への状態可視化。監視は止まらない）。
      * ベストエフォート: 圏外などで失敗してもログアウト自体は続行してよい。

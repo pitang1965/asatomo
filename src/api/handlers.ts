@@ -33,6 +33,7 @@ import {
   setTravelMode,
   withdrawVote,
 } from '../domain/monitoring';
+import { getWatcherOverview, type OverviewRow } from '../domain/queries';
 import { type ApiContext, type ApiResult, safe } from './context';
 
 /**
@@ -104,6 +105,17 @@ export function createHandlers(ctx: ApiContext) {
       const r = await cancelBySubject(db, actor, config);
       if (!r.ok) return { ok: false, status: 409, error: r.reason ?? 'error' };
       return { ok: true, data: {} };
+    },
+
+    // ── 見守り者（本人アプリの一瞥。ADR-0006） ──
+    /** 見守り対象の整形済み一覧。表示文はサーバー側で確定し、クライアントは表示するだけ。 */
+    async watchOverview(
+      actor: string,
+    ): Promise<ApiResult<{ subjects: OverviewRow[] }>> {
+      return {
+        ok: true,
+        data: { subjects: await getWatcherOverview(db, actor, config) },
+      };
     },
 
     // ── 見守り者（見守りWeb） ──

@@ -18,6 +18,7 @@ const ROUTES: Record<string, keyof Handlers> = {
   'DELETE /travel': 'clearTravel',
   'POST /app-logout': 'appLogout',
   'POST /disclosure/cancel': 'cancelDisclosure',
+  'GET /watch/overview': 'watchOverview',
   'POST /watch/vote': 'vote',
   'POST /watch/vote/withdraw': 'withdrawVote',
   'POST /watch/attest': 'attest',

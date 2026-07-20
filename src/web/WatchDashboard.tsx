@@ -1,5 +1,5 @@
 import type { DashboardRow } from '../domain/queries';
-import { recentActivityText } from './recent-activity';
+import { recentActivityText } from '../domain/recent-activity';
 
 /**
  * 見守りWeb ダッシュボード（プレゼンテーション）。データ取得・アクションは props で受け、

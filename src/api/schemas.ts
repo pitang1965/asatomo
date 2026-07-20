@@ -42,6 +42,7 @@ export const SCHEMAS: Record<keyof Handlers, z.ZodType> = {
   clearTravel: z.object({}),
   appLogout: z.object({}),
   cancelDisclosure: z.object({}),
+  watchOverview: z.object({}),
   vote: z.object({ subjectUserId: id }),
   withdrawVote: z.object({ subjectUserId: id }),
   attest: z.object({ subjectUserId: id, note: z.string().optional() }),

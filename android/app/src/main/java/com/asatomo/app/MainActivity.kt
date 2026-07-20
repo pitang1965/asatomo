@@ -107,6 +107,24 @@ private fun MainScreen() {
     var status by remember { mutableStateOf("") }
     var trackedWork by remember { mutableStateOf<UUID?>(null) }
     var trackedLabel by remember { mutableStateOf("") }
+
+    // 見守りの一瞥（サーバー整形済み。null = 読み込み中）。attest 後は reload++ で再取得。
+    var watchRows by remember { mutableStateOf<List<ApiClient.WatchSubject>?>(null) }
+    var watchError by remember { mutableStateOf(false) }
+    var watchReload by remember { mutableStateOf(0) }
+    var attestBusy by remember { mutableStateOf(false) }
+
+    LaunchedEffect(watchReload) {
+        watchError = false
+        ApiClient.watchOverview(settings)
+            .fold(
+                onSuccess = { watchRows = it },
+                onFailure = {
+                    watchError = true
+                    watchRows = emptyList()
+                },
+            )
+    }
     var alarmText by
         remember {
             mutableStateOf(
@@ -280,12 +298,38 @@ private fun MainScreen() {
                 }
             }
 
-            // ── 見守っている人（今回は Web リンク。次フェーズで近況一瞥に育つ。ADR-0006） ──
-            SectionCard(title = "見守っている人") {
-                Text(
-                    "あなたが見守っている人の様子は、Webで見られます。",
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            // ── あなたが見守っている人（近況の一瞥＋代理確認。重いフローは Web へ。ADR-0006）
+            //    本画面は本人文脈（見守ってくれる人）と混在するため主語を明示する（CONTEXT.md 本人）。
+            SectionCard(title = "あなたが見守っている人") {
+                val rows = watchRows
+                when {
+                    rows == null -> Text("読み込み中…", style = MaterialTheme.typography.bodySmall)
+                    watchError ->
+                        Text(
+                            "様子を取得できませんでした。接続を確認してください。",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    rows.isEmpty() ->
+                        Text(
+                            "まだ見守っている人はいません。誘うのはWebからできます。",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    else ->
+                        rows.forEach { row ->
+                            WatchRow(
+                                row = row,
+                                attestBusy = attestBusy,
+                                onAttest = {
+                                    attestBusy = true
+                                    scope.launch {
+                                        ApiClient.attest(settings, row.subjectUserId)
+                                        attestBusy = false
+                                        watchReload++
+                                    }
+                                },
+                            )
+                        }
+                }
                 OutlinedButton(
                     onClick = {
                         CustomTabsIntent.Builder()
@@ -323,6 +367,52 @@ private fun MainScreen() {
             }
 
             Spacer(Modifier.size(8.dp))
+        }
+    }
+}
+
+/** 見守っている人1人ぶんの行（名前・状態ラベル・近況・注記・要確認時の代理確認）。 */
+@Composable
+private fun WatchRow(
+    row: ApiClient.WatchSubject,
+    attestBusy: Boolean,
+    onAttest: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(row.name, style = MaterialTheme.typography.titleSmall)
+            Text(
+                row.label,
+                style = MaterialTheme.typography.labelMedium,
+                color =
+                    when (row.level) {
+                        "warn" -> MaterialTheme.colorScheme.error
+                        "travel" -> MaterialTheme.colorScheme.tertiary
+                        "night" -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.primary
+                    },
+            )
+        }
+        Text(row.statusText, style = MaterialTheme.typography.bodySmall)
+        row.note?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        row.alertText?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            OutlinedButton(onClick = onAttest, enabled = !attestBusy) {
+                Text("連絡がついた・無事です")
+            }
         }
     }
 }

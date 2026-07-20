@@ -14,6 +14,7 @@ import {
   type DomainConfig,
   type SignalKind,
 } from './monitoring';
+import { recentActivityText } from './recent-activity';
 
 /**
  * 読み取り系クエリ（見守りWeb のダッシュボード等）。書き込みはドメイン各所、これは参照専用。
@@ -85,6 +86,73 @@ export async function getWatcherDashboard(
 
   rows.sort((a, b) => Number(b.isAlert) - Number(a.isAlert));
   return rows;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 本人アプリの「見守っている人」一瞥（ADR-0006）用の整形済み1行。
+ * 表示文はすべてサーバー側で整形し、クライアント（Android / 将来のWeb）は表示するだけ
+ * （近況のぼかしルールの二重実装を避ける）。
+ */
+export interface OverviewRow {
+  subjectUserId: string;
+  name: string;
+  /** 状態ラベル（Webのステータスピルと同一ロジック）。 */
+  label: '要確認' | '旅行' | '就寝中' | '元気そう';
+  level: 'warn' | 'travel' | 'night' | 'good';
+  /** 近況（過去形＋経過時間）または旅行中の一行。 */
+  statusText: string;
+  /** アプリからログアウト中の注記（null = 表示なし）。 */
+  note: string | null;
+  /** 要確認時の説明（null = 通常）。非 null なら「無事です」（代理確認）を出してよい。 */
+  alertText: string | null;
+}
+
+/** ある見守り者の一瞥データ（整形済み）。並びは getWatcherDashboard と同じ（要確認が先頭）。 */
+export async function getWatcherOverview(
+  db: Db,
+  watcherUserId: string,
+  config: DomainConfig,
+): Promise<OverviewRow[]> {
+  const now = config.now ?? new Date();
+  const rows = await getWatcherDashboard(db, watcherUserId);
+  return rows.map((r) => {
+    const traveling = r.travelUntil != null && r.travelUntil > now;
+    const hours = r.lastSignalAt
+      ? Math.floor((now.getTime() - r.lastSignalAt.getTime()) / 3_600_000)
+      : null;
+    return {
+      subjectUserId: r.subjectUserId,
+      name: r.name,
+      label: r.isAlert
+        ? '要確認'
+        : traveling
+          ? '旅行'
+          : r.currentPresence === 'sleeping'
+            ? '就寝中'
+            : '元気そう',
+      level: r.isAlert
+        ? 'warn'
+        : traveling
+          ? 'travel'
+          : r.currentPresence === 'sleeping'
+            ? 'night'
+            : 'good',
+      statusText:
+        traveling && r.travelUntil
+          ? `旅行中 · ${r.travelUntil.getMonth() + 1}/${r.travelUntil.getDate()} まで`
+          : recentActivityText(r.latestKind, r.latestAt, now),
+      note: r.appLoggedOutAt
+        ? 'スマホアプリからログアウトしています（「元気」が届かない状態です）'
+        : null,
+      alertText: r.isAlert
+        ? hours != null
+          ? `${hours}時間、応答がありません`
+          : '応答がありません'
+        : null,
+    };
+  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
