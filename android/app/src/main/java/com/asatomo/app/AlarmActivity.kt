@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +54,8 @@ class AlarmActivity : ComponentActivity() {
 @Composable
 private fun AlarmScreen(finish: () -> Unit) {
     val context = LocalContext.current
+    // 見守り者ゼロなら受け手を匂わせない（オフライン・ロック画面上のためキャッシュを読む）。
+    val hasWatchers = remember { Settings(context).hasWatchers }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -62,7 +65,11 @@ private fun AlarmScreen(finish: () -> Unit) {
         Text("おはようございます 🌅", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.size(12.dp))
         Text(
-            "止めると、見守ってくれる人に\n今日の「元気」が伝わります",
+            if (hasWatchers) {
+                "止めると、見守ってくれる人に\n今日の「元気」が伝わります"
+            } else {
+                "見守り合う友ができると、\n朝の「元気」がここから届くようになります"
+            },
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
         )

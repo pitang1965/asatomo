@@ -99,26 +99,48 @@ object ApiClient {
         val alertText: String?,
     )
 
-    /** 自分が見守っている人の一覧（整形済み）を取得する。 */
-    suspend fun watchOverview(settings: Settings): Result<List<WatchSubject>> =
+    /**
+     * overview 応答。subjects は「自分が見守っている人」、youAreWatched は
+     * 「自分を見守っている人がいるか」＝別軸（コピー分岐用）。取り違えないこと。
+     */
+    data class Overview(
+        val subjects: List<WatchSubject>,
+        val youAreWatched: Boolean,
+    )
+
+    /** 見守りの一瞥＋自分が見守られているかを取得する。 */
+    suspend fun watchOverview(settings: Settings): Result<Overview> =
         withContext(Dispatchers.IO) {
             runCatching {
                 val text = request(settings, "GET", "/api/watch/overview", null)
-                val arr = JSONObject(text).getJSONArray("subjects")
-                (0 until arr.length()).map { i ->
-                    val o = arr.getJSONObject(i)
-                    WatchSubject(
-                        subjectUserId = o.getString("subjectUserId"),
-                        name = o.getString("name"),
-                        label = o.getString("label"),
-                        level = o.getString("level"),
-                        statusText = o.getString("statusText"),
-                        note = if (o.isNull("note")) null else o.getString("note"),
-                        alertText = if (o.isNull("alertText")) null else o.getString("alertText"),
-                    )
-                }
+                val obj = JSONObject(text)
+                val arr = obj.getJSONArray("subjects")
+                val subjects =
+                    (0 until arr.length()).map { i ->
+                        val o = arr.getJSONObject(i)
+                        WatchSubject(
+                            subjectUserId = o.getString("subjectUserId"),
+                            name = o.getString("name"),
+                            label = o.getString("label"),
+                            level = o.getString("level"),
+                            statusText = o.getString("statusText"),
+                            note = if (o.isNull("note")) null else o.getString("note"),
+                            alertText = if (o.isNull("alertText")) null else o.getString("alertText"),
+                        )
+                    }
+                Overview(subjects, obj.optBoolean("youAreWatched", false))
             }
         }
+
+    /**
+     * シグナル/overview 応答の youAreWatched を取り出す（無ければ null）。
+     * コピー分岐フラグ（Settings.hasWatchers）を最新化するのに使う。
+     */
+    fun parseYouAreWatched(responseText: String): Boolean? =
+        runCatching {
+            val obj = JSONObject(responseText)
+            if (obj.has("youAreWatched")) obj.getBoolean("youAreWatched") else null
+        }.getOrNull()
 
     /** 代理確認「連絡がついた・無事です」。エスカレーションの解決アクション（CONTEXT.md 代理確認）。 */
     suspend fun attest(settings: Settings, subjectUserId: String): Result<Unit> =

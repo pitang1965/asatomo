@@ -114,11 +114,18 @@ private fun MainScreen() {
     var watchReload by remember { mutableStateOf(0) }
     var attestBusy by remember { mutableStateOf(false) }
 
+    // 自分を見守っている人がいるか（コピー分岐用。既定はキャッシュ値、overview で最新化）。
+    var hasWatchers by remember { mutableStateOf(settings.hasWatchers) }
+
     LaunchedEffect(watchReload) {
         watchError = false
         ApiClient.watchOverview(settings)
             .fold(
-                onSuccess = { watchRows = it },
+                onSuccess = {
+                    watchRows = it.subjects
+                    settings.hasWatchers = it.youAreWatched
+                    hasWatchers = it.youAreWatched
+                },
                 onFailure = {
                     watchError = true
                     watchRows = emptyList()
@@ -246,7 +253,11 @@ private fun MainScreen() {
             // ── 毎朝の目覚まし ──
             SectionCard(title = "☀ 毎朝の目覚まし") {
                 Text(
-                    "セットした時刻に毎日鳴ります。止めるだけで、見守ってくれる人に今日の「元気」が伝わります。",
+                    if (hasWatchers) {
+                        "セットした時刻に毎日鳴ります。止めるだけで、見守ってくれる人に今日の「元気」が伝わります。"
+                    } else {
+                        "セットした時刻に毎日鳴ります。見守り合う友を招くと、止めるだけで「元気」が届くようになります。"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (alarmText.isNotEmpty()) {
@@ -290,7 +301,11 @@ private fun MainScreen() {
                 }
                 // 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。
                 Text(
-                    "このアプリを開いたことも「元気」として自動で伝わります。",
+                    if (hasWatchers) {
+                        "このアプリを開いたことも「元気」として自動で伝わります。"
+                    } else {
+                        "このアプリを開いたことも「元気」のもとになります。届け先ができると自動で伝わります。"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (status.isNotEmpty()) {

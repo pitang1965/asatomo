@@ -63,7 +63,11 @@ class SignalWorker(context: Context, params: WorkerParameters) :
         val settings = Settings(applicationContext)
         return ApiClient.postSignal(settings, kind, occurredAtMs)
             .fold(
-                onSuccess = { Result.success() },
+                onSuccess = { body ->
+                    // コピー分岐フラグを送信のたびに最新化（見守り者取得直後の停滞を次の1本で回復）。
+                    ApiClient.parseYouAreWatched(body)?.let { settings.hasWatchers = it }
+                    Result.success()
+                },
                 onFailure = { e ->
                     // 恒久的な拒否（入力不正等）だけ諦める。ネットワーク不調・認証切れは再試行
                     //（認証切れは本人がログインし直せば次の再試行で届く。沈黙より再送）。

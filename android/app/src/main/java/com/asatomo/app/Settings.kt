@@ -42,6 +42,15 @@ class Settings(context: Context) {
         set(v) = prefs.edit().putLong("lastAppOpenSentAtMs", v).apply()
 
     /**
+     * 承諾済みの見守り者が1人以上いるか（サーバーの youAreWatched のキャッシュ）。
+     * 「元気が伝わります」等のコピー分岐に使う。見守り者ゼロの初回に受け手を匂わせないよう
+     * 既定は false（安全側）。overview 読み込み時とシグナル送信成功時に最新化する。
+     */
+    var hasWatchers: Boolean
+        get() = prefs.getBoolean("hasWatchers", false)
+        set(v) = prefs.edit().putBoolean("hasWatchers", v).apply()
+
+    /**
      * 旅行モードの期限（epoch ms、0 = 未設定）。サーバー（subjectSettings.travelUntil）が
      * 監視抑制・自動復帰の真実源。ここは直近に本人が設定した値の端末側キャッシュで、表示用。
      * 期限を過ぎたら自動で見守り再開なので、now を超えたら「旅行モードではない」と扱う。
@@ -66,6 +75,7 @@ class Settings(context: Context) {
             .remove("alarmMinute")
             .remove("lastAppOpenSentAtMs")
             .remove("travelUntilMs")
+            .remove("hasWatchers")
             .apply()
     }
 }
