@@ -270,6 +270,26 @@ function Dashboard({
     }
   }
 
+  // 見守り者端の解除。降りたら一覧から消える（再取得）。本人へは名指しで通知される（サーバー側）。
+  async function leaveWatch(subjectUserId: string, name: string) {
+    setPendingSubjectId(subjectUserId);
+    setNotice('');
+    try {
+      const res = await fetch('/api/watch/leave', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ subjectUserId }),
+      });
+      if (!res.ok) throw new Error(`leave failed: ${res.status}`);
+      setNotice(`${name}さんの見守りをやめました。`);
+      await router.invalidate();
+    } catch {
+      setNotice('うまくいきませんでした。時間をおいてお試しください。');
+    } finally {
+      setPendingSubjectId(null);
+    }
+  }
+
   return (
     <div
       style={{
@@ -497,6 +517,7 @@ function Dashboard({
               to: '/death/$subjectId',
               params: { subjectId: subjectUserId },
             }),
+          onLeaveWatch: leaveWatch,
           pendingSubjectId,
         }}
       />

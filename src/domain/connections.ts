@@ -208,6 +208,51 @@ export async function revokeWatcher(
   return { ok: true, disclosureEnabled: disclosure.enabled };
 }
 
+// ─── 見守り者端の解除（見守り者が自分から降りる。grill 2026-07-21） ───────────
+/**
+ * 見守り者が「自分から降りる」= 自分が otherUserId のエッジ1本を終える。
+ * 本人所有の revokeWatcher とは起点が逆（照合キーは otherUserId=自分）。有向1本の操作で、
+ * 相互見守り（2本）なら片方だけ解けて非対称になりうる（自分を見守る側のエッジは無関係で不変）。
+ *
+ * 本人の網が黙って縮むので、route 側で本人へ通知する（CONTEXT「沈黙より通知」）。
+ * 返り値の watcherName（本人が見ている表示名）と disclosureLocked で通知文面を決める。
+ */
+export async function leaveWatch(
+  db: Db,
+  input: { watcherUserId: string; subjectUserId: string },
+  config: DomainConfig,
+): Promise<
+  | { ok: false; reason: 'not_found' }
+  | { ok: true; watcherName: string; disclosureLocked: boolean }
+> {
+  const now = config.now ?? new Date();
+  const upd = await db
+    .update(connections)
+    .set({ watcherStatus: 'revoked', updatedAt: now })
+    .where(
+      and(
+        eq(connections.subjectUserId, input.subjectUserId),
+        eq(connections.otherUserId, input.watcherUserId),
+        eq(connections.isWatcher, true),
+        eq(connections.watcherStatus, 'accepted'),
+      ),
+    )
+    .returning({ displayName: connections.displayName });
+  if (upd.length === 0) return { ok: false, reason: 'not_found' };
+
+  // 本人の網が縮む。開示可否を再計算（不変条件D）。
+  const disclosure = await recomputeDisclosureEnabled(
+    db,
+    input.subjectUserId,
+    config,
+  );
+  return {
+    ok: true,
+    watcherName: upd[0].displayName,
+    disclosureLocked: !disclosure.enabled,
+  };
+}
+
 // ─── 純粋な受取人（メールのみ or 見守りでない user）を追加 ───────────────────
 //   メッセージの宛先にできる「つながり」を作る。受取人性は宛先指定から派生するため、
 //   ここでは isWatcher=false のつながりを用意するだけ。

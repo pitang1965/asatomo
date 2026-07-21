@@ -155,6 +155,7 @@
 .card {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 13px;
   padding: 15px;
   border-radius: 15px;
@@ -271,6 +272,43 @@
   background: transparent;
   color: var(--crit);
   border: 1px solid color-mix(in oklab, var(--crit) 45%, var(--line));
+}
+
+/* 見守りをやめる（見守り者端の解除）。生死系アクションとは別階層に静かに置く。 */
+.leave {
+  width: 100%;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.leave__trigger {
+  appearance: none;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-3);
+  padding: 2px 0;
+}
+.leave__trigger:hover {
+  color: var(--crit);
+}
+.leave__panel {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.85;
+}
+.leave__acts {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.leave__acts .btn {
+  width: auto;
+  padding: 9px 15px;
+  font-size: 13px;
 }
 
 /* 死亡確認 */

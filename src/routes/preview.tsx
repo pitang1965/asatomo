@@ -149,6 +149,8 @@ function App() {
             onConfirmAlive: () =>
               setNotice('「無事です」を送信しました（代理確認）'),
             onCannotReach: () => setScreen('death'),
+            onLeaveWatch: (_id, name) =>
+              setNotice(`${name}さんの見守りをやめました（プレビュー）`),
           }}
         />
       ) : null}

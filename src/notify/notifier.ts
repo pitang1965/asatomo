@@ -30,6 +30,15 @@ export interface Notifications extends Notifier {
   notifyWatchers(subjectUserId: string, event: WatcherEvent): Promise<void>;
   /** ルート層: 見守り者2人未満で開示がロックされたことを本人へ（不変条件D）。 */
   notifySubjectDisclosureLocked(subjectUserId: string): Promise<void>;
+  /**
+   * ルート層: 見守り者が自分から降りたことを本人へ（名指し・段階文面。CONTEXT 見守り解除）。
+   * disclosureLocked=true なら開示ラインを割ったので文面を強める。
+   */
+  notifySubjectWatcherLeft(
+    subjectUserId: string,
+    watcherName: string,
+    disclosureLocked: boolean,
+  ): Promise<void>;
   /** ルート層: 見守り招待を受けた相手へ。 */
   notifyWatchInvite(
     subjectUserId: string,
@@ -148,6 +157,17 @@ export function createNotifications(
         config.appName,
         '最後のメッセージの開示には見守り者が2人必要です。もう1人招待しましょう。',
       );
+    },
+
+    async notifySubjectWatcherLeft(
+      subjectUserId,
+      watcherName,
+      disclosureLocked,
+    ) {
+      const body = disclosureLocked
+        ? `${watcherName}さんが見守りをやめました。見守ってくれる人が少なくなり、今のままでは最後のメッセージを届けられません。もう1人、見守りをお願いしましょう。`
+        : `${watcherName}さんが見守りをやめました。`;
+      await notifySubject(subjectUserId, config.appName, body);
     },
 
     async notifyWatchInvite(subjectUserId, inviteeUserId) {

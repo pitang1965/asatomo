@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { DashboardRow } from '../domain/queries';
 import { recentActivityText } from '../domain/recent-activity';
 
@@ -12,8 +13,70 @@ export interface WatchAction {
   onConfirmAlive: (subjectUserId: string) => void;
   /** 「連絡がつきません」= 死亡確認フローへ（投票開始）。 */
   onCannotReach: (subjectUserId: string) => void;
+  /**
+   * 「見守りをやめる」= 見守り者端の解除（自分がこの人を見守るのをやめる。grill 決定A）。
+   * 未指定なら導線を出さない（プレビュー等）。
+   */
+  onLeaveWatch?: (subjectUserId: string, subjectName: string) => void;
   /** アクション実行中の本人ID（ボタン無効化用）。 */
   pendingSubjectId?: string | null;
+}
+
+/**
+ * 「見守りをやめる」導線。生死系アクション（無事です／連絡がつきません）とは別階層に、
+ * 静かに置く（誤タップ回避。grill 決定A）。押すと向きの明示と通知の予告を出す（決定C/D）。
+ */
+function LeaveControl({
+  row,
+  actions,
+}: {
+  row: DashboardRow;
+  actions: WatchAction;
+}) {
+  const [open, setOpen] = useState(false);
+  const pending = actions.pendingSubjectId === row.subjectUserId;
+  if (!actions.onLeaveWatch) return null;
+  if (!open)
+    return (
+      <div className="leave">
+        <button
+          type="button"
+          className="leave__trigger"
+          onClick={() => setOpen(true)}
+        >
+          {row.name}さんの見守りをやめる…
+        </button>
+      </div>
+    );
+  return (
+    <div className="leave">
+      <p className="leave__panel">
+        {row.name}さんの見守りをやめますか？
+        <br />
+        あなたを見守ってくれる人（あなた自身の見守り）は、これでは変わりません。
+        <br />
+        {row.name}さんには、あなたが見守りをやめたことをお知らせします。
+      </p>
+      <div className="leave__acts">
+        <button
+          type="button"
+          className="btn btn--grave"
+          disabled={pending}
+          onClick={() => actions.onLeaveWatch?.(row.subjectUserId, row.name)}
+        >
+          {pending ? '処理中…' : '見守りをやめる'}
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          disabled={pending}
+          onClick={() => setOpen(false)}
+        >
+          キャンセル
+        </button>
+      </div>
+    </div>
+  );
 }
 
 const AVATAR_COLORS = ['#e0912f', '#3a8aa3', '#5a659a', '#4f9e7f', '#b16478'];
@@ -53,7 +116,15 @@ function StatusPill({ row, now }: { row: DashboardRow; now: Date }) {
   );
 }
 
-function SubjectCard({ row, now }: { row: DashboardRow; now: Date }) {
+function SubjectCard({
+  row,
+  now,
+  actions,
+}: {
+  row: DashboardRow;
+  now: Date;
+  actions: WatchAction;
+}) {
   const statusText =
     row.travelUntil && row.travelUntil > now
       ? `旅行中 · ${row.travelUntil.getMonth() + 1}/${row.travelUntil.getDate()} まで`
@@ -76,6 +147,7 @@ function SubjectCard({ row, now }: { row: DashboardRow; now: Date }) {
         ) : null}
       </div>
       <StatusPill row={row} now={now} />
+      <LeaveControl row={row} actions={actions} />
     </div>
   );
 }
@@ -124,6 +196,7 @@ function AlertCard({
             連絡がつきません…
           </button>
         </div>
+        <LeaveControl row={row} actions={actions} />
       </div>
     </div>
   );
@@ -175,7 +248,12 @@ export function WatchDashboard({
         />
       ))}
       {calm.map((row) => (
-        <SubjectCard key={row.subjectUserId} row={row} now={now} />
+        <SubjectCard
+          key={row.subjectUserId}
+          row={row}
+          now={now}
+          actions={actions}
+        />
       ))}
     </div>
   );

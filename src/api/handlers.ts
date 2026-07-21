@@ -3,6 +3,7 @@ import { connections, subjectSettings } from '../db/schema';
 import {
   addContact,
   inviteWatcher,
+  leaveWatch,
   respondToWatchInvite,
   revokeWatcher,
   setPassphraseHint,
@@ -290,6 +291,28 @@ export function createHandlers(ctx: ApiContext) {
       );
       if (!r.ok) return { ok: false, status: 404, error: r.reason };
       return { ok: true, data: { disclosureEnabled: r.disclosureEnabled } };
+    },
+
+    // 見守り者端の解除（actor = 見守り者。自分がこの人を見守るのをやめる）。
+    async leaveWatch(
+      actor: string,
+      input: { subjectUserId: string },
+    ): Promise<ApiResult<{ disclosureLocked: boolean }>> {
+      const r = await leaveWatch(
+        db,
+        { watcherUserId: actor, subjectUserId: input.subjectUserId },
+        config,
+      );
+      if (!r.ok) return { ok: false, status: 404, error: r.reason };
+      // 本人の網が黙って縮むので本人へ通知（名指し・段階文面。CONTEXT 見守り解除）。
+      await safe(() =>
+        notify.notifySubjectWatcherLeft(
+          input.subjectUserId,
+          r.watcherName,
+          r.disclosureLocked,
+        ),
+      );
+      return { ok: true, data: { disclosureLocked: r.disclosureLocked } };
     },
 
     // ── 招待（本人。ADR-0005） ──
