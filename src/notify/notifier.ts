@@ -83,7 +83,7 @@ export function createNotifications(
       await notifySubject(
         subjectUserId,
         config.appName,
-        '元気ですか？アプリを開いて無事を知らせてください。',
+        '元気ですか？アプリか見守りWebを開いて、無事を知らせてください。',
       );
     },
 

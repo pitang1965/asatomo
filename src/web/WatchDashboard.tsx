@@ -71,7 +71,7 @@ function SubjectCard({ row, now }: { row: DashboardRow; now: Date }) {
         <div className="card__status">{statusText}</div>
         {row.appLoggedOutAt ? (
           <div className="card__note">
-            スマホアプリからログアウトしています（「元気」が届かない状態です）
+            スマホアプリからログアウト中です（Webからは今も「元気」が届きます）
           </div>
         ) : null}
       </div>
@@ -103,7 +103,7 @@ function AlertCard({
         </p>
         <p className="alert__body">
           {row.appLoggedOutAt
-            ? 'アプリからログアウトしているため「元気」は届きません。まずは一声かけてみてください。'
+            ? 'スマホアプリからログアウト中です。まずは一声かけてみてください。'
             : '急かすものではありません。まずは一声かけてみてください。'}
         </p>
         <div className="alert__acts">
