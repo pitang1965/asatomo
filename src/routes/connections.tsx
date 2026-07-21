@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { type CSSProperties, useState } from 'react';
 import type { SubjectWatcher } from '../domain/queries';
 import { fetchConnectionsPage } from '../server/functions';
+import { RowMenu } from '../web/RowMenu';
 
 /**
  * つながり整理ページ（本人側）＝「今わたしを見守ってくれている人」の一覧と、
@@ -60,7 +61,6 @@ function Roster({
   initial: SubjectWatcher[];
 }) {
   const [watchers, setWatchers] = useState(initial);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
 
@@ -81,7 +81,6 @@ function Roster({
       setWatchers((prev) =>
         prev.filter((x) => x.connectionId !== w.connectionId),
       );
-      setConfirmingId(null);
       setNotice(`${w.displayName}さんへの見守りのお願いをやめました。`);
     } catch {
       setNotice('うまくいきませんでした。時間をおいてお試しください。');
@@ -165,67 +164,40 @@ function Roster({
             {watchers.map((w) => {
               // その1人が「生存」で、生存がちょうど2人なら、外すと開示ラインを割る。
               const willLock = w.isLiving && livingCount === 2;
-              const confirming = confirmingId === w.connectionId;
               return (
                 <li
                   key={w.connectionId}
                   style={{
                     border: '1px solid var(--line)',
                     borderRadius: 12,
-                    padding: 12,
+                    padding: '8px 8px 8px 12px',
                     background: 'var(--surface-2)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 10,
                   }}
                 >
-                  <div
+                  <span
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 10,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--ink)',
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: 'var(--ink)',
-                      }}
-                    >
-                      {w.displayName}
-                    </span>
-                    {!confirming ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNotice('');
-                          setConfirmingId(w.connectionId);
-                        }}
-                        style={{
-                          appearance: 'none',
-                          border: '1px solid var(--line)',
-                          cursor: 'pointer',
-                          padding: '6px 12px',
-                          borderRadius: 999,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          background: 'var(--surface)',
-                          color: 'var(--ink-2)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        見守りをお願いするのをやめる
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {confirming ? (
-                    <div style={{ marginTop: 12 }}>
-                      {willLock ? (
-                        <p
+                    {w.displayName}
+                  </span>
+                  {/* 稀な操作なので⋮に畳む（grill フィードバック）。開示ラインを割る時だけ警告（決定B）。 */}
+                  <RowMenu
+                    actionLabel="見守りをお願いするのをやめる"
+                    confirmLabel="やめる"
+                    pending={busyId === w.connectionId}
+                    onConfirm={() => stopWatching(w)}
+                    confirmBody={
+                      willLock ? (
+                        <span
                           style={{
-                            margin: 0,
-                            fontSize: 13,
-                            lineHeight: 1.8,
+                            display: 'block',
                             color: 'var(--ink)',
                             background: 'var(--warn-soft)',
                             borderRadius: 10,
@@ -236,65 +208,12 @@ function Roster({
                           なります。そのままだと、あなたにもしものことがあっても
                           <strong>最後のメッセージを届けられません</strong>。
                           それでもやめますか？
-                        </p>
+                        </span>
                       ) : (
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: 13,
-                            lineHeight: 1.8,
-                            color: 'var(--ink)',
-                          }}
-                        >
-                          {w.displayName}さんへの見守りのお願いをやめますか？
-                        </p>
-                      )}
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 8,
-                          marginTop: 10,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          disabled={busyId === w.connectionId}
-                          onClick={() => stopWatching(w)}
-                          style={{
-                            appearance: 'none',
-                            border: 0,
-                            cursor: 'pointer',
-                            padding: '8px 14px',
-                            borderRadius: 10,
-                            fontSize: 13,
-                            fontWeight: 600,
-                            background: 'var(--crit)',
-                            color: '#fff',
-                          }}
-                        >
-                          {busyId === w.connectionId ? '処理中…' : 'やめる'}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busyId === w.connectionId}
-                          onClick={() => setConfirmingId(null)}
-                          style={{
-                            appearance: 'none',
-                            border: '1px solid var(--line)',
-                            cursor: 'pointer',
-                            padding: '8px 14px',
-                            borderRadius: 10,
-                            fontSize: 13,
-                            fontWeight: 600,
-                            background: 'var(--surface)',
-                            color: 'var(--ink)',
-                          }}
-                        >
-                          キャンセル
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
+                        <>{w.displayName}さんへの見守りのお願いをやめますか？</>
+                      )
+                    }
+                  />
                 </li>
               );
             })}

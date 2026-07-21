@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import type { DashboardRow } from '../domain/queries';
 import { recentActivityText } from '../domain/recent-activity';
+import { RowMenu } from './RowMenu';
 
 /**
  * 見守りWeb ダッシュボード（プレゼンテーション）。データ取得・アクションは props で受け、
@@ -23,59 +23,34 @@ export interface WatchAction {
 }
 
 /**
- * 「見守りをやめる」導線。生死系アクション（無事です／連絡がつきません）とは別階層に、
- * 静かに置く（誤タップ回避。grill 決定A）。押すと向きの明示と通知の予告を出す（決定C/D）。
+ * 「見守りをやめる」導線。稀・管理的なので⋮メニューの中に畳む（grill 決定A＋フィードバック）。
+ * 生死系アクション（無事です／連絡がつきません）とは別階層。確認で向きの明示・自分の見守りは
+ * 不変・相手への通知予告を出す（決定C/D）。onLeaveWatch 未指定なら出さない（プレビュー等）。
  */
-function LeaveControl({
+function LeaveMenu({
   row,
   actions,
 }: {
   row: DashboardRow;
   actions: WatchAction;
 }) {
-  const [open, setOpen] = useState(false);
-  const pending = actions.pendingSubjectId === row.subjectUserId;
-  if (!actions.onLeaveWatch) return null;
-  if (!open)
-    return (
-      <div className="leave">
-        <button
-          type="button"
-          className="leave__trigger"
-          onClick={() => setOpen(true)}
-        >
-          {row.name}さんの見守りをやめる…
-        </button>
-      </div>
-    );
+  const onLeave = actions.onLeaveWatch;
+  if (!onLeave) return null;
   return (
-    <div className="leave">
-      <p className="leave__panel">
-        {row.name}さんの見守りをやめますか？
-        <br />
-        あなたを見守ってくれる人（あなた自身の見守り）は、これでは変わりません。
-        <br />
-        {row.name}さんには、あなたが見守りをやめたことをお知らせします。
-      </p>
-      <div className="leave__acts">
-        <button
-          type="button"
-          className="btn btn--grave"
-          disabled={pending}
-          onClick={() => actions.onLeaveWatch?.(row.subjectUserId, row.name)}
-        >
-          {pending ? '処理中…' : '見守りをやめる'}
-        </button>
-        <button
-          type="button"
-          className="btn btn--ghost"
-          disabled={pending}
-          onClick={() => setOpen(false)}
-        >
-          キャンセル
-        </button>
-      </div>
-    </div>
+    <RowMenu
+      actionLabel="見守りをやめる"
+      pending={actions.pendingSubjectId === row.subjectUserId}
+      onConfirm={() => onLeave(row.subjectUserId, row.name)}
+      confirmBody={
+        <>
+          {row.name}さんの見守りをやめますか？
+          <br />
+          あなたを見守ってくれる人（あなた自身の見守り）は、これでは変わりません。
+          <br />
+          {row.name}さんには、あなたが見守りをやめたことをお知らせします。
+        </>
+      }
+    />
   );
 }
 
@@ -147,7 +122,7 @@ function SubjectCard({
         ) : null}
       </div>
       <StatusPill row={row} now={now} />
-      <LeaveControl row={row} actions={actions} />
+      <LeaveMenu row={row} actions={actions} />
     </div>
   );
 }
@@ -169,10 +144,13 @@ function AlertCard({
     <div className="alert">
       <div className="alert__stripe" />
       <div className="alert__in">
-        <p className="alert__title">
-          {row.name}さんから
-          {hours != null ? `、${hours}時間` : ''} 応答がありません
-        </p>
+        <div className="alert__head">
+          <p className="alert__title">
+            {row.name}さんから
+            {hours != null ? `、${hours}時間` : ''} 応答がありません
+          </p>
+          <LeaveMenu row={row} actions={actions} />
+        </div>
         <p className="alert__body">
           {row.appLoggedOutAt
             ? 'スマホアプリからログアウト中です。まずは一声かけてみてください。'
@@ -196,7 +174,6 @@ function AlertCard({
             連絡がつきません…
           </button>
         </div>
-        <LeaveControl row={row} actions={actions} />
       </div>
     </div>
   );
