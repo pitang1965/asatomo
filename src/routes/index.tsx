@@ -476,6 +476,15 @@ function Dashboard({
             🤝 見守り合いに誘う
           </button>
         )}
+        {/* 逆向き（あなたを見守ってくれている人）の確認・整理は別ページへ。
+            一字違いの逆向きリストをこの画面に同居させない（CONTEXT.md 本人）。 */}
+        {isSubject ? (
+          <p style={{ margin: '10px 0 0', textAlign: 'center', fontSize: 12 }}>
+            <Link to="/connections" style={{ color: 'var(--ink-2)' }}>
+              見守ってくれている人を確認・整理する →
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       <WatchDashboard

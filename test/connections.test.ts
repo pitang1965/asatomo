@@ -10,7 +10,14 @@ import {
   setPassphraseHint,
 } from '../src/domain/connections';
 import { DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
-import { makeTestDb, seedSubject, seedUser } from './helpers';
+import { getSubjectWatchers } from '../src/domain/queries';
+import {
+  hoursAgo,
+  makeTestDb,
+  seedSubject,
+  seedUser,
+  seedWatcher,
+} from './helpers';
 
 const NOW = new Date('2026-07-14T12:00:00Z');
 const cfg = { ...DEFAULT_DOMAIN_CONFIG, now: NOW };
@@ -188,6 +195,47 @@ describe('不変条件D: 承諾/取消で開示可否が連動', () => {
       cfg,
     );
     expect(rev).toEqual({ ok: false, reason: 'not_found' });
+  });
+});
+
+describe('本人の見守り者一覧（整理ページ）', () => {
+  it('accepted の見守り者だけを返す（pending・純粋な受取人は除く）', async () => {
+    const s = await seedSubject(db);
+    const accepted = await seedWatcher(db, s, { lastSeenAt: NOW });
+    // pending の見守り者は出さない。
+    const pendingUser = await seedUser(db, 'pending');
+    await inviteWatcher(
+      db,
+      { subjectUserId: s, watcherUserId: pendingUser },
+      cfg,
+    );
+    // 純粋な受取人（isWatcher=false）も出さない。
+    await addContact(
+      db,
+      { subjectUserId: s, email: 'r@example.test', displayName: '受取人' },
+      cfg,
+    );
+
+    const watchers = await getSubjectWatchers(db, s, cfg);
+    expect(watchers).toHaveLength(1);
+    expect(watchers[0]).toMatchObject({
+      displayName: accepted,
+      isLiving: true,
+    });
+  });
+
+  it('isLiving は休眠しきい値（14日）内かで決まる', async () => {
+    const s = await seedSubject(db);
+    // 休眠しきい値内 → 生存。
+    await seedWatcher(db, s, { lastSeenAt: hoursAgo(24, NOW) });
+    // しきい値超（15日前）→ 非生存。外しても開示ラインに影響しない側。
+    await seedWatcher(db, s, { lastSeenAt: hoursAgo(15 * 24, NOW) });
+    // 応答なし（null）→ 非生存。
+    await seedWatcher(db, s, { lastSeenAt: null });
+
+    const watchers = await getSubjectWatchers(db, s, cfg);
+    expect(watchers).toHaveLength(3);
+    expect(watchers.filter((w) => w.isLiving)).toHaveLength(1);
   });
 });
 

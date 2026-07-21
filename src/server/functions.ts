@@ -12,9 +12,11 @@ import {
   type DeathConfirmInfo,
   getDeathConfirmInfo,
   getSubjectConnections,
+  getSubjectWatchers,
   getWatcherDashboard,
   hasAcceptedWatcher,
   type SubjectConnection,
+  type SubjectWatcher,
 } from '../domain/queries';
 import { ConfigError, createRequestApp } from './app';
 import { getServerEnv } from './env';
@@ -129,6 +131,44 @@ export const fetchInvitePreview = createServerFn({ method: 'GET' })
       isSelf: session?.user.id === preview.inviterUserId,
     };
   });
+
+/**
+ * つながり整理ページ（本人側）の材料＝「今わたしを見守ってくれている人」。
+ * signed_out は未ログイン。承諾済み見守り者が居なければ watchers は空（案内を出す）。
+ */
+export type ConnectionsPageData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'signed_out' }
+  | { status: 'ok'; userName: string; watchers: SubjectWatcher[] };
+
+export const fetchConnectionsPage = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<ConnectionsPageData> => {
+    let app: ReturnType<typeof createRequestApp>;
+    try {
+      app = createRequestApp(getServerEnv());
+    } catch (e) {
+      if (e instanceof ConfigError)
+        return { status: 'unconfigured', message: e.message };
+      throw e;
+    }
+
+    const request = getRequest();
+    const session = await app.auth.api.getSession({
+      headers: request.headers,
+    });
+    if (!session) return { status: 'signed_out' };
+
+    return {
+      status: 'ok',
+      userName: session.user.name,
+      watchers: await getSubjectWatchers(
+        app.db,
+        session.user.id,
+        DEFAULT_DOMAIN_CONFIG,
+      ),
+    };
+  },
+);
 
 /** 最後のメッセージ管理画面（本人側）の材料。暗号材料は不透明なまま返す（復号は端末）。 */
 export type MessagesPageData =
