@@ -270,6 +270,26 @@ function Dashboard({
     }
   }
 
+  // 見守り者端の解除。降りたら一覧から消える（再取得）。本人へは名指しで通知される（サーバー側）。
+  async function leaveWatch(subjectUserId: string, name: string) {
+    setPendingSubjectId(subjectUserId);
+    setNotice('');
+    try {
+      const res = await fetch('/api/watch/leave', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ subjectUserId }),
+      });
+      if (!res.ok) throw new Error(`leave failed: ${res.status}`);
+      setNotice(`${name}さんの見守りをやめました。`);
+      await router.invalidate();
+    } catch {
+      setNotice('うまくいきませんでした。時間をおいてお試しください。');
+    } finally {
+      setPendingSubjectId(null);
+    }
+  }
+
   return (
     <div
       style={{
@@ -476,6 +496,15 @@ function Dashboard({
             🤝 見守り合いに誘う
           </button>
         )}
+        {/* 逆向き（あなたを見守ってくれている人）の確認・整理は別ページへ。
+            一字違いの逆向きリストをこの画面に同居させない（CONTEXT.md 本人）。 */}
+        {isSubject ? (
+          <p style={{ margin: '10px 0 0', textAlign: 'center', fontSize: 12 }}>
+            <Link to="/connections" style={{ color: 'var(--ink-2)' }}>
+              見守ってくれている人を確認・整理する →
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       <WatchDashboard
@@ -488,6 +517,7 @@ function Dashboard({
               to: '/death/$subjectId',
               params: { subjectId: subjectUserId },
             }),
+          onLeaveWatch: leaveWatch,
           pendingSubjectId,
         }}
       />

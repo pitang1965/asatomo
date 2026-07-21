@@ -5,12 +5,20 @@ import * as schema from '../src/db/schema';
 import {
   addContact,
   inviteWatcher,
+  leaveWatch,
   respondToWatchInvite,
   revokeWatcher,
   setPassphraseHint,
 } from '../src/domain/connections';
 import { DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
-import { makeTestDb, seedSubject, seedUser } from './helpers';
+import { getSubjectWatchers } from '../src/domain/queries';
+import {
+  hoursAgo,
+  makeTestDb,
+  seedSubject,
+  seedUser,
+  seedWatcher,
+} from './helpers';
 
 const NOW = new Date('2026-07-14T12:00:00Z');
 const cfg = { ...DEFAULT_DOMAIN_CONFIG, now: NOW };
@@ -188,6 +196,109 @@ describe('不変条件D: 承諾/取消で開示可否が連動', () => {
       cfg,
     );
     expect(rev).toEqual({ ok: false, reason: 'not_found' });
+  });
+});
+
+describe('見守り者端の解除（見守りをやめる）', () => {
+  it('自分のエッジ（otherUserId=自分）を終える。2→1で開示ラインを割る', async () => {
+    const s = await seedSubject(db);
+    const w1 = await seedWatcher(db, s, { lastSeenAt: NOW });
+    await seedWatcher(db, s, { lastSeenAt: NOW });
+
+    const r = await leaveWatch(
+      db,
+      { watcherUserId: w1, subjectUserId: s },
+      cfg,
+    );
+    // 本人が見ている表示名を返し、開示ラインを割ったことを伝える。
+    expect(r).toMatchObject({
+      ok: true,
+      watcherName: w1,
+      disclosureLocked: true,
+    });
+    expect((await connOf(s, w1))?.watcherStatus).toBe('revoked');
+    expect(await disclosureEnabled(s)).toBe(false);
+  });
+
+  it('相互見守りで片方だけ降りても逆向きは不変（非対称になる）', async () => {
+    const a = await seedSubject(db);
+    const b = await seedSubject(db);
+    // A が B を見守る（Bの行）／ B が A を見守る（Aの行）。
+    await db.insert(schema.connections).values([
+      {
+        subjectUserId: b,
+        otherUserId: a,
+        displayName: 'Aさん',
+        isWatcher: true,
+        watcherStatus: 'accepted',
+        watcherLastSeenAt: NOW,
+      },
+      {
+        subjectUserId: a,
+        otherUserId: b,
+        displayName: 'Bさん',
+        isWatcher: true,
+        watcherStatus: 'accepted',
+        watcherLastSeenAt: NOW,
+      },
+    ]);
+
+    // A が「B の見守り」をやめる（A = Bの行の otherUserId）。
+    const r = await leaveWatch(db, { watcherUserId: a, subjectUserId: b }, cfg);
+    expect(r).toMatchObject({ ok: true, watcherName: 'Aさん' });
+    expect((await connOf(b, a))?.watcherStatus).toBe('revoked'); // A→B は終了
+    expect((await connOf(a, b))?.watcherStatus).toBe('accepted'); // B→A は不変
+  });
+
+  it('該当する承諾済みエッジが無ければ not_found', async () => {
+    const s = await seedSubject(db);
+    const r = await leaveWatch(
+      db,
+      { watcherUserId: 'ghost', subjectUserId: s },
+      cfg,
+    );
+    expect(r).toEqual({ ok: false, reason: 'not_found' });
+  });
+});
+
+describe('本人の見守り者一覧（整理ページ）', () => {
+  it('accepted の見守り者だけを返す（pending・純粋な受取人は除く）', async () => {
+    const s = await seedSubject(db);
+    const accepted = await seedWatcher(db, s, { lastSeenAt: NOW });
+    // pending の見守り者は出さない。
+    const pendingUser = await seedUser(db, 'pending');
+    await inviteWatcher(
+      db,
+      { subjectUserId: s, watcherUserId: pendingUser },
+      cfg,
+    );
+    // 純粋な受取人（isWatcher=false）も出さない。
+    await addContact(
+      db,
+      { subjectUserId: s, email: 'r@example.test', displayName: '受取人' },
+      cfg,
+    );
+
+    const watchers = await getSubjectWatchers(db, s, cfg);
+    expect(watchers).toHaveLength(1);
+    expect(watchers[0]).toMatchObject({
+      displayName: accepted,
+      isLiving: true,
+    });
+  });
+
+  it('isLiving は休眠しきい値（14日）内かで決まる', async () => {
+    const s = await seedSubject(db);
+    // 休眠しきい値内 → 生存。
+    await seedWatcher(db, s, { lastSeenAt: hoursAgo(24, NOW) });
+    // しきい値超（15日前）→ 非生存。外しても開示ラインに影響しない側。
+    await seedWatcher(db, s, { lastSeenAt: hoursAgo(15 * 24, NOW) });
+    // 応答なし（null）→ 非生存。
+    await seedWatcher(db, s, { lastSeenAt: null });
+
+    const watchers = await getSubjectWatchers(db, s, cfg);
+    expect(watchers).toHaveLength(3);
+    expect(watchers.filter((w) => w.isLiving)).toHaveLength(1);
   });
 });
 

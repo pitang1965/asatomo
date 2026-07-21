@@ -12,6 +12,7 @@ import {
   countActiveVotes,
   countLivingWatchers,
   type DomainConfig,
+  isWatcherLiving,
   type SignalKind,
 } from './monitoring';
 import { recentActivityText } from './recent-activity';
@@ -144,7 +145,7 @@ export async function getWatcherOverview(
           ? `旅行中 · ${r.travelUntil.getMonth() + 1}/${r.travelUntil.getDate()} まで`
           : recentActivityText(r.latestKind, r.latestAt, now),
       note: r.appLoggedOutAt
-        ? 'スマホアプリからログアウトしています（「元気」が届かない状態です）'
+        ? 'スマホアプリからログアウト中です（Webからは今も「元気」が届きます）'
         : null,
       alertText: r.isAlert
         ? hours != null
@@ -206,6 +207,51 @@ export async function getSubjectConnections(
     .from(connections)
     .where(eq(connections.subjectUserId, subjectUserId))
     .orderBy(connections.createdAt);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface SubjectWatcher {
+  connectionId: string;
+  displayName: string;
+  /**
+   * 承諾済みかつ休眠しきい値以内（不変条件Dの分母に入る）。この人を外すと
+   * 生存見守り者が1人減る。isLiving な人が2人ちょうどのとき外すと開示ラインを割る。
+   */
+  isLiving: boolean;
+}
+
+/**
+ * 本人を「今」見守ってくれている人（accepted のみ）。本人のつながり整理ページ用。
+ * 外す瞬間の警告（開示ライン＝生存2人を割るか）は、行の isLiving と
+ * 「生存が2人ちょうどか」を画面側で突き合わせて出す（grill 決定B）。
+ */
+export async function getSubjectWatchers(
+  db: Db,
+  subjectUserId: string,
+  config: DomainConfig,
+): Promise<SubjectWatcher[]> {
+  const now = config.now ?? new Date();
+  const rows = await db
+    .select({
+      connectionId: connections.id,
+      displayName: connections.displayName,
+      watcherLastSeenAt: connections.watcherLastSeenAt,
+    })
+    .from(connections)
+    .where(
+      and(
+        eq(connections.subjectUserId, subjectUserId),
+        eq(connections.isWatcher, true),
+        eq(connections.watcherStatus, 'accepted'),
+      ),
+    )
+    .orderBy(connections.createdAt);
+  return rows.map((r) => ({
+    connectionId: r.connectionId,
+    displayName: r.displayName,
+    isLiving: isWatcherLiving(r.watcherLastSeenAt, now, config),
+  }));
 }
 
 // ────────────────────────────────────────────────────────────────────────────

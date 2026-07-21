@@ -37,6 +37,7 @@ function makeCtx() {
     async notifySubjectDisclosureLocked(id: string) {
       calls.locked.push(id);
     },
+    async notifySubjectWatcherLeft() {},
     async notifyWatchInvite(id: string, invitee: string) {
       calls.invites.push({ id, invitee });
     },

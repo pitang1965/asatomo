@@ -25,5 +25,6 @@
     "statusBar.debuggingBackground": "#215732",
     "statusBar.debuggingForeground": "#e7e7e7"
   },
-  "peacock.color": "#215732"
+  "peacock.color": "#215732",
+  "cSpell.words": ["asatomo", "gradlew", "neondatabase", "pglite"]
 }

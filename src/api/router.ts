@@ -26,6 +26,7 @@ const ROUTES: Record<string, keyof Handlers> = {
   'POST /watch/concern': 'raiseConcern',
   'POST /connections/invite': 'inviteWatcher',
   'POST /connections/revoke': 'revokeWatcher',
+  'POST /watch/leave': 'leaveWatch',
   'POST /invitations': 'createInvitation',
   'POST /invitations/accept': 'acceptInvitation',
   'POST /invitations/revoke': 'revokeInvitation',

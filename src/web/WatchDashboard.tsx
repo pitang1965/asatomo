@@ -1,5 +1,6 @@
 import type { DashboardRow } from '../domain/queries';
 import { recentActivityText } from '../domain/recent-activity';
+import { RowMenu } from './RowMenu';
 
 /**
  * 見守りWeb ダッシュボード（プレゼンテーション）。データ取得・アクションは props で受け、
@@ -12,8 +13,45 @@ export interface WatchAction {
   onConfirmAlive: (subjectUserId: string) => void;
   /** 「連絡がつきません」= 死亡確認フローへ（投票開始）。 */
   onCannotReach: (subjectUserId: string) => void;
+  /**
+   * 「見守りをやめる」= 見守り者端の解除（自分がこの人を見守るのをやめる。grill 決定A）。
+   * 未指定なら導線を出さない（プレビュー等）。
+   */
+  onLeaveWatch?: (subjectUserId: string, subjectName: string) => void;
   /** アクション実行中の本人ID（ボタン無効化用）。 */
   pendingSubjectId?: string | null;
+}
+
+/**
+ * 「見守りをやめる」導線。稀・管理的なので⋮メニューの中に畳む（grill 決定A＋フィードバック）。
+ * 生死系アクション（無事です／連絡がつきません）とは別階層。確認で向きの明示・自分の見守りは
+ * 不変・相手への通知予告を出す（決定C/D）。onLeaveWatch 未指定なら出さない（プレビュー等）。
+ */
+function LeaveMenu({
+  row,
+  actions,
+}: {
+  row: DashboardRow;
+  actions: WatchAction;
+}) {
+  const onLeave = actions.onLeaveWatch;
+  if (!onLeave) return null;
+  return (
+    <RowMenu
+      actionLabel="見守りをやめる"
+      pending={actions.pendingSubjectId === row.subjectUserId}
+      onConfirm={() => onLeave(row.subjectUserId, row.name)}
+      confirmBody={
+        <>
+          {row.name}さんの見守りをやめますか？
+          <br />
+          あなたを見守ってくれる人（あなた自身の見守り）は、これでは変わりません。
+          <br />
+          {row.name}さんには、あなたが見守りをやめたことをお知らせします。
+        </>
+      }
+    />
+  );
 }
 
 const AVATAR_COLORS = ['#e0912f', '#3a8aa3', '#5a659a', '#4f9e7f', '#b16478'];
@@ -53,7 +91,15 @@ function StatusPill({ row, now }: { row: DashboardRow; now: Date }) {
   );
 }
 
-function SubjectCard({ row, now }: { row: DashboardRow; now: Date }) {
+function SubjectCard({
+  row,
+  now,
+  actions,
+}: {
+  row: DashboardRow;
+  now: Date;
+  actions: WatchAction;
+}) {
   const statusText =
     row.travelUntil && row.travelUntil > now
       ? `旅行中 · ${row.travelUntil.getMonth() + 1}/${row.travelUntil.getDate()} まで`
@@ -71,11 +117,12 @@ function SubjectCard({ row, now }: { row: DashboardRow; now: Date }) {
         <div className="card__status">{statusText}</div>
         {row.appLoggedOutAt ? (
           <div className="card__note">
-            スマホアプリからログアウトしています（「元気」が届かない状態です）
+            スマホアプリからログアウト中です（Webからは今も「元気」が届きます）
           </div>
         ) : null}
       </div>
       <StatusPill row={row} now={now} />
+      <LeaveMenu row={row} actions={actions} />
     </div>
   );
 }
@@ -97,13 +144,16 @@ function AlertCard({
     <div className="alert">
       <div className="alert__stripe" />
       <div className="alert__in">
-        <p className="alert__title">
-          {row.name}さんから
-          {hours != null ? `、${hours}時間` : ''} 応答がありません
-        </p>
+        <div className="alert__head">
+          <p className="alert__title">
+            {row.name}さんから
+            {hours != null ? `、${hours}時間` : ''} 応答がありません
+          </p>
+          <LeaveMenu row={row} actions={actions} />
+        </div>
         <p className="alert__body">
           {row.appLoggedOutAt
-            ? 'アプリからログアウトしているため「元気」は届きません。まずは一声かけてみてください。'
+            ? 'スマホアプリからログアウト中です。まずは一声かけてみてください。'
             : '急かすものではありません。まずは一声かけてみてください。'}
         </p>
         <div className="alert__acts">
@@ -175,7 +225,12 @@ export function WatchDashboard({
         />
       ))}
       {calm.map((row) => (
-        <SubjectCard key={row.subjectUserId} row={row} now={now} />
+        <SubjectCard
+          key={row.subjectUserId}
+          row={row}
+          now={now}
+          actions={actions}
+        />
       ))}
     </div>
   );

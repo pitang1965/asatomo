@@ -673,6 +673,22 @@ export async function countActiveVotes(
   return row?.n ?? 0;
 }
 
+/**
+ * その見守り者が「生存」（＝承諾済み前提で、休眠しきい値以内に応答あり）か。
+ * countLivingWatchers と同じしきい値。整理ページで「外すと開示ラインを割るか」を
+ * 行ごとに判定するために共有する。
+ */
+export function isWatcherLiving(
+  watcherLastSeenAt: Date | null,
+  now: Date,
+  config: DomainConfig,
+): boolean {
+  if (!watcherLastSeenAt) return false;
+  return (
+    watcherLastSeenAt.getTime() >= now.getTime() - config.dormantDays * DAY_MS
+  );
+}
+
 /** 承諾済み かつ 休眠しきい値以内の見守り者数（定足数の分母）。 */
 export async function countLivingWatchers(
   db: Db,

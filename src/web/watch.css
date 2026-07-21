@@ -194,18 +194,26 @@
 
 .alert {
   border-radius: 16px;
-  overflow: hidden;
   box-shadow: var(--shadow-sm);
   border: 1px solid color-mix(in oklab, var(--warn) 40%, var(--line));
   background: var(--surface);
   margin-bottom: 14px;
 }
+/* overflow:hidden は使わない（⋮ メニューのポップが枠で切られるため）。
+   角丸はストライプ側を丸めて保つ。 */
 .alert__stripe {
   height: 4px;
   background: var(--warn);
+  border-radius: 15px 15px 0 0;
 }
 .alert__in {
   padding: 17px;
+}
+.alert__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 .alert__title {
   margin: 0 0 6px;
@@ -271,6 +279,83 @@
   background: transparent;
   color: var(--crit);
   border: 1px solid color-mix(in oklab, var(--crit) 45%, var(--line));
+}
+
+/* 行の⋮メニュー。稀・管理的な操作（見守り解除）を畳んで目立たせない。 */
+.rowmenu {
+  position: relative;
+  flex: none;
+}
+.rowmenu__dots {
+  appearance: none;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink-3);
+  padding: 4px 7px;
+  border-radius: 8px;
+}
+.rowmenu__dots:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.rowmenu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: transparent;
+  border: 0;
+  cursor: default;
+}
+.rowmenu__pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 21;
+  min-width: 190px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  padding: 6px;
+}
+.rowmenu__pop--wide {
+  width: 264px;
+  padding: 13px;
+}
+.rowmenu__item {
+  appearance: none;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  color: var(--crit);
+  padding: 9px 10px;
+  border-radius: 8px;
+}
+.rowmenu__item:hover {
+  background: var(--surface-2);
+}
+.rowmenu__confirm {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.85;
+}
+.rowmenu__acts {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rowmenu__acts .btn {
+  width: auto;
+  padding: 9px 15px;
+  font-size: 13px;
 }
 
 /* 死亡確認 */
