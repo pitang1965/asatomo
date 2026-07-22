@@ -1,18 +1,10 @@
-import { readFileSync } from 'node:fs';
 import { desc, eq } from 'drizzle-orm';
 import { createDb } from '../src/db';
 import { session, signals, subjectSettings, user } from '../src/db/schema';
+import { loadEnv } from './dev-db';
 
 /** 実機検証用（読み取り専用）: メールでユーザーを引き、セッション・シグナル・監視行を表示。 */
-if (!process.env.DATABASE_URL) {
-  for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
-    const i = line.indexOf('=');
-    if (i > 0 && !line.startsWith('#')) {
-      const key = line.slice(0, i).trim();
-      if (!process.env[key]) process.env[key] = line.slice(i + 1).trim();
-    }
-  }
-}
+loadEnv();
 
 const fmt = (d: Date | null | undefined) =>
   d ? d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '—';

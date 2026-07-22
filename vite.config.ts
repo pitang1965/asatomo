@@ -1,6 +1,12 @@
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react from '@vitejs/plugin-react';
+import { config as loadDotenv } from 'dotenv';
 import { defineConfig } from 'vite';
+
+// 開発サーバー（Node 実行）の環境変数は .env.local から供給する（nafuda と同じ file-per-env）。
+// 本番は Cloudflare Workers の vars/secrets（このファイルは本番配備に使わない）。
+// dotenv は既存の process.env を上書きしないので、シェルで渡した値が優先される。
+loadDotenv({ path: '.env.local' });
 
 /**
  * TanStack Start（SSR + サーバールート）の本番土台。

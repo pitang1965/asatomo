@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { asc, inArray } from 'drizzle-orm';
 import { createDb } from '../src/db';
 import {
@@ -8,6 +7,7 @@ import {
   subjectSettings,
   user,
 } from '../src/db/schema';
+import { loadEnv } from './dev-db';
 
 /**
  * 開発用シード。最初にログインした実ユーザーを見守り者として、テストの「本人」3人と
@@ -15,20 +15,11 @@ import {
  * 佐藤（アラート中）は再実行のたびに watchers_alerted へ戻る（「無事です」の動作確認用）。
  *
  * 実行: npx tsx scripts/seed-dev.ts
+ * 参照するのは .env.local（開発DB）のみ。本番へは touch しない（file-per-env）。
  */
-
-// .env の簡易読み込み(依存パッケージなし。値に = を含む場合も考慮)。
-if (!process.env.DATABASE_URL) {
-  for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
-    const i = line.indexOf('=');
-    if (i > 0 && !line.startsWith('#')) {
-      const key = line.slice(0, i).trim();
-      if (!process.env[key]) process.env[key] = line.slice(i + 1).trim();
-    }
-  }
-}
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL がありません');
-
+loadEnv();
+if (!process.env.DATABASE_URL)
+  throw new Error('DATABASE_URL がありません（.env.local を確認してください）');
 const db = createDb(process.env.DATABASE_URL);
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
 

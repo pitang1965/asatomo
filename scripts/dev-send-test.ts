@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { createHttpEmailSender } from '../src/notify/senders';
+import { loadEnv } from './dev-db';
 
 /**
  * 通知メール（Resend）配線のワンショット確認。
@@ -12,24 +12,11 @@ import { createHttpEmailSender } from '../src/notify/senders';
  *
  * ⚠ ドメイン未検証の Resend では、宛先はアカウント所有者のメールに限られる。
  *    over40web.club を検証すれば任意の相手へ送れる。
- *    .env に一時的に置いた場合はコミットしないこと（.env は .gitignore 済み）。
+ *    .env.local に一時的に置いた場合はコミットしないこと（.env.local は .gitignore 済み）。
  */
 
-// .env の簡易読み込み（他の dev スクリプトと同じ方式）。
-for (const key of ['EMAIL_API_KEY', 'EMAIL_FROM']) {
-  if (process.env[key]) continue;
-  try {
-    for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
-      const i = line.indexOf('=');
-      if (i > 0 && !line.startsWith('#')) {
-        const k = line.slice(0, i).trim();
-        if (k === key) process.env[key] = line.slice(i + 1).trim();
-      }
-    }
-  } catch {
-    // .env が無くても環境変数で渡せるので無視。
-  }
-}
+// EMAIL_API_KEY / EMAIL_FROM は .env.local から（シェル指定があればそちらが優先）。
+loadEnv();
 
 async function main() {
   const to = process.argv[2];

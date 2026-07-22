@@ -1,23 +1,15 @@
-import { readFileSync } from 'node:fs';
 import { desc, eq } from 'drizzle-orm';
 import { createDb } from '../src/db';
 import { signals, subjectSettings } from '../src/db/schema';
+import { loadEnv } from './dev-db';
 
 /**
  * 実機検証用: 本人の直近シグナルと lastSignalAt を表示する。
  * 実行: npx tsx scripts/dev-check-signals.ts [subjectUserId]（既定 seed-subject-sato）
  */
 
-// .env の簡易読み込み（seed-dev.ts と同じ）。
-if (!process.env.DATABASE_URL) {
-  for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
-    const i = line.indexOf('=');
-    if (i > 0 && !line.startsWith('#')) {
-      const key = line.slice(0, i).trim();
-      if (!process.env[key]) process.env[key] = line.slice(i + 1).trim();
-    }
-  }
-}
+// 読み取り専用なので本番ガードは掛けない（loadEnv のみ）。
+loadEnv();
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL がありません');
 
 async function main() {

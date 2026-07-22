@@ -1,9 +1,12 @@
 node_modules/
 dist/
 .wrangler/
+.tanstack/
 .dev.vars
 *.local
 
 .env
+.env.*
+!.env.example
 .claude/
 android/.idea/
