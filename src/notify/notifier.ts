@@ -70,10 +70,14 @@ export function createNotifications(
   const tag = (s: string) => `[${config.appName}] ${s}`;
 
   // プッシュ優先・トークンが無ければメールにフォールバックして本人へ届ける。
+  // linkForEmail はメール本文にのみ付ける（プッシュはタップで開くのでURL不要・ノイズになる）。
+  // title はプッシュのタイトル兼メール件名（tag で [アサトモ] を前置）。appName を渡さない
+  // （件名が「[アサトモ] アサトモ」になるため、意味のある一言を渡す）。
   async function notifySubject(
     subjectUserId: string,
     title: string,
     body: string,
+    linkForEmail?: string,
   ): Promise<void> {
     const tokens = await getSubjectPushTokens(db, subjectUserId);
     if (tokens.length > 0) {
@@ -81,8 +85,10 @@ export function createNotifications(
       return;
     }
     const email = await getUserEmail(db, subjectUserId);
-    if (email)
-      await senders.email.send(email, { subject: tag(title), text: body });
+    if (email) {
+      const text = linkForEmail ? `${body}\n${linkForEmail}` : body;
+      await senders.email.send(email, { subject: tag(title), text });
+    }
   }
 
   async function emailWatchers(
@@ -99,10 +105,14 @@ export function createNotifications(
   return {
     // ── cron Notifier ──
     async notifySubjectUnresponsive(subjectUserId) {
+      // 件名＝「元気ですか？」／本文にスマホアプリと見守りWeb（経路非依存。CONTEXT.md
+      // プラットフォームの呼び分け）。メールには見守りWebのURLを付ける（ドメインは env
+      // WEB_BASE_URL 由来。iPhone等アプリ非所持の本人はここから開く）。
       await notifySubject(
         subjectUserId,
-        config.appName,
-        '元気ですか？アプリか見守りWebを開いて、無事を知らせてください。',
+        '元気ですか？',
+        'スマホアプリか見守りWebを開いて、無事を知らせてください。',
+        config.webBaseUrl,
       );
     },
 
@@ -164,7 +174,7 @@ export function createNotifications(
     async notifySubjectDisclosureLocked(subjectUserId) {
       await notifySubject(
         subjectUserId,
-        config.appName,
+        '見守り者があと1人必要です',
         '最後のメッセージの開示には見守り者が2人必要です。もう1人招待しましょう。',
       );
     },
@@ -177,7 +187,7 @@ export function createNotifications(
       const body = disclosureLocked
         ? `${watcherName}さんが見守りをやめました。見守ってくれる人が少なくなり、今のままでは最後のメッセージを届けられません。もう1人、見守りをお願いしましょう。`
         : `${watcherName}さんが見守りをやめました。`;
-      await notifySubject(subjectUserId, config.appName, body);
+      await notifySubject(subjectUserId, '見守りのお知らせ', body);
     },
 
     async notifySubjectDeparted(departingName, watcherEmails, hadActiveAlert) {
@@ -206,7 +216,7 @@ export function createNotifications(
       const body = mutual
         ? `${name}さんと見守り合いを始めました。`
         : `${name}さんがあなたの見守りに加わりました。`;
-      await notifySubject(inviterUserId, config.appName, body);
+      await notifySubject(inviterUserId, '見守りのお知らせ', body);
     },
   };
 }

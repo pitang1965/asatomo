@@ -63,6 +63,19 @@ export function createFcmPushSender(config: FcmConfig): PushSender {
   };
 }
 
+/**
+ * プレーンテキストを、言語を明示した最小 HTML に包む。
+ * Gmail 等は HTML の lang 属性で言語を判定するため、日本語メールが「英語で書かれている
+ * ようです」と誤検知されて翻訳バナーが出るのを防ぐ（本文はテキストと同一。改行は <br>）。
+ */
+export function toJapaneseHtml(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return `<!doctype html><html lang="ja"><body>${escaped.replace(/\r?\n/g, '<br>')}</body></html>`;
+}
+
 // ─── メール（Resend 互換の REST。Cloudflare Workers 向き） ────────────────────
 export interface EmailConfig {
   apiKey: string;
@@ -88,6 +101,9 @@ export function createHttpEmailSender(config: EmailConfig): EmailSender {
           to,
           subject: msg.subject,
           text: msg.text,
+          // 言語を明示（テキストと同内容の HTML）。翻訳バナーの誤検知を防ぐ。
+          html: toJapaneseHtml(msg.text),
+          headers: { 'Content-Language': 'ja' },
         }),
       });
       if (!res.ok) throw new Error(`Email send failed: ${res.status}`);
@@ -134,6 +150,7 @@ export function createMailerSendEmailSender(
           to: [{ email: to }],
           subject: msg.subject,
           text: msg.text,
+          html: toJapaneseHtml(msg.text), // 言語明示で翻訳バナーの誤検知を防ぐ。
         }),
       });
       if (!res.ok) throw new Error(`MailerSend send failed: ${res.status}`);
