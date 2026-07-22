@@ -47,7 +47,7 @@ android {
             buildConfigField(
                 "String",
                 "BASE_URL",
-                "\"https://asatomo.pitang1965.workers.dev\"",
+                "\"https://asatomo.nafuda.me\"",
             )
             // 自分専用段階の暫定: debug 鍵で署名して実機に入れられるようにする
             // （日常利用は本番を向く release を使う。Play 公開時に正式署名へ差し替え）。
