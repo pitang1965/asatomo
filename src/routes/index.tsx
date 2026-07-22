@@ -7,6 +7,7 @@ import {
 import { type CSSProperties, useEffect, useState } from 'react';
 import type { DashboardRow } from '../domain/queries';
 import { fetchDashboard } from '../server/functions';
+import { Avatar } from '../web/Avatar';
 import { authClient } from '../web/auth-client';
 import { WatchDashboard } from '../web/WatchDashboard';
 
@@ -43,6 +44,7 @@ function Home() {
   return (
     <Dashboard
       userName={data.userName}
+      userImage={data.userImage}
       rows={reviveRows(data.rows)}
       isSubject={data.isSubject}
     />
@@ -174,10 +176,12 @@ function Login() {
 
 function Dashboard({
   userName,
+  userImage,
   rows,
   isSubject,
 }: {
   userName: string;
+  userImage: string | null;
   rows: DashboardRow[];
   /** 閲覧者が見守られている本人なら、手動シグナルと自動チェックインを有効化。 */
   isSubject: boolean;
@@ -303,7 +307,7 @@ function Dashboard({
           display: 'flex',
           justifyContent: 'flex-end',
           alignItems: 'center',
-          gap: 12,
+          gap: 14,
           padding: '10px 16px',
           fontSize: 12,
           color: 'var(--ink-2)',
@@ -312,26 +316,15 @@ function Dashboard({
         <Link to="/messages" style={{ color: 'var(--accent)' }}>
           最後のメッセージ
         </Link>
-        <span>{userName} さん</span>
-        <button
-          type="button"
-          style={{
-            appearance: 'none',
-            border: 0,
-            cursor: 'pointer',
-            font: 'inherit',
-            fontSize: 12,
-            color: 'var(--accent)',
-            background: 'none',
-            padding: 0,
-          }}
-          onClick={async () => {
-            await authClient.signOut();
-            router.invalidate();
-          }}
+        {/* 名前テキスト＋ログアウトを畳んだアバター。押すとアカウント画面（ログアウト・削除）へ。 */}
+        <Link
+          to="/account"
+          aria-label={`${userName} さんのアカウント`}
+          title={`${userName} さん`}
+          style={{ display: 'inline-flex' }}
         >
-          ログアウト
-        </button>
+          <Avatar name={userName} image={userImage} size={32} />
+        </Link>
       </div>
 
       {notice ? (

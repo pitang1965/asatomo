@@ -1,6 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import { connections, subjectSettings } from '../db/schema';
 import {
+  finalizeAccountDeletion,
+  planAccountDeletion,
+} from '../domain/account';
+import {
   addContact,
   inviteWatcher,
   leaveWatch,
@@ -113,6 +117,37 @@ export function createHandlers(ctx: ApiContext) {
      */
     async appLogout(actor: string): Promise<ApiResult<Record<string, never>>> {
       await recordAppLogout(db, actor, config);
+      return { ok: true, data: {} };
+    },
+
+    /**
+     * アカウント削除（即時・不可逆・ハード削除。ADR-0007）。
+     * 通知は不可逆な撤去の**前**に発火する（plan＝読み取りで意図を集計 → 通知 → finalize＝撤去）。
+     * 明示トランザクションを張らない方針のため、finalize が途中失敗しても本人の網が黙って
+     * 縮まない（沈黙より通知。§2）。網が縮む本人へは名指し通知、自分を見守っていた人へは
+     * 「利用をやめた」穏当通知。通知はベストエフォート（safe）。成功後クライアントは signOut する。
+     */
+    async deleteAccount(
+      actor: string,
+    ): Promise<ApiResult<Record<string, never>>> {
+      const plan = await planAccountDeletion(db, actor, config);
+      for (const s of plan.subjectsToNotify) {
+        await safe(() =>
+          notify.notifySubjectWatcherLeft(
+            s.subjectUserId,
+            s.watcherName,
+            s.disclosureLocked,
+          ),
+        );
+      }
+      await safe(() =>
+        notify.notifySubjectDeparted(
+          plan.yourName,
+          plan.watcherEmailsOnYou,
+          plan.hadActiveAlertOnYou,
+        ),
+      );
+      await finalizeAccountDeletion(db, actor, config);
       return { ok: true, data: {} };
     },
 

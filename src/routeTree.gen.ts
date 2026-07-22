@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as ConnectionsRouteImport } from './routes/connections'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as DeathSubjectIdRouteImport } from './routes/death.$subjectId'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
+import { Route as AccountDeleteRouteImport } from './routes/account_.delete'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 
 const PreviewRoute = PreviewRouteImport.update({
@@ -31,6 +33,11 @@ const MessagesRoute = MessagesRouteImport.update({
 const ConnectionsRoute = ConnectionsRouteImport.update({
   id: '/connections',
   path: '/connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +60,11 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountDeleteRoute = AccountDeleteRouteImport.update({
+  id: '/account_/delete',
+  path: '/account/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -61,9 +73,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/connections': typeof ConnectionsRoute
   '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/api/$': typeof ApiSplatRoute
   '/death/$subjectId': typeof DeathSubjectIdRoute
   '/join/$token': typeof JoinTokenRoute
@@ -71,9 +85,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/connections': typeof ConnectionsRoute
   '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/api/$': typeof ApiSplatRoute
   '/death/$subjectId': typeof DeathSubjectIdRoute
   '/join/$token': typeof JoinTokenRoute
@@ -82,9 +98,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/connections': typeof ConnectionsRoute
   '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
+  '/account_/delete': typeof AccountDeleteRoute
   '/api/$': typeof ApiSplatRoute
   '/death/$subjectId': typeof DeathSubjectIdRoute
   '/join/$token': typeof JoinTokenRoute
@@ -94,9 +112,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/connections'
     | '/messages'
     | '/preview'
+    | '/account/delete'
     | '/api/$'
     | '/death/$subjectId'
     | '/join/$token'
@@ -104,9 +124,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/connections'
     | '/messages'
     | '/preview'
+    | '/account/delete'
     | '/api/$'
     | '/death/$subjectId'
     | '/join/$token'
@@ -114,9 +136,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/connections'
     | '/messages'
     | '/preview'
+    | '/account_/delete'
     | '/api/$'
     | '/death/$subjectId'
     | '/join/$token'
@@ -125,9 +149,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   ConnectionsRoute: typeof ConnectionsRoute
   MessagesRoute: typeof MessagesRoute
   PreviewRoute: typeof PreviewRoute
+  AccountDeleteRoute: typeof AccountDeleteRoute
   ApiSplatRoute: typeof ApiSplatRoute
   DeathSubjectIdRoute: typeof DeathSubjectIdRoute
   JoinTokenRoute: typeof JoinTokenRoute
@@ -155,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/connections'
       fullPath: '/connections'
       preLoaderRoute: typeof ConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -185,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account_/delete': {
+      id: '/account_/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AccountDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -197,9 +237,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   ConnectionsRoute: ConnectionsRoute,
   MessagesRoute: MessagesRoute,
   PreviewRoute: PreviewRoute,
+  AccountDeleteRoute: AccountDeleteRoute,
   ApiSplatRoute: ApiSplatRoute,
   DeathSubjectIdRoute: DeathSubjectIdRoute,
   JoinTokenRoute: JoinTokenRoute,

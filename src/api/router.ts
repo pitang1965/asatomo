@@ -37,6 +37,7 @@ const ROUTES: Record<string, keyof Handlers> = {
   'POST /messages/recipients': 'setRecipients',
   'DELETE /messages': 'deleteMessage',
   'GET /messages': 'listMessages',
+  'POST /account/delete': 'deleteAccount',
 };
 
 function json(body: unknown, status = 200): Response {

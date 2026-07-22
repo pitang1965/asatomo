@@ -80,4 +80,5 @@ export const SCHEMAS: Record<keyof Handlers, z.ZodType> = {
   setRecipients: z.object({ messageId: id, recipients: z.array(recipient) }),
   deleteMessage: z.object({ messageId: id }),
   listMessages: z.object({}),
+  deleteAccount: z.object({}),
 };

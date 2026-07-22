@@ -39,6 +39,16 @@ export interface Notifications extends Notifier {
     watcherName: string,
     disclosureLocked: boolean,
   ): Promise<void>;
+  /**
+   * ルート層: あなたが[[アカウント削除]]で去ったことを、あなたを見守っていた人へ（ADR-0007）。
+   * 死亡認定/開示とは別物の穏当な文面。宛先は削除前に捕捉したメール（connections は消えている）。
+   * hadActiveAlert=true（削除時に安否確認が進行中だった）なら「安否確認は解除」を添える。
+   */
+  notifySubjectDeparted(
+    departingName: string,
+    watcherEmails: string[],
+    hadActiveAlert: boolean,
+  ): Promise<void>;
   /** ルート層: 見守り招待を受けた相手へ。 */
   notifyWatchInvite(
     subjectUserId: string,
@@ -168,6 +178,17 @@ export function createNotifications(
         ? `${watcherName}さんが見守りをやめました。見守ってくれる人が少なくなり、今のままでは最後のメッセージを届けられません。もう1人、見守りをお願いしましょう。`
         : `${watcherName}さんが見守りをやめました。`;
       await notifySubject(subjectUserId, config.appName, body);
+    },
+
+    async notifySubjectDeparted(departingName, watcherEmails, hadActiveAlert) {
+      const body = hadActiveAlert
+        ? `${departingName}さんはアサトモの利用をやめました。進行中だった安否確認は解除されました。ご心配なく。`
+        : `${departingName}さんはアサトモの利用をやめました。これまで見守っていただき、ありがとうございました。`;
+      await Promise.all(
+        watcherEmails.map((e) =>
+          senders.email.send(e, { subject: tag('お知らせ'), text: body }),
+        ),
+      );
     },
 
     async notifyWatchInvite(subjectUserId, inviteeUserId) {

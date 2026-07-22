@@ -2,6 +2,10 @@ import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { z } from 'zod';
 import {
+  type AccountDeletionPreview,
+  previewAccountDeletion,
+} from '../domain/account';
+import {
   getInvitationPreview,
   type InvitationInvalidReason,
 } from '../domain/invitations';
@@ -31,6 +35,8 @@ export type DashboardData =
   | {
       status: 'ok';
       userName: string;
+      /** ヘッダーの円形アバター用（OAuth 画像。無ければ頭文字で代替）。 */
+      userImage: string | null;
       rows: DashboardRow[];
       /** 閲覧者が「見守られている本人」か。Web の本人機能（手動/自動シグナル）のゲート。 */
       isSubject: boolean;
@@ -56,6 +62,7 @@ export const fetchDashboard = createServerFn({ method: 'GET' }).handler(
     return {
       status: 'ok',
       userName: session.user.name,
+      userImage: session.user.image ?? null,
       rows: await getWatcherDashboard(app.db, session.user.id),
       isSubject: await hasAcceptedWatcher(app.db, session.user.id),
     };
@@ -169,6 +176,77 @@ export const fetchConnectionsPage = createServerFn({ method: 'GET' }).handler(
     };
   },
 );
+
+/** アカウント画面（/account）の材料。プロフィール要約とログアウト・削除の入口。 */
+export type AccountData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'signed_out' }
+  | {
+      status: 'ok';
+      userName: string;
+      userEmail: string;
+      userImage: string | null;
+    };
+
+export const fetchAccount = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<AccountData> => {
+    let app: ReturnType<typeof createRequestApp>;
+    try {
+      app = createRequestApp(getServerEnv());
+    } catch (e) {
+      if (e instanceof ConfigError)
+        return { status: 'unconfigured', message: e.message };
+      throw e;
+    }
+
+    const request = getRequest();
+    const session = await app.auth.api.getSession({ headers: request.headers });
+    if (!session) return { status: 'signed_out' };
+
+    return {
+      status: 'ok',
+      userName: session.user.name,
+      userEmail: session.user.email,
+      userImage: session.user.image ?? null,
+    };
+  },
+);
+
+/**
+ * アカウント削除の確認画面（/account/delete）の材料。削除で網が縮む本人ごとの結果を
+ * 変更せず集計して返す（ADR-0007 §2 の「情報つきの摩擦」）。
+ */
+export type AccountDeletePreviewData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'signed_out' }
+  | { status: 'ok'; userName: string; preview: AccountDeletionPreview };
+
+export const fetchAccountDeletePreview = createServerFn({
+  method: 'GET',
+}).handler(async (): Promise<AccountDeletePreviewData> => {
+  let app: ReturnType<typeof createRequestApp>;
+  try {
+    app = createRequestApp(getServerEnv());
+  } catch (e) {
+    if (e instanceof ConfigError)
+      return { status: 'unconfigured', message: e.message };
+    throw e;
+  }
+
+  const request = getRequest();
+  const session = await app.auth.api.getSession({ headers: request.headers });
+  if (!session) return { status: 'signed_out' };
+
+  return {
+    status: 'ok',
+    userName: session.user.name,
+    preview: await previewAccountDeletion(
+      app.db,
+      session.user.id,
+      DEFAULT_DOMAIN_CONFIG,
+    ),
+  };
+});
 
 /** 最後のメッセージ管理画面（本人側）の材料。暗号材料は不透明なまま返す（復号は端末）。 */
 export type MessagesPageData =

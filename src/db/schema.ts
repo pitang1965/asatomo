@@ -258,8 +258,11 @@ export const connections = pgTable(
 
     // 相手。登録ユーザー（見守り者 or アプリ利用の受取人）なら otherUserId、
     // メールだけの純粋な受取人なら externalEmail（アカウント不要）。どちらか一方のみ。
+    // 相手ユーザーが[[アカウント削除]]されたらこのエッジは消える（cascade）。set null にすると
+    // externalEmail も null になり connections_party_ck（user XOR email）に違反するため cascade で正す
+    // （ADR-0007。アプリ層の削除手順が漏らしても DB 単体で自己整合になる belt-and-suspenders）。
     otherUserId: text('other_user_id').references(() => user.id, {
-      onDelete: 'set null',
+      onDelete: 'cascade',
     }),
     externalEmail: text('external_email'),
     displayName: text('display_name').notNull(), // 本人が付ける表示名

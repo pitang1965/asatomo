@@ -1,9 +1,11 @@
 package com.asatomo.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -114,6 +116,36 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
             ) {
                 Text(if (busy) "ログアウト中…" else "ログアウト")
             }
+
+            // アカウント削除は「まれで重いフロー」なので見守りWeb が唯一の実装（ADR-0006/0007）。
+            // ここは導線だけ: /account を Custom Tab で開く（安否への影響を見せる確認は Web 側）。
+            TextButton(
+                onClick = {
+                    CustomTabsIntent.Builder()
+                        .build()
+                        .launchUrl(
+                            context,
+                            Uri.parse(
+                                "${BuildConfig.BASE_URL.trimEnd('/')}/account",
+                            ),
+                        )
+                },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "アカウントを削除する ↗",
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            Text(
+                "削除は見守りWebで行います",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+
+            Spacer(Modifier.size(4.dp))
             Text(
                 "アサトモ ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodySmall,
