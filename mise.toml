@@ -1,0 +1,12 @@
+# mise: 開発ツールのバージョン固定（https://mise.jdx.dev）。
+# 導入（Windows・初回のみ）: winget install jdx.mise → 新しいシェルを開く。
+# 使い方: このリポジトリで `mise install` すると下記の Node が入り、以後このディレクトリ内で
+#   自動的にこの Node が選択される（グローバルの node を汚さない）。
+#
+# スコープは Node のみ（grill 決定 2026-07-23）:
+#   - 環境変数は従来どおり .env.local を vite(dotenv) が読む。mise の [env] では二重管理しない。
+#   - Java/JDK は mise で管理しない。Android ビルドは Android Studio 同梱 JBR の JAVA_HOME を使う
+#     （mise が JDK の JAVA_HOME を上書きすると Android ビルドが壊れるため）。
+
+[tools]
+node = "22.17.0"
