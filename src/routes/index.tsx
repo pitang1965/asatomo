@@ -297,6 +297,9 @@ function Dashboard({
           color: 'var(--ink-2)',
         }}
       >
+        <Link to="/activity" style={{ color: 'var(--accent)' }}>
+          あなたの記録
+        </Link>
         <Link to="/messages" style={{ color: 'var(--accent)' }}>
           最後のメッセージ
         </Link>
