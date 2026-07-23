@@ -15,13 +15,19 @@ import java.util.Calendar
  */
 object AlarmScheduler {
 
+    /** 表示用の時刻ラベル。例: "09:30（午前）" / "17:00（午後）" */
+    fun label(hour: Int, minute: Int): String {
+        val period = if (hour < 12) "午前" else "午後"
+        return "%02d:%02d（%s）".format(hour, minute, period)
+    }
+
     /** 時刻を保存して次回分をセットする（UI から呼ぶ）。戻り値は表示用メッセージ。 */
     fun setDailyAlarm(context: Context, hour: Int, minute: Int): String {
         val settings = Settings(context)
         settings.alarmHour = hour
         settings.alarmMinute = minute
         return if (scheduleNext(context)) {
-            "毎日 %02d:%02d に鳴ります".format(hour, minute)
+            label(hour, minute)
         } else {
             "正確なアラームの許可が必要です（設定画面を開きました）"
         }

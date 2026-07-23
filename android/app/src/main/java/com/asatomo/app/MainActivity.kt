@@ -39,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.work.WorkInfo
@@ -136,7 +137,7 @@ private fun MainScreen() {
         remember {
             mutableStateOf(
                 if (settings.hasAlarm) {
-                    "毎日 %02d:%02d に鳴ります".format(settings.alarmHour, settings.alarmMinute)
+                    AlarmScheduler.label(settings.alarmHour, settings.alarmMinute)
                 } else {
                     ""
                 },
@@ -250,8 +251,8 @@ private fun MainScreen() {
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // ── 毎朝の目覚まし ──
-            SectionCard(title = "☀ 毎朝の目覚まし") {
+            // ── 毎日の目覚まし ──（夜勤の人もいるので「毎朝」ではなく「毎日」）
+            SectionCard(title = "⏰ 毎日の目覚まし") {
                 Text(
                     if (hasWatchers) {
                         "セットした時刻に毎日鳴ります。止めるだけで、見守ってくれる人に今日の「元気」が伝わります。"
@@ -261,7 +262,11 @@ private fun MainScreen() {
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (alarmText.isNotEmpty()) {
-                    Text(alarmText, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        alarmText,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
                 Button(
                     onClick = {
@@ -282,21 +287,21 @@ private fun MainScreen() {
             }
 
             // ── いまの様子を伝える ──
-            SectionCard(title = "いまの様子を伝える") {
+            SectionCard(title = "📣 いまの様子を伝える") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { send(ApiClient.SignalKind.MEAL, "ごはん") }) {
-                        Text("ごはん")
+                        Text("🍚 ごはん")
                     }
                     OutlinedButton(onClick = { send(ApiClient.SignalKind.SLEEP, "おやすみ") }) {
-                        Text("おやすみ")
+                        Text("🌙 おやすみ")
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { send(ApiClient.SignalKind.OUTING, "いってきます") }) {
-                        Text("いってきます")
+                        Text("👋 いってきます")
                     }
                     OutlinedButton(onClick = { send(ApiClient.SignalKind.HOMECOMING, "ただいま") }) {
-                        Text("ただいま")
+                        Text("🏠 ただいま")
                     }
                 }
                 // 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。
@@ -315,7 +320,7 @@ private fun MainScreen() {
 
             // ── あなたが見守っている人（近況の一瞥＋代理確認。重いフローは Web へ。ADR-0006）
             //    本画面は本人文脈（見守ってくれる人）と混在するため主語を明示する（CONTEXT.md 本人）。
-            SectionCard(title = "あなたが見守っている人") {
+            SectionCard(title = "👀 あなたが見守っている人") {
                 val rows = watchRows
                 when {
                     rows == null -> Text("読み込み中…", style = MaterialTheme.typography.bodySmall)
@@ -357,7 +362,7 @@ private fun MainScreen() {
             }
 
             // ── 旅行モード ──
-            SectionCard(title = "旅行モード") {
+            SectionCard(title = "🧳 旅行モード") {
                 val travelActive = travelUntilMs > System.currentTimeMillis()
                 if (travelActive) {
                     Text(
