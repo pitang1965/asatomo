@@ -111,7 +111,7 @@ export function createNotifications(
       await notifySubject(
         subjectUserId,
         '元気ですか？',
-        'スマホアプリか見守りWebを開いて、無事を知らせてください。',
+        'スマホアプリか見守りWebを開くだけで大丈夫です。',
         config.webBaseUrl,
       );
     },

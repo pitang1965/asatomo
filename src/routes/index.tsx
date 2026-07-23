@@ -385,6 +385,12 @@ function Dashboard({
             >
               このページを開いたことも「元気」として自動で伝わります。
             </p>
+            {/* 透明性: 何が記録され、相手にどう見えるかを本人がいつでも確認できる（grill 2026-07-23）。 */}
+            <p style={{ margin: '8px 0 0', fontSize: 12 }}>
+              <Link to="/activity" style={{ color: 'var(--accent)' }}>
+                あなたの記録を見る（相手にどう見えるか）→
+              </Link>
+            </p>
             {signalNotice ? (
               <p
                 style={{

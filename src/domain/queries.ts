@@ -183,6 +183,36 @@ export async function hasAcceptedWatcher(
 
 // ────────────────────────────────────────────────────────────────────────────
 
+export interface ActivityEntry {
+  id: string;
+  kind: SignalKind;
+  occurredAt: Date;
+}
+
+/**
+ * 本人自身の生存シグナル履歴（新しい順）。自分のデータなのでぼかさず真の種別で返す
+ * （透明性: 何が記録されているかを本人に隠さない。CONTEXT.md 生存シグナル/近況）。
+ * 見守り者にはこの履歴は出さない（見せるのは常に最新1件のみ。grill 決定 2026-07-23）。
+ */
+export async function getSubjectActivityHistory(
+  db: Db,
+  subjectUserId: string,
+  limit = 50,
+): Promise<ActivityEntry[]> {
+  return db
+    .select({
+      id: signals.id,
+      kind: signals.kind,
+      occurredAt: signals.occurredAt,
+    })
+    .from(signals)
+    .where(eq(signals.subjectUserId, subjectUserId))
+    .orderBy(desc(signals.occurredAt))
+    .limit(limit);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 export interface SubjectConnection {
   id: string;
   displayName: string;

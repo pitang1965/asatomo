@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as ConnectionsRouteImport } from './routes/connections'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
@@ -33,6 +34,11 @@ const MessagesRoute = MessagesRouteImport.update({
 const ConnectionsRoute = ConnectionsRouteImport.update({
   id: '/connections',
   path: '/connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRoute = AccountRouteImport.update({
@@ -74,6 +80,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/activity': typeof ActivityRoute
   '/connections': typeof ConnectionsRoute
   '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/activity': typeof ActivityRoute
   '/connections': typeof ConnectionsRoute
   '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/activity': typeof ActivityRoute
   '/connections': typeof ConnectionsRoute
   '/messages': typeof MessagesRoute
   '/preview': typeof PreviewRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/activity'
     | '/connections'
     | '/messages'
     | '/preview'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/activity'
     | '/connections'
     | '/messages'
     | '/preview'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/activity'
     | '/connections'
     | '/messages'
     | '/preview'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  ActivityRoute: typeof ActivityRoute
   ConnectionsRoute: typeof ConnectionsRoute
   MessagesRoute: typeof MessagesRoute
   PreviewRoute: typeof PreviewRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/connections'
       fullPath: '/connections'
       preLoaderRoute: typeof ConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -238,6 +258,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  ActivityRoute: ActivityRoute,
   ConnectionsRoute: ConnectionsRoute,
   MessagesRoute: MessagesRoute,
   PreviewRoute: PreviewRoute,

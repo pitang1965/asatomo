@@ -12,9 +12,11 @@ import {
 import { listMessages } from '../domain/messages';
 import { DEFAULT_DOMAIN_CONFIG } from '../domain/monitoring';
 import {
+  type ActivityEntry,
   type DashboardRow,
   type DeathConfirmInfo,
   getDeathConfirmInfo,
+  getSubjectActivityHistory,
   getSubjectConnections,
   getSubjectWatchers,
   getWatcherDashboard,
@@ -247,6 +249,45 @@ export const fetchAccountDeletePreview = createServerFn({
     ),
   };
 });
+
+/**
+ * 自分のアクティビティ履歴画面（/activity・本人側）の材料。透明性の画面。
+ * 履歴は本人だけに見せる（見守り者には最新1件のみ。grill 決定 2026-07-23）。isSubject は
+ * 「見守り者にはこう見えます」の対比を出すかの分岐（見守ってくれる人が居なければ誰にも届かない）。
+ */
+export type ActivityHistoryData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'signed_out' }
+  | {
+      status: 'ok';
+      userName: string;
+      isSubject: boolean;
+      entries: ActivityEntry[];
+    };
+
+export const fetchActivityHistory = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<ActivityHistoryData> => {
+    let app: ReturnType<typeof createRequestApp>;
+    try {
+      app = createRequestApp(getServerEnv());
+    } catch (e) {
+      if (e instanceof ConfigError)
+        return { status: 'unconfigured', message: e.message };
+      throw e;
+    }
+
+    const request = getRequest();
+    const session = await app.auth.api.getSession({ headers: request.headers });
+    if (!session) return { status: 'signed_out' };
+
+    return {
+      status: 'ok',
+      userName: session.user.name,
+      isSubject: await hasAcceptedWatcher(app.db, session.user.id),
+      entries: await getSubjectActivityHistory(app.db, session.user.id),
+    };
+  },
+);
 
 /** 最後のメッセージ管理画面（本人側）の材料。暗号材料は不透明なまま返す（復号は端末）。 */
 export type MessagesPageData =

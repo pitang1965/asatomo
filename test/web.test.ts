@@ -4,9 +4,15 @@ import * as schema from '../src/db/schema';
 import { castVote, DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
 import {
   getDeathConfirmInfo,
+  getSubjectActivityHistory,
   getWatcherDashboard,
 } from '../src/domain/queries';
-import { recentActivityText, relativeJa } from '../src/domain/recent-activity';
+import {
+  absoluteJa,
+  recentActivityText,
+  relativeJa,
+  signalTrueLabel,
+} from '../src/domain/recent-activity';
 import {
   hoursAgo,
   makeTestDb,
@@ -39,9 +45,18 @@ describe('近況テキスト整形', () => {
   });
 
   it('相対時間のバケット', () => {
-    expect(relativeJa(new Date(NOW.getTime() - 90_000), NOW)).toBe('約1分前');
+    expect(relativeJa(new Date(NOW.getTime() - 90_000), NOW)).toBe('さっき');
     expect(relativeJa(hoursAgo(3, NOW), NOW)).toBe('約3時間前');
     expect(relativeJa(hoursAgo(50, NOW), NOW)).toBe('2日前');
+  });
+
+  it('本人の履歴は真の種別＋絶対時刻（見守り者向けのぼかしと別）', () => {
+    // 外出はぼかさず「いってきます」。見守り者向け VERB（「元気にしていました」）と別物。
+    expect(signalTrueLabel('outing')).toBe('「いってきます」を送りました');
+    expect(signalTrueLabel('meal')).toBe('「ごはん」を送りました');
+    // 絶対時刻はローカル時刻の M月D日 HH:mm（ローカル部品で構築して TZ 非依存に検証）。
+    expect(absoluteJa(new Date(2026, 6, 20, 14, 12))).toBe('7月20日 14:12');
+    expect(absoluteJa(new Date(2026, 0, 3, 9, 5))).toBe('1月3日 09:05');
   });
 });
 
@@ -168,5 +183,44 @@ describe('死亡確認画面の材料（getDeathConfirmInfo）', () => {
 
     const info = await getDeathConfirmInfo(db, s, active, config);
     expect(info?.livingWatchers).toBe(1);
+  });
+});
+
+describe('自分のアクティビティ履歴（getSubjectActivityHistory）', () => {
+  let db: Db;
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it('本人自身の全シグナルを新しい順で返す', async () => {
+    const s = await seedSubject(db);
+    await db.insert(schema.signals).values([
+      { subjectUserId: s, kind: 'meal', occurredAt: hoursAgo(5, NOW) },
+      { subjectUserId: s, kind: 'outing', occurredAt: hoursAgo(2, NOW) },
+      { subjectUserId: s, kind: 'app_open', occurredAt: hoursAgo(9, NOW) },
+    ]);
+
+    const entries = await getSubjectActivityHistory(db, s);
+    expect(entries.map((e) => e.kind)).toEqual(['outing', 'meal', 'app_open']);
+    // 履歴はぼかさない: 外出は真の種別で返る（見守り者向けの最新1件ぼかしと別経路）。
+    expect(signalTrueLabel(entries[0].kind)).toBe(
+      '「いってきます」を送りました',
+    );
+  });
+
+  it('他人のシグナルは混ざらない', async () => {
+    const me = await seedSubject(db);
+    const other = await seedSubject(db);
+    await db.insert(schema.signals).values([
+      { subjectUserId: me, kind: 'meal', occurredAt: hoursAgo(1, NOW) },
+      { subjectUserId: other, kind: 'meal', occurredAt: hoursAgo(1, NOW) },
+    ]);
+    const entries = await getSubjectActivityHistory(db, me);
+    expect(entries).toHaveLength(1);
+  });
+
+  it('記録が無ければ空配列', async () => {
+    const s = await seedSubject(db);
+    expect(await getSubjectActivityHistory(db, s)).toEqual([]);
   });
 });
