@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -143,6 +147,22 @@ private fun MainScreen() {
                 },
             )
         }
+
+    // アラーム音量が0＝目覚ましが鳴らない状態の警告（ADR-0009）。アラーム設定済みのときだけ意味を持つ。
+    // 前面復帰のたびに読み直す（サウンド設定から戻った時・別アプリで音量を変えた時も鮮度を保つ）。
+    var alarmMuted by
+        remember { mutableStateOf(settings.hasAlarm && AlarmAudio.isMuted(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // キューに積んだシグナルの送信状態を観測して表示（圏外→接続時の自動送達も見える）。
     LaunchedEffect(trackedWork) {
@@ -268,6 +288,22 @@ private fun MainScreen() {
                         fontWeight = FontWeight.Bold,
                     )
                 }
+                // 道具の不調として平易に告げる（監視感・技術語・「マナーモード解除」は書かない。ADR-0009 決定6）。
+                if (alarmMuted) {
+                    Text(
+                        "⚠ アラームの音量がゼロになっています。\nこのままでは、時刻になっても音が鳴りません。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Button(
+                        onClick = {
+                            AlarmAudio.makeAudible(context)
+                            alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
+                        },
+                    ) {
+                        Text("アラームの音を出せるようにする")
+                    }
+                }
                 Button(
                     onClick = {
                         val now = Calendar.getInstance()
@@ -275,6 +311,8 @@ private fun MainScreen() {
                             context,
                             { _, h, m ->
                                 alarmText = AlarmScheduler.setDailyAlarm(context, h, m)
+                                // セット直後の教育の瞬間: 今セットしたのに音が0なら即警告する。
+                                alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
                             },
                             if (settings.hasAlarm) settings.alarmHour else now.get(Calendar.HOUR_OF_DAY),
                             if (settings.hasAlarm) settings.alarmMinute else now.get(Calendar.MINUTE),
