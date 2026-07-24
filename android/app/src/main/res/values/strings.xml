@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">アサトモ</string>
+    <string name="app_name">アサトモ目覚まし</string>
+    <!-- ホーム画面アイコンの短縮名（ランチャーのみ）。正式名 app_name とは別に、日常の道具名を出す。 -->
+    <string name="launcher_label">目覚まし</string>
 </resources>
