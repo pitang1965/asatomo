@@ -15,7 +15,7 @@ import { authClient } from '../web/auth-client';
  * 入れ子から外れ、独立フルページになる。account.tsx は Outlet を持たないため、入れ子のままだと
  * /account/delete が描画されない（＝「押しても何も起きない」）。URL は /account/delete のまま。
  */
-export const Route = createFileRoute('/account_/delete')({
+export const Route = createFileRoute('/_app/account_/delete')({
   loader: () => fetchAccountDeletePreview(),
   component: DeletePage,
 });
@@ -62,7 +62,7 @@ function impactLine(s: WatchedSubjectImpact): {
     };
   if (s.dropsBelowDisclosureLine)
     return {
-      text: `${s.subjectName}さんは見守り者が${s.currentLivingWatchers}人→${s.resultingLivingWatchers}人になり、そのままだと最後のメッセージを届けられなくなります。`,
+      text: `${s.subjectName}さんは見守り者が${s.currentLivingWatchers}人→${s.resultingLivingWatchers}人になり、そのままだと最後の伝言を届けられなくなります。`,
       strong: true,
     };
   return {
@@ -134,7 +134,7 @@ function Confirm({
           }}
         >
           削除は<strong>すぐに反映され、元に戻せません</strong>。
-          あなたが用意した最後のメッセージと宛先も削除されます。
+          あなたが用意した最後の伝言と宛先も削除されます。
         </p>
 
         {watchedSubjects.length > 0 ? (

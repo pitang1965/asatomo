@@ -175,7 +175,7 @@ export function createNotifications(
       await notifySubject(
         subjectUserId,
         '見守り者があと1人必要です',
-        '最後のメッセージの開示には見守り者が2人必要です。もう1人招待しましょう。',
+        '最後の伝言の開示には見守り者が2人必要です。もう1人招待しましょう。',
       );
     },
 
@@ -185,7 +185,7 @@ export function createNotifications(
       disclosureLocked,
     ) {
       const body = disclosureLocked
-        ? `${watcherName}さんが見守りをやめました。見守ってくれる人が少なくなり、今のままでは最後のメッセージを届けられません。もう1人、見守りをお願いしましょう。`
+        ? `${watcherName}さんが見守りをやめました。見守ってくれる人が少なくなり、今のままでは最後の伝言を届けられません。もう1人、見守りをお願いしましょう。`
         : `${watcherName}さんが見守りをやめました。`;
       await notifySubject(subjectUserId, '見守りのお知らせ', body);
     },

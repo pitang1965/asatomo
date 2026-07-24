@@ -12,7 +12,7 @@ import { authClient } from '../web/auth-client';
  *   - アカウント削除はここを入口に、依存者ごとの結果を見せる確認（/account/delete）へ。
  *   - 削除は「まれで重いフロー」なので見守りWeb が唯一の実装（ADR-0006）。
  */
-export const Route = createFileRoute('/account')({
+export const Route = createFileRoute('/_app/account')({
   loader: () => fetchAccount(),
   component: AccountPage,
 });
@@ -79,12 +79,6 @@ function Account({
 
   return (
     <div style={page}>
-      <div style={{ padding: '10px 16px', fontSize: 13 }}>
-        <Link to="/" style={{ color: 'var(--accent)' }}>
-          ← もどる
-        </Link>
-      </div>
-
       <div style={card}>
         {/* プロフィール要約 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

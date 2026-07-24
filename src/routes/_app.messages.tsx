@@ -17,7 +17,7 @@ import {
  * サーバへは暗号材料だけを送る（POST /api/messages）。読み返しも本人の合言葉で端末内復号。
  * 合言葉を忘れると誰にも復元できない（受託しないことが仕様）。
  */
-export const Route = createFileRoute('/messages')({
+export const Route = createFileRoute('/_app/messages')({
   loader: () => fetchMessagesPage(),
   component: MessagesPage,
 });
@@ -71,26 +71,22 @@ function MessagesPage() {
     return (
       <Center
         title="ログインが必要です"
-        body="最後のメッセージの作成・管理は、ご本人のアカウントで行います。"
+        body="最後の伝言の作成・管理は、ご本人のアカウントで行います。"
       />
     );
 
   return (
     <div style={page}>
-      <div style={{ padding: '10px 16px', fontSize: 13 }}>
-        <Link to="/" style={{ color: 'var(--accent)' }}>
-          ← ダッシュボード
-        </Link>
-      </div>
       <h1
         style={{
           textAlign: 'center',
           fontSize: 20,
           color: 'var(--ink)',
           margin: '8px 0 0',
+          paddingTop: 12,
         }}
       >
-        最後のメッセージ
+        最後の伝言
       </h1>
       <p
         style={{
@@ -106,7 +102,7 @@ function MessagesPage() {
 
       <div style={card}>
         <label style={{ ...labelStyle, marginTop: 0 }}>
-          編集用パスワード（全メッセージ共通・あなただけの秘密）
+          編集用パスワード（全伝言共通・あなただけの秘密）
           <input
             style={input}
             type={hidePass ? 'password' : 'text'}
@@ -198,7 +194,7 @@ function MessageList({
     return (
       <div style={{ ...card, textAlign: 'center' }}>
         <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-          まだメッセージはありません。下のフォームから作成できます。
+          まだ伝言はありません。下のフォームから作成できます。
         </p>
       </div>
     );
@@ -260,8 +256,7 @@ function MessageCard({
   }
 
   async function remove() {
-    if (!window.confirm('このメッセージを削除しますか？元に戻せません。'))
-      return;
+    if (!window.confirm('この伝言を削除しますか？元に戻せません。')) return;
     setBusy(true);
     try {
       const res = await fetch('/api/messages', {
@@ -613,7 +608,7 @@ function CreateForm({
   return (
     <div style={card}>
       <h2 style={{ fontSize: 16, color: 'var(--ink)', margin: 0 }}>
-        新しいメッセージ
+        新しい伝言
       </h2>
 
       <label style={labelStyle}>
@@ -638,8 +633,8 @@ function CreateForm({
 
       <div style={labelStyle}>宛先（受取人）と、それぞれの合言葉</div>
       <p style={{ fontSize: 11, color: 'var(--ink-3)', margin: '4px 0 0' }}>
-        合言葉は、その人がメッセージを開けるための鍵です。生前に直接伝えておいてください。
-        人ごとに内容を変えたいときは、宛先を分けて複数のメッセージを作れます。
+        合言葉は、その人が伝言を開けるための鍵です。生前に直接伝えておいてください。
+        人ごとに内容を変えたいときは、宛先を分けて複数の伝言を作れます。
       </p>
       {connections.length === 0 ? (
         <p style={{ fontSize: 12, color: 'var(--ink-3)' }}>

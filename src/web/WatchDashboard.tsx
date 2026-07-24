@@ -183,32 +183,40 @@ export function WatchDashboard({
   rows,
   now,
   actions,
+  /**
+   * 内部ヘッダー（みまもり ブランド＋状態ピル）を出すか。既定 true（プレビュー等の単独利用）。
+   * /watch では上位の共通ブランドヘッダー（アサトモ）があるので false にして二重ブランドを避ける。
+   */
+  showHeader = true,
 }: {
   rows: DashboardRow[];
   now: Date;
   actions: WatchAction;
+  showHeader?: boolean;
 }) {
   const alerts = rows.filter((r) => r.isAlert);
   const calm = rows.filter((r) => !r.isAlert);
   return (
     <div className="watch">
-      <header className="watch__head">
-        <div className="watch__brand">
-          <span className="watch__sun" />
-          みまもり
-        </div>
-        {alerts.length > 0 ? (
-          <span className="pill pill--warn">
-            <span className="pill__d" />
-            要確認 {alerts.length}件
-          </span>
-        ) : (
-          <span className="pill pill--good">
-            <span className="pill__d" />
-            みんな元気そう
-          </span>
-        )}
-      </header>
+      {showHeader ? (
+        <header className="watch__head">
+          <div className="watch__brand">
+            <span className="watch__sun" />
+            みまもり
+          </div>
+          {alerts.length > 0 ? (
+            <span className="pill pill--warn">
+              <span className="pill__d" />
+              要確認 {alerts.length}件
+            </span>
+          ) : (
+            <span className="pill pill--good">
+              <span className="pill__d" />
+              みんな元気そう
+            </span>
+          )}
+        </header>
+      ) : null}
 
       {rows.length === 0 ? (
         <p className="watch__empty">

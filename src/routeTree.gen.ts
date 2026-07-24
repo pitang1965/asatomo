@@ -10,40 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PreviewRouteImport } from './routes/preview'
-import { Route as MessagesRouteImport } from './routes/messages'
-import { Route as ConnectionsRouteImport } from './routes/connections'
-import { Route as ActivityRouteImport } from './routes/activity'
-import { Route as AccountRouteImport } from './routes/account'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
-import { Route as DeathSubjectIdRouteImport } from './routes/death.$subjectId'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
-import { Route as AccountDeleteRouteImport } from './routes/account_.delete'
+import { Route as AppWatchRouteImport } from './routes/_app.watch'
+import { Route as AppMessagesRouteImport } from './routes/_app.messages'
+import { Route as AppMeRouteImport } from './routes/_app.me'
+import { Route as AppConnectionsRouteImport } from './routes/_app.connections'
+import { Route as AppActivityRouteImport } from './routes/_app.activity'
+import { Route as AppAccountRouteImport } from './routes/_app.account'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as AppDeathSubjectIdRouteImport } from './routes/_app.death.$subjectId'
+import { Route as AppAccountDeleteRouteImport } from './routes/_app.account_.delete'
 
 const PreviewRoute = PreviewRouteImport.update({
   id: '/preview',
   path: '/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MessagesRoute = MessagesRouteImport.update({
-  id: '/messages',
-  path: '/messages',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConnectionsRoute = ConnectionsRouteImport.update({
-  id: '/connections',
-  path: '/connections',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ActivityRoute = ActivityRouteImport.update({
-  id: '/activity',
-  path: '/activity',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccountRoute = AccountRouteImport.update({
-  id: '/account',
-  path: '/account',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -56,119 +49,165 @@ const JoinTokenRoute = JoinTokenRouteImport.update({
   path: '/join/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DeathSubjectIdRoute = DeathSubjectIdRouteImport.update({
-  id: '/death/$subjectId',
-  path: '/death/$subjectId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountDeleteRoute = AccountDeleteRouteImport.update({
-  id: '/account_/delete',
-  path: '/account/delete',
-  getParentRoute: () => rootRouteImport,
+const AppWatchRoute = AppWatchRouteImport.update({
+  id: '/watch',
+  path: '/watch',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMessagesRoute = AppMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMeRoute = AppMeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConnectionsRoute = AppConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppActivityRoute = AppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppDeathSubjectIdRoute = AppDeathSubjectIdRouteImport.update({
+  id: '/death/$subjectId',
+  path: '/death/$subjectId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountDeleteRoute = AppAccountDeleteRouteImport.update({
+  id: '/account_/delete',
+  path: '/account/delete',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
-  '/activity': typeof ActivityRoute
-  '/connections': typeof ConnectionsRoute
-  '/messages': typeof MessagesRoute
+  '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
-  '/account/delete': typeof AccountDeleteRoute
+  '/account': typeof AppAccountRoute
+  '/activity': typeof AppActivityRoute
+  '/connections': typeof AppConnectionsRoute
+  '/me': typeof AppMeRoute
+  '/messages': typeof AppMessagesRoute
+  '/watch': typeof AppWatchRoute
   '/api/$': typeof ApiSplatRoute
-  '/death/$subjectId': typeof DeathSubjectIdRoute
   '/join/$token': typeof JoinTokenRoute
+  '/account/delete': typeof AppAccountDeleteRoute
+  '/death/$subjectId': typeof AppDeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
-  '/activity': typeof ActivityRoute
-  '/connections': typeof ConnectionsRoute
-  '/messages': typeof MessagesRoute
+  '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
-  '/account/delete': typeof AccountDeleteRoute
+  '/account': typeof AppAccountRoute
+  '/activity': typeof AppActivityRoute
+  '/connections': typeof AppConnectionsRoute
+  '/me': typeof AppMeRoute
+  '/messages': typeof AppMessagesRoute
+  '/watch': typeof AppWatchRoute
   '/api/$': typeof ApiSplatRoute
-  '/death/$subjectId': typeof DeathSubjectIdRoute
   '/join/$token': typeof JoinTokenRoute
+  '/account/delete': typeof AppAccountDeleteRoute
+  '/death/$subjectId': typeof AppDeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
-  '/activity': typeof ActivityRoute
-  '/connections': typeof ConnectionsRoute
-  '/messages': typeof MessagesRoute
+  '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
-  '/account_/delete': typeof AccountDeleteRoute
+  '/_app/account': typeof AppAccountRoute
+  '/_app/activity': typeof AppActivityRoute
+  '/_app/connections': typeof AppConnectionsRoute
+  '/_app/me': typeof AppMeRoute
+  '/_app/messages': typeof AppMessagesRoute
+  '/_app/watch': typeof AppWatchRoute
   '/api/$': typeof ApiSplatRoute
-  '/death/$subjectId': typeof DeathSubjectIdRoute
   '/join/$token': typeof JoinTokenRoute
+  '/_app/account_/delete': typeof AppAccountDeleteRoute
+  '/_app/death/$subjectId': typeof AppDeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
+    | '/preview'
     | '/account'
     | '/activity'
     | '/connections'
+    | '/me'
     | '/messages'
-    | '/preview'
-    | '/account/delete'
+    | '/watch'
     | '/api/$'
-    | '/death/$subjectId'
     | '/join/$token'
+    | '/account/delete'
+    | '/death/$subjectId'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
+    | '/preview'
     | '/account'
     | '/activity'
     | '/connections'
+    | '/me'
     | '/messages'
-    | '/preview'
-    | '/account/delete'
+    | '/watch'
     | '/api/$'
-    | '/death/$subjectId'
     | '/join/$token'
+    | '/account/delete'
+    | '/death/$subjectId'
     | '/api/auth/$'
   id:
     | '__root__'
     | '/'
-    | '/account'
-    | '/activity'
-    | '/connections'
-    | '/messages'
+    | '/_app'
+    | '/login'
     | '/preview'
-    | '/account_/delete'
+    | '/_app/account'
+    | '/_app/activity'
+    | '/_app/connections'
+    | '/_app/me'
+    | '/_app/messages'
+    | '/_app/watch'
     | '/api/$'
-    | '/death/$subjectId'
     | '/join/$token'
+    | '/_app/account_/delete'
+    | '/_app/death/$subjectId'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccountRoute: typeof AccountRoute
-  ActivityRoute: typeof ActivityRoute
-  ConnectionsRoute: typeof ConnectionsRoute
-  MessagesRoute: typeof MessagesRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
   PreviewRoute: typeof PreviewRoute
-  AccountDeleteRoute: typeof AccountDeleteRoute
   ApiSplatRoute: typeof ApiSplatRoute
-  DeathSubjectIdRoute: typeof DeathSubjectIdRoute
   JoinTokenRoute: typeof JoinTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -182,32 +221,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/messages': {
-      id: '/messages'
-      path: '/messages'
-      fullPath: '/messages'
-      preLoaderRoute: typeof MessagesRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/connections': {
-      id: '/connections'
-      path: '/connections'
-      fullPath: '/connections'
-      preLoaderRoute: typeof ConnectionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/activity': {
-      id: '/activity'
-      path: '/activity'
-      fullPath: '/activity'
-      preLoaderRoute: typeof ActivityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account': {
-      id: '/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof AccountRouteImport
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -224,13 +249,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/death/$subjectId': {
-      id: '/death/$subjectId'
-      path: '/death/$subjectId'
-      fullPath: '/death/$subjectId'
-      preLoaderRoute: typeof DeathSubjectIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/$': {
       id: '/api/$'
       path: '/api/$'
@@ -238,12 +256,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/account_/delete': {
-      id: '/account_/delete'
-      path: '/account/delete'
-      fullPath: '/account/delete'
-      preLoaderRoute: typeof AccountDeleteRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_app/watch': {
+      id: '/_app/watch'
+      path: '/watch'
+      fullPath: '/watch'
+      preLoaderRoute: typeof AppWatchRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/messages': {
+      id: '/_app/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AppMessagesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/me': {
+      id: '/_app/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof AppMeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/connections': {
+      id: '/_app/connections'
+      path: '/connections'
+      fullPath: '/connections'
+      preLoaderRoute: typeof AppConnectionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/activity': {
+      id: '/_app/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof AppActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/account': {
+      id: '/_app/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AppAccountRouteImport
+      parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -252,19 +305,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/death/$subjectId': {
+      id: '/_app/death/$subjectId'
+      path: '/death/$subjectId'
+      fullPath: '/death/$subjectId'
+      preLoaderRoute: typeof AppDeathSubjectIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/account_/delete': {
+      id: '/_app/account_/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AppAccountDeleteRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAccountRoute: typeof AppAccountRoute
+  AppActivityRoute: typeof AppActivityRoute
+  AppConnectionsRoute: typeof AppConnectionsRoute
+  AppMeRoute: typeof AppMeRoute
+  AppMessagesRoute: typeof AppMessagesRoute
+  AppWatchRoute: typeof AppWatchRoute
+  AppAccountDeleteRoute: typeof AppAccountDeleteRoute
+  AppDeathSubjectIdRoute: typeof AppDeathSubjectIdRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAccountRoute: AppAccountRoute,
+  AppActivityRoute: AppActivityRoute,
+  AppConnectionsRoute: AppConnectionsRoute,
+  AppMeRoute: AppMeRoute,
+  AppMessagesRoute: AppMessagesRoute,
+  AppWatchRoute: AppWatchRoute,
+  AppAccountDeleteRoute: AppAccountDeleteRoute,
+  AppDeathSubjectIdRoute: AppDeathSubjectIdRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccountRoute: AccountRoute,
-  ActivityRoute: ActivityRoute,
-  ConnectionsRoute: ConnectionsRoute,
-  MessagesRoute: MessagesRoute,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
   PreviewRoute: PreviewRoute,
-  AccountDeleteRoute: AccountDeleteRoute,
   ApiSplatRoute: ApiSplatRoute,
-  DeathSubjectIdRoute: DeathSubjectIdRoute,
   JoinTokenRoute: JoinTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

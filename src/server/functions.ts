@@ -28,24 +28,27 @@ import { ConfigError, createRequestApp } from './app';
 import { getServerEnv } from './env';
 
 /**
- * 見守りWeb 用のサーバー関数（ローダーから RPC で呼ぶ）。
- * 状態を3値で返し、画面側は「未設定 → 案内 / 未ログイン → ログイン / OK → 実データ」に分岐する。
+ * 見守りWeb 用のサーバー関数（ローダーから RPC で呼ぶ）。状態を判別可能ユニオンで返し、
+ * 画面側は「未設定 → 案内 / 未ログイン → 分岐 / OK → 実データ」に分ける。
+ * 認証・設定ガードは _app レイアウトが一元化するが、各関数もセッションを確認する
+ * （ローダーは独立に走りうるため。多重防御）。
  */
-export type DashboardData =
+
+/**
+ * 共通レイアウト（_app）のガード用。セッションと設定状態だけを軽く返す。
+ * ページ本体のデータは各ルートのローダーが別途取る（ここでは持たない）。
+ * user は将来のブランドヘッダー（アバター）でも使う。
+ */
+export type ShellData =
   | { status: 'unconfigured'; message: string }
   | { status: 'signed_out' }
   | {
       status: 'ok';
-      userName: string;
-      /** ヘッダーの円形アバター用（OAuth 画像。無ければ頭文字で代替）。 */
-      userImage: string | null;
-      rows: DashboardRow[];
-      /** 閲覧者が「見守られている本人」か。Web の本人機能（手動/自動シグナル）のゲート。 */
-      isSubject: boolean;
+      user: { id: string; name: string; image: string | null };
     };
 
-export const fetchDashboard = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<DashboardData> => {
+export const fetchShell = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<ShellData> => {
     let app: ReturnType<typeof createRequestApp>;
     try {
       app = createRequestApp(getServerEnv());
@@ -56,17 +59,91 @@ export const fetchDashboard = createServerFn({ method: 'GET' }).handler(
     }
 
     const request = getRequest();
-    const session = await app.auth.api.getSession({
-      headers: request.headers,
-    });
+    const session = await app.auth.api.getSession({ headers: request.headers });
+    if (!session) return { status: 'signed_out' };
+    return {
+      status: 'ok',
+      user: {
+        id: session.user.id,
+        name: session.user.name,
+        image: session.user.image ?? null,
+      },
+    };
+  },
+);
+
+/**
+ * 「わたし」タブ（/me）の材料。見られる側の要約。ADR-0008 §実装決定6。
+ *   - watchersTotal: あなたを見守ってくれている人の数（accepted）。0 なら空状態カードへ。
+ *   - watchersLiving: そのうち休眠しきい値以内の人数。2 未満なら開示ライン割れの警告を出す。
+ * isSubject（様子送信・自動チェックインのゲート）は watchersTotal > 0 と同値。
+ */
+export type MeData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'signed_out' }
+  | {
+      status: 'ok';
+      userName: string;
+      watchersTotal: number;
+      watchersLiving: number;
+    };
+
+export const fetchMe = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<MeData> => {
+    let app: ReturnType<typeof createRequestApp>;
+    try {
+      app = createRequestApp(getServerEnv());
+    } catch (e) {
+      if (e instanceof ConfigError)
+        return { status: 'unconfigured', message: e.message };
+      throw e;
+    }
+
+    const request = getRequest();
+    const session = await app.auth.api.getSession({ headers: request.headers });
+    if (!session) return { status: 'signed_out' };
+
+    const watchers = await getSubjectWatchers(
+      app.db,
+      session.user.id,
+      DEFAULT_DOMAIN_CONFIG,
+    );
+    return {
+      status: 'ok',
+      userName: session.user.name,
+      watchersTotal: watchers.length,
+      watchersLiving: watchers.filter((w) => w.isLiving).length,
+    };
+  },
+);
+
+/**
+ * 「仲間」タブ（/watch）の材料＝あなたが見守っている人の一覧。ADR-0008。
+ * 旧トップに埋まっていた見守りダッシュボードをこの独立ルートへ移設した。
+ */
+export type WatchData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'signed_out' }
+  | { status: 'ok'; rows: DashboardRow[] };
+
+export const fetchWatch = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<WatchData> => {
+    let app: ReturnType<typeof createRequestApp>;
+    try {
+      app = createRequestApp(getServerEnv());
+    } catch (e) {
+      if (e instanceof ConfigError)
+        return { status: 'unconfigured', message: e.message };
+      throw e;
+    }
+
+    const request = getRequest();
+    const session = await app.auth.api.getSession({ headers: request.headers });
     if (!session) return { status: 'signed_out' };
 
     return {
       status: 'ok',
-      userName: session.user.name,
-      userImage: session.user.image ?? null,
       rows: await getWatcherDashboard(app.db, session.user.id),
-      isSubject: await hasAcceptedWatcher(app.db, session.user.id),
     };
   },
 );

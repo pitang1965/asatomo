@@ -77,7 +77,7 @@ export function DeathConfirm({
           電話や訪問などで連絡を試みた結果を教えてください。
           「亡くなられました」は一人の報告だけでは成立せず、他の見守り者との合意と
           猶予期間（{graceHours}時間）を経てはじめて、{subjectName}
-          さんの「最後のメッセージ」の開示につながります。
+          さんの「最後の伝言」の開示につながります。
         </p>
         <div className="quorum">
           <div className="quorum__track">

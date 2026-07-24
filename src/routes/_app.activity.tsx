@@ -19,7 +19,7 @@ import { fetchActivityHistory } from '../server/functions';
  *     相手の閲覧時刻次第で相対表示は変わり、そもそも過去分は相手からは見えないため）。
  *   - Web に置く（本人の稀な確認系。ADR-0006 の面の切り分け）。iPhone 本人もここへ来られる。
  */
-export const Route = createFileRoute('/activity')({
+export const Route = createFileRoute('/_app/activity')({
   loader: () => fetchActivityHistory(),
   component: ActivityPage,
 });
@@ -54,7 +54,6 @@ function ActivityPage() {
 
   return (
     <History
-      userName={data.userName}
       isSubject={data.isSubject}
       entries={data.entries.map((e) => ({
         id: e.id,
@@ -66,11 +65,9 @@ function ActivityPage() {
 }
 
 function History({
-  userName,
   isSubject,
   entries,
 }: {
-  userName: string;
   isSubject: boolean;
   entries: { id: string; kind: SignalKind; occurredAt: Date }[];
 }) {
@@ -79,21 +76,6 @@ function History({
 
   return (
     <div style={page}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '10px 16px',
-          fontSize: 13,
-        }}
-      >
-        <Link to="/" style={{ color: 'var(--accent)' }}>
-          ← もどる
-        </Link>
-        <span style={{ color: 'var(--ink-2)' }}>{userName} さん</span>
-      </div>
-
       <div style={card}>
         <h1 style={{ fontSize: 17, color: 'var(--ink)', margin: 0 }}>
           あなたの記録

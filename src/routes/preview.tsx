@@ -132,7 +132,7 @@ function App() {
       >
         {tab('dash', 'ダッシュボード')}
         {tab('death', '死亡確認')}
-        {tab('msg', '最後のメッセージ')}
+        {tab('msg', '最後の伝言')}
       </nav>
 
       {notice ? (

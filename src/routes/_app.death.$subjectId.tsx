@@ -15,7 +15,7 @@ import { DeathConfirm } from '../web/DeathConfirm';
  *   亡くなられました     → vote（最初の一票で voting へ遷移、定足数成立で猶予入り）
  * 状態ごとの分岐: 平常 → 案内 / 猶予中 → 期限表示 / 見守り者でない → 404 相当。
  */
-export const Route = createFileRoute('/death/$subjectId')({
+export const Route = createFileRoute('/_app/death/$subjectId')({
   loader: ({ params }) =>
     fetchDeathConfirm({ data: { subjectUserId: params.subjectId } }),
   component: DeathPage,
@@ -49,8 +49,8 @@ function Notice({ title, body }: { title: string; body: string }) {
           {body}
         </p>
         <p style={{ marginTop: 20, fontSize: 13 }}>
-          <Link to="/" style={{ color: 'var(--accent)' }}>
-            ← ダッシュボードへ戻る
+          <Link to="/watch" style={{ color: 'var(--accent)' }}>
+            ← 仲間へ戻る
           </Link>
         </p>
       </div>
@@ -113,7 +113,7 @@ function DeathPage() {
     return (
       <Notice
         title="確認が成立し、猶予期間に入っています"
-        body={`${until} まではご本人がいつでも取り消せます。期限を過ぎると「最後のメッセージ」が受取人へ開示されます。`}
+        body={`${until} まではご本人がいつでも取り消せます。期限を過ぎると「最後の伝言」が受取人へ開示されます。`}
       />
     );
   }
@@ -122,7 +122,7 @@ function DeathPage() {
     return (
       <Notice
         title="開示済みです"
-        body="「最後のメッセージ」はすでに受取人へ届けられました。"
+        body="「最後の伝言」はすでに受取人へ届けられました。"
       />
     );
 
@@ -130,8 +130,8 @@ function DeathPage() {
   return (
     <div style={page}>
       <div style={{ padding: '10px 16px', fontSize: 13 }}>
-        <Link to="/" style={{ color: 'var(--accent)' }}>
-          ← ダッシュボード
+        <Link to="/watch" style={{ color: 'var(--accent)' }}>
+          ← 仲間へ戻る
         </Link>
       </div>
       {error ? (

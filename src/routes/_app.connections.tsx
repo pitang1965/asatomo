@@ -17,7 +17,7 @@ import { RowMenu } from '../web/RowMenu';
  * 外したあと（決定A）: 行は消える（一覧＝今見守ってくれている人）。再依頼は通常の招待に戻る。
  * 相手への通知（決定A）: しない（本人が当事者。CONTEXT.md 見守り解除の非対称を参照）。
  */
-export const Route = createFileRoute('/connections')({
+export const Route = createFileRoute('/_app/connections')({
   loader: () => fetchConnectionsPage(),
   component: ConnectionsPage,
 });
@@ -50,16 +50,10 @@ function ConnectionsPage() {
       />
     );
 
-  return <Roster userName={data.userName} initial={data.watchers} />;
+  return <Roster initial={data.watchers} />;
 }
 
-function Roster({
-  userName,
-  initial,
-}: {
-  userName: string;
-  initial: SubjectWatcher[];
-}) {
+function Roster({ initial }: { initial: SubjectWatcher[] }) {
   const [watchers, setWatchers] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -91,21 +85,6 @@ function Roster({
 
   return (
     <div style={page}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '10px 16px',
-          fontSize: 13,
-        }}
-      >
-        <Link to="/" style={{ color: 'var(--accent)' }}>
-          ← もどる
-        </Link>
-        <span style={{ color: 'var(--ink-2)' }}>{userName} さん</span>
-      </div>
-
       <div style={card}>
         <h1 style={{ fontSize: 17, color: 'var(--ink)', margin: 0 }}>
           あなたを見守ってくれている人
@@ -207,7 +186,7 @@ function Roster({
                           {w.displayName}さんへの見守りのお願いをやめると、
                           見守ってくれる人が少なくなり、そのままだと、あなたに
                           もしものことがあっても
-                          <strong>最後のメッセージを届けられません</strong>。
+                          <strong>最後の伝言を届けられません</strong>。
                           それでもやめますか？
                         </span>
                       ) : (
