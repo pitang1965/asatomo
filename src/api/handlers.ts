@@ -427,7 +427,7 @@ export function createHandlers(ctx: ApiContext) {
       return { ok: true, data: {} };
     },
 
-    // ── 最後のメッセージ（本人） ──
+    // ── 最後の伝言（本人） ──
     async createMessage(
       actor: string,
       input: EncryptedContent & { recipients: RecipientWrap[] },

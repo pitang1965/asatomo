@@ -4,12 +4,12 @@ import { connections, legacyMessages, messageRecipients } from '../db/schema';
 import type { DomainConfig } from './monitoring';
 
 /**
- * 最後のメッセージのドメイン（作成・編集・宛先指定・開示解決）。ADR-0002。
+ * 最後の伝言のドメイン（作成・編集・宛先指定・開示解決）。ADR-0002。
  *
  * ゼロ知識: ドメイン層は暗号材料（暗号文・iv・ラップ済みDEK・暗号化見出し）を
  *   不透明なまま保存するだけ。暗号化/復号は端末側で行い、サーバは平文も鍵も持たない。
  *
- * 「受取人」はメッセージ宛先（messageRecipients）から派生する動的状態。宛先は
+ * 「受取人」は伝言の宛先（messageRecipients）から派生する動的状態。宛先は
  *   本人のつながりに限る（他人のつながりは指定できない）。
  * DEK は本人鍵（authorWrappedDek）＋受取人ごとの合言葉鍵（wrappedDek）にマルチラップ。
  */

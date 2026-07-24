@@ -254,7 +254,7 @@ export async function leaveWatch(
 }
 
 // ─── 純粋な受取人（メールのみ or 見守りでない user）を追加 ───────────────────
-//   メッセージの宛先にできる「つながり」を作る。受取人性は宛先指定から派生するため、
+//   伝言の宛先にできる「つながり」を作る。受取人性は宛先指定から派生するため、
 //   ここでは isWatcher=false のつながりを用意するだけ。
 export async function addContact(
   db: Db,

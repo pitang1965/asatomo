@@ -9,7 +9,7 @@ import { WatchDashboard } from '../web/WatchDashboard';
 /**
  * 見守りWeb のプレビュー画面（モックデータ、DB不要）。デザイン確認用に残す。
  * 実データ画面はトップ（/）で、こちらはログインせずに全画面を見られる。
- * 「最後のメッセージ」は実際に暗号化 → 合言葉「ポチ」で本物の復号が走る（ゼロ知識のデモ）。
+ * 「最後の伝言」は実際に暗号化 → 合言葉「ポチ」で本物の復号が走る（ゼロ知識のデモ）。
  */
 export const Route = createFileRoute('/preview')({
   component: App,

@@ -12,7 +12,7 @@ import {
 } from '../web/crypto';
 
 /**
- * 最後のメッセージの管理画面（本人側）。暗号化はすべてこのブラウザ内で行う（ADR-0002）:
+ * 最後の伝言の管理画面（本人側）。暗号化はすべてこのブラウザ内で行う（ADR-0002）:
  *   本文/見出し → DEK で暗号化、DEK → 本人の合言葉 + 受取人ごとの合言葉でマルチラップ。
  * サーバへは暗号材料だけを送る（POST /api/messages）。読み返しも本人の合言葉で端末内復号。
  * 合言葉を忘れると誰にも復元できない（受託しないことが仕様）。
@@ -60,7 +60,7 @@ const labelStyle: CSSProperties = {
 
 function MessagesPage() {
   const data = Route.useLoaderData();
-  // あなたの合言葉はアカウント単位（全メッセージ共通）。ページ最上部で1回だけ入力し、
+  // あなたの合言葉はアカウント単位（全伝言共通）。ページ最上部で1回だけ入力し、
   // 作成・読み返し・宛先編集のすべてがこれを参照する。サーバには送らない。
   const [masterPass, setMasterPass] = useState('');
   const [hidePass, setHidePass] = useState(false);
@@ -346,7 +346,7 @@ function MessageCard({
   );
 }
 
-// ─── 宛先の後から編集（メッセージを開いた状態でのみ可能） ─────────────────────
+// ─── 宛先の後から編集（伝言を開いた状態でのみ可能） ─────────────────────
 //   既存宛先: 保存済みの wrappedDek を再利用（合言葉の再入力は不要）。
 //   新規宛先: 開封で得た DEK をその人の合言葉でラップして追加。
 function RecipientEditor({

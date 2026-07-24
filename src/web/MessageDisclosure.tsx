@@ -2,7 +2,7 @@ import { type FormEvent, useState } from 'react';
 import { openMessage } from './crypto';
 
 /**
- * 最後のメッセージの開示（受取人向け・見守りWeb）。合言葉を入力すると、この端末の中だけで
+ * 最後の伝言の開示（受取人向け・見守りWeb）。合言葉を入力すると、この端末の中だけで
  * 復号する（ADR-0002）。運営者は暗号文しか持たず平文を読めない。
  */
 
@@ -18,7 +18,7 @@ export function OpenedLetter({
       <div className="letter__from">{fromName}さんより</div>
       <div className="letter__body">{text}</div>
       <div className="letter__note">
-        これは想いを伝えるメッセージです。財産分与などの法的効力はありません。
+        これは想いを伝える伝言です。財産分与などの法的効力はありません。
       </div>
     </div>
   );
@@ -69,7 +69,7 @@ export function MessageDisclosure({
     <div className="watch">
       <div className="unlock">
         <div className="unlock__ico">🕊️</div>
-        <h2 className="unlock__title">{fromName}さんからのメッセージ</h2>
+        <h2 className="unlock__title">{fromName}さんからの伝言</h2>
         <p className="unlock__sub">
           {fromName}
           さんが、あなたへ言葉を遺されました。合言葉を入力して開いてください。

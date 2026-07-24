@@ -141,8 +141,8 @@ export function createNotifications(
             ? `\n合言葉のヒント: ${p.passphraseHint}`
             : '';
           await senders.email.send(to, {
-            subject: tag(`${name}さんからのメッセージ`),
-            text: `${name}さんが、あなたへメッセージを遺されました。\n下記から合言葉を入力して開いてください。\n${link}${hint}`,
+            subject: tag(`${name}さんからの伝言`),
+            text: `${name}さんが、あなたへ伝言を遺されました。\n下記から合言葉を入力して開いてください。\n${link}${hint}`,
           });
         }),
       );

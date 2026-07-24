@@ -221,7 +221,7 @@ export interface SubjectConnection {
   passphraseHint: string | null;
 }
 
-/** 本人のつながり一覧（最後のメッセージの宛先候補）。 */
+/** 本人のつながり一覧（最後の伝言の宛先候補）。 */
 export async function getSubjectConnections(
   db: Db,
   subjectUserId: string,

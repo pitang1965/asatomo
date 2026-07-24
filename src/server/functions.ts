@@ -366,7 +366,7 @@ export const fetchActivityHistory = createServerFn({ method: 'GET' }).handler(
   },
 );
 
-/** 最後のメッセージ管理画面（本人側）の材料。暗号材料は不透明なまま返す（復号は端末）。 */
+/** 最後の伝言の管理画面（本人側）の材料。暗号材料は不透明なまま返す（復号は端末）。 */
 export type MessagesPageData =
   | { status: 'unconfigured'; message: string }
   | { status: 'signed_out' }

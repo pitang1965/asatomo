@@ -6,10 +6,10 @@
  *   本人(Subject)             → user + subjectSettings
  *   つながり(Connection)      → connections（有向エッジ。見守り/受取の性質を載せる）
  *   見守り者(Watcher)         → connections.isWatcher = true（役割はつながりの上の属性）
- *   受取人(Recipient)         → messageRecipients（メッセージ宛先から派生。固定ロールではない）
+ *   受取人(Recipient)         → messageRecipients（伝言の宛先から派生。固定ロールではない）
  *   生存シグナル(Liveness)     → signals
  *   代理確認(Attestation)     → attestations
- *   最後のメッセージ(FinalMsg) → legacyMessages + messageRecipients
+ *   最後の伝言(FinalMsg)      → legacyMessages + messageRecipients
  *   合言葉(Passphrase)        → 保存しない（ゼロ知識）。hint と wrappedDek のみ保持
  *   死亡認定(Certification)   → deathCertifications + deathVotes
  *   旅行モード(TravelMode)     → subjectSettings.travelUntil
@@ -520,7 +520,7 @@ export const concernFlags = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────────────────
-// 最後のメッセージ（legacyMessages）— ゼロ知識暗号化（ADR-0002）
+// 最後の伝言（legacyMessages）— ゼロ知識暗号化（ADR-0002）
 //   サーバは暗号文しか持たない。復号は端末側で合言葉から。運営者は平文を読めない。
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -551,7 +551,7 @@ export const legacyMessages = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────────────────
-// メッセージ宛先（messageRecipients）— メッセージ ⇄ 受取人 の多対多 + 受取人ごとの暗号材料
+// 伝言の宛先（messageRecipients）— 伝言 ⇄ 受取人 の多対多 + 受取人ごとの暗号材料
 //   「受取人」はここから派生する動的状態（宛先変更で増減）。個別=1件 / 全員=つながり全件。
 //   グループ宛はv2（質問6）。wrappedDek は合言葉由来鍵で包んだ DEK（ADR-0002）。
 // ────────────────────────────────────────────────────────────────────────────
