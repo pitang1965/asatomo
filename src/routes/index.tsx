@@ -99,7 +99,7 @@ const lpCss = `
 .landing .assur-item{padding:16px 4px 6px;border-top:2px solid var(--accent)}
 .landing .assur-item h4{margin:0 0 6px;font-size:15.5px}
 .landing .assur-item p{margin:0;color:var(--ink-2);font-size:13.5px}
-.landing .legacy-note{text-align:center;max-width:42em;margin:36px auto 0;color:var(--ink-2);font-size:15px;padding:22px;background:var(--surface-2);border-radius:18px;text-wrap:balance}
+.landing .legacy-note{text-align:center;margin:36px auto 0;color:var(--ink-2);font-size:15px;padding:22px 28px;background:var(--surface-2);border-radius:18px;text-wrap:balance}
 .landing .cta{text-align:center;margin:40px 0 6px;display:flex;flex-direction:column;align-items:center;gap:14px}
 .landing .btn{appearance:none;border:0;font-family:inherit;cursor:pointer;font-size:15px;font-weight:600;border-radius:13px;padding:14px 40px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:auto;max-width:100%}
 .landing .btn.primary{background:var(--accent);color:#fff;min-width:240px}
