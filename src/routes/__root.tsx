@@ -9,6 +9,47 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'アサトモ 見守りWeb' },
+      {
+        name: 'description',
+        content:
+          '目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる。一人暮らしの朝を、そっと見守り合うサービスです。',
+      },
+      // OGP / Twitter カード（SSR で初期HTMLに乗るためクローラにも届く）。
+      // 絶対URLは正準ドメイン asatomo.nafuda.me を用いる。
+      { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: 'アサトモ' },
+      { property: 'og:locale', content: 'ja_JP' },
+      { property: 'og:url', content: 'https://asatomo.nafuda.me/' },
+      {
+        property: 'og:title',
+        content:
+          'アサトモ｜目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる',
+      },
+      {
+        property: 'og:description',
+        content:
+          '一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う見守りです。',
+      },
+      { property: 'og:image', content: 'https://asatomo.nafuda.me/ogp.png' },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
+      {
+        property: 'og:image:alt',
+        content:
+          'アサトモ — 目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる',
+      },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      {
+        name: 'twitter:title',
+        content:
+          'アサトモ｜目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる',
+      },
+      {
+        name: 'twitter:description',
+        content:
+          '一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う見守りです。',
+      },
+      { name: 'twitter:image', content: 'https://asatomo.nafuda.me/ogp.png' },
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
