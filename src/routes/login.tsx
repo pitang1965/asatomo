@@ -75,9 +75,7 @@ function LoginPage() {
           height={56}
           style={{ display: 'block', margin: '0 auto 8px', borderRadius: 12 }}
         />
-        <h1 style={{ fontSize: 20, color: 'var(--ink)' }}>
-          アサトモ 見守りWeb
-        </h1>
+        <h1 style={{ fontSize: 20, color: 'var(--ink)' }}>アサトモWeb</h1>
         <p
           style={{
             fontSize: 13,
