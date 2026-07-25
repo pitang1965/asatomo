@@ -3,7 +3,10 @@ import { type CSSProperties, useState } from 'react';
 
 /**
  * ログイン後の共通ブランドヘッダー（ADR-0008 §実装決定・決定5/6）。
- *   - 左: 「アサトモ」ロゴ単体（プラットフォーム識別子「見守りWeb」は載せない）。
+ *   - 左: 「アサトモWeb」ロゴ（ブランド表記。ADR-0008 決定6 を grill 2026-07-25 で改訂。
+ *     アイコン意匠だけでは目覚ましアプリと区別しづらい実地の反証を受け、Web 面を
+ *     自己識別できる「アサトモWeb」に。ハブ＝スポーク構造は不変で、家族名「アサトモ」
+ *     単体はオンボーディング初回銘板に残す）。
  *   - 右: ハンバーガー。最頻でない管理をタブから追い出してここへ畳む。
  *     当面は「アカウント」1項目のみ（利用規約・プライバシーポリシーはページ整備後に追加）。
  *     ログアウトはメニューに直接置かず、アカウント画面に集約する。
@@ -26,7 +29,7 @@ export function BrandHeader() {
     <header style={barStyle}>
       <Link
         to="/me"
-        aria-label="アサトモ ホームへ"
+        aria-label="アサトモWeb ホームへ"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -46,7 +49,7 @@ export function BrandHeader() {
         <span
           style={{ fontSize: 17, fontWeight: 700, letterSpacing: '0.02em' }}
         >
-          アサトモ
+          アサトモWeb
         </span>
       </Link>
 

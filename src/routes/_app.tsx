@@ -8,6 +8,7 @@ import { fetchShell } from '../server/functions';
 import { BottomTabs } from '../web/BottomTabs';
 import { BrandHeader } from '../web/BrandHeader';
 import { activeTab } from '../web/nav';
+import { PwaInstallBanner } from '../web/PwaInstallBanner';
 
 /**
  * ログイン後の共通レイアウト（URL に寄与しないパスレスの枠。ADR-0008 §実装決定1）。
@@ -37,6 +38,7 @@ function AppLayout() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
       <BrandHeader />
+      <PwaInstallBanner />
       <main style={{ paddingBottom: tab ? 76 : 0 }}>
         <Outlet />
       </main>
