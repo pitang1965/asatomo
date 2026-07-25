@@ -22,13 +22,11 @@ export const Route = createRootRoute({
       { property: 'og:url', content: 'https://asatomo.nafuda.me/' },
       {
         property: 'og:title',
-        content:
-          'アサトモ｜目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる',
+        content: 'アサトモ｜そっと見守り合う、朝の目覚まし',
       },
       {
         property: 'og:description',
-        content:
-          '一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う見守りです。',
+        content: '目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる。',
       },
       { property: 'og:image', content: 'https://asatomo.nafuda.me/ogp.png' },
       { property: 'og:image:width', content: '1200' },
@@ -41,13 +39,11 @@ export const Route = createRootRoute({
       { name: 'twitter:card', content: 'summary_large_image' },
       {
         name: 'twitter:title',
-        content:
-          'アサトモ｜目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる',
+        content: 'アサトモ｜そっと見守り合う、朝の目覚まし',
       },
       {
         name: 'twitter:description',
-        content:
-          '一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う見守りです。',
+        content: '目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる。',
       },
       { name: 'twitter:image', content: 'https://asatomo.nafuda.me/ogp.png' },
     ],
