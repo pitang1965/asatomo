@@ -107,7 +107,25 @@ function LoginPage() {
                 authClient.signIn.social({ provider: 'facebook', callbackURL: back })
                 authClient.signIn.oauth2({ providerId: 'line', callbackURL: back }) */}
         </div>
-        <p style={{ marginTop: 20, fontSize: 12 }}>
+        <p
+          style={{
+            marginTop: 16,
+            fontSize: 11,
+            color: 'var(--ink-3)',
+            lineHeight: 1.7,
+          }}
+        >
+          ログインすることで、
+          <Link to="/terms" style={{ color: 'var(--accent)' }}>
+            利用規約
+          </Link>
+          と
+          <Link to="/privacy" style={{ color: 'var(--accent)' }}>
+            プライバシーポリシー
+          </Link>
+          に同意したものとみなします。
+        </p>
+        <p style={{ marginTop: 16, fontSize: 12 }}>
           <Link to="/preview" style={{ color: 'var(--accent)' }}>
             ログインせずにデモ画面を見る →
           </Link>

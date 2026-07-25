@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
@@ -25,6 +27,16 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as AppDeathSubjectIdRouteImport } from './routes/_app.death.$subjectId'
 import { Route as AppAccountDeleteRouteImport } from './routes/_app.account_.delete'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PreviewRoute = PreviewRouteImport.update({
   id: '/preview',
   path: '/preview',
@@ -104,6 +116,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/account': typeof AppAccountRoute
   '/activity': typeof AppActivityRoute
   '/connections': typeof AppConnectionsRoute
@@ -120,6 +134,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/account': typeof AppAccountRoute
   '/activity': typeof AppActivityRoute
   '/connections': typeof AppConnectionsRoute
@@ -138,6 +154,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/_app/account': typeof AppAccountRoute
   '/_app/activity': typeof AppActivityRoute
   '/_app/connections': typeof AppConnectionsRoute
@@ -156,6 +174,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/preview'
+    | '/privacy'
+    | '/terms'
     | '/account'
     | '/activity'
     | '/connections'
@@ -172,6 +192,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/preview'
+    | '/privacy'
+    | '/terms'
     | '/account'
     | '/activity'
     | '/connections'
@@ -189,6 +211,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/preview'
+    | '/privacy'
+    | '/terms'
     | '/_app/account'
     | '/_app/activity'
     | '/_app/connections'
@@ -207,6 +231,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   PreviewRoute: typeof PreviewRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
   ApiSplatRoute: typeof ApiSplatRoute
   JoinTokenRoute: typeof JoinTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -214,6 +240,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/preview': {
       id: '/preview'
       path: '/preview'
@@ -351,6 +391,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   PreviewRoute: PreviewRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
   ApiSplatRoute: ApiSplatRoute,
   JoinTokenRoute: JoinTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
