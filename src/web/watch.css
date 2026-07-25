@@ -121,12 +121,12 @@ html {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
-.watch__sun {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 40%, var(--accent), var(--warn));
-  box-shadow: 0 0 0 4px var(--accent-soft);
+.watch__brandicon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  display: block;
+  box-shadow: var(--shadow-sm);
 }
 .watch__empty {
   text-align: center;

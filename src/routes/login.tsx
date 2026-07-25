@@ -111,7 +111,7 @@ function LoginPage() {
         </div>
         <p style={{ marginTop: 20, fontSize: 12 }}>
           <Link to="/preview" style={{ color: 'var(--accent)' }}>
-            ログインせずに画面プレビューを見る →
+            ログインせずにデモ画面を見る →
           </Link>
         </p>
       </div>

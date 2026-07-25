@@ -56,7 +56,7 @@ function SetupNotice({ message }: { message: string }) {
         </p>
         <p style={{ marginTop: 20, fontSize: 13 }}>
           <Link to="/preview" style={{ color: 'var(--accent)' }}>
-            設定なしで画面プレビューを見る →
+            設定なしでデモ画面を見る →
           </Link>
         </p>
       </div>
@@ -65,53 +65,146 @@ function SetupNotice({ message }: { message: string }) {
 }
 
 /**
- * 未ログインのランディング（ADR-0008 §7・§実装決定4）。暫定・最小限（本格化は宣伝フェーズ）。
- * ログイン UI は持たず、独立した `/login` へ誘導するだけにとどめる。
+ * 未ログインのランディング（ADR-0008 §7・§実装決定4）。
+ * デザインは既存モックアップの LP 部を移植。実画面のショーケースは重複を作らず、
+ * ライブで操作できる /preview へ「引用」リンクする。
+ *   - ブランド銘板は素名「アサトモ」（家族名・ハブそのものを出す場。CONTEXT.md）。
+ *   - 「最後の伝言」表記（旧「最後のメッセージ」から統一。ADR-0008）。
+ *   - CTA はログイン（/login。Google ログイン稼働中）＋画面プレビュー（/preview）。
+ * スタイルは watch.css の夜明けトークンを使い、LP 固有分だけ .landing 配下にスコープする。
  */
+const lpCss = `
+.landing{background:var(--bg);color:var(--ink);font-family:var(--font-jp);line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh;padding:0 20px 72px}
+.landing .wrap{max-width:1000px;margin:0 auto}
+.landing .masthead{position:relative;text-align:center;padding:80px 20px 52px;overflow:hidden}
+.landing .masthead::before{content:"";position:absolute;inset:-40% 0 auto 0;height:320px;background:radial-gradient(60% 80% at 50% 0%,color-mix(in oklab,var(--accent) 30%,transparent),transparent 70%);pointer-events:none}
+.landing .brandrow{position:relative;display:inline-flex;align-items:center;gap:12px;margin-bottom:26px}
+.landing .brandicon{width:32px;height:32px;border-radius:9px;display:block;box-shadow:var(--shadow-sm)}
+.landing .wordmark{font-size:22px;font-weight:700;letter-spacing:.18em;padding-left:.18em}
+.landing .tagline{position:relative;font-size:clamp(26px,4.6vw,42px);font-weight:700;line-height:1.35;letter-spacing:.01em;text-wrap:balance;margin:0 auto;max-width:18em}
+.landing .subline{position:relative;color:var(--ink-2);max-width:34em;margin:20px auto 0;font-size:16px}
+.landing .lp{padding:8px 0 8px}
+.landing .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:24px 0 34px}
+.landing .step{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px 22px;box-shadow:var(--shadow-sm);position:relative}
+.landing .step .num{position:absolute;top:20px;right:22px;font-size:13px;font-weight:700;color:var(--accent);background:var(--accent-soft);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.landing .step .ico{font-size:30px;margin-bottom:12px}
+.landing .step h3{margin:0 0 8px;font-size:17px}
+.landing .step p{margin:0;color:var(--ink-2);font-size:14px}
+.landing .stepnote{text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.7;max-width:40em;margin:-14px auto 6px}
+.landing .assur{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:22px 0 8px}
+.landing .assur-item{padding:16px 4px 6px;border-top:2px solid var(--accent)}
+.landing .assur-item h4{margin:0 0 6px;font-size:15.5px}
+.landing .assur-item p{margin:0;color:var(--ink-2);font-size:13.5px}
+.landing .legacy-note{text-align:center;max-width:42em;margin:36px auto 0;color:var(--ink-2);font-size:15px;padding:22px;background:var(--surface-2);border-radius:18px;text-wrap:balance}
+.landing .cta{text-align:center;margin:40px 0 6px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.landing .btn{appearance:none;border:0;font-family:inherit;cursor:pointer;font-size:15px;font-weight:600;border-radius:13px;padding:14px 32px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.landing .btn.primary{background:var(--accent);color:#fff}
+.landing .prevlink{color:var(--accent);font-size:13.5px;text-decoration:none}
+.landing footer{text-align:center;color:var(--ink-3);font-size:12.5px;padding:44px 20px 0;margin-top:32px;border-top:1px solid var(--line)}
+@media (max-width:720px){.landing .steps,.landing .assur{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.landing .btn{transition:transform .12s ease}.landing .btn:hover{transform:translateY(-1px)}}
+`;
+
 function Landing() {
   return (
-    <div style={page}>
-      <div style={card}>
-        <img
-          src="/apple-touch-icon.png"
-          alt=""
-          aria-hidden
-          width={56}
-          height={56}
-          style={{ display: 'block', margin: '0 auto 8px', borderRadius: 12 }}
-        />
-        <h1 style={{ fontSize: 20, color: 'var(--ink)' }}>アサトモ</h1>
-        <p
-          style={{
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-            marginTop: 8,
-          }}
-        >
-          大切な人の「今日も元気」を、そっと見守り合うためのサービスです。
-        </p>
-        <Link
-          to="/login"
-          style={{
-            display: 'block',
-            marginTop: 20,
-            padding: '12px 16px',
-            borderRadius: 12,
-            fontWeight: 600,
-            fontSize: 14,
-            background: 'var(--accent)',
-            color: '#fff',
-            textDecoration: 'none',
-          }}
-        >
-          ログインする
-        </Link>
-        <p style={{ marginTop: 16, fontSize: 12 }}>
-          <Link to="/preview" style={{ color: 'var(--accent)' }}>
-            ログインせずに画面プレビューを見る →
-          </Link>
-        </p>
+    <div className="landing">
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: LP固有CSSをスコープ注入 */}
+      <style dangerouslySetInnerHTML={{ __html: lpCss }} />
+      <div className="wrap">
+        <header className="masthead">
+          <div className="brandrow">
+            <img
+              src="/apple-touch-icon.png"
+              alt=""
+              aria-hidden
+              width={32}
+              height={32}
+              className="brandicon"
+            />
+            <span className="wordmark">アサトモ</span>
+          </div>
+          <h1 className="tagline">
+            目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる。
+          </h1>
+          <p className="subline">
+            一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う設計です。
+          </p>
+        </header>
+
+        <section className="lp">
+          <div className="steps">
+            <div className="step">
+              <div className="num">1</div>
+              <div className="ico" aria-hidden>
+                ⏰
+              </div>
+              <h3>朝、アラームを止める</h3>
+              <p>
+                いつもの目覚まし。止めるだけで、それが「無事」のサインになります。
+              </p>
+            </div>
+            <div className="step">
+              <div className="num">2</div>
+              <div className="ico" aria-hidden>
+                🌤️
+              </div>
+              <h3>そっと、伝わる</h3>
+              <p>
+                見守ってくれる人に「今日も元気そう」が届く。居場所ではなく、近況だけ。
+              </p>
+            </div>
+            <div className="step">
+              <div className="num">3</div>
+              <div className="ico" aria-hidden>
+                🕊️
+              </div>
+              <h3>もしもの時だけ</h3>
+              <p>
+                人の判断を経て、大切な人へ用意した言葉が届きます。急がず、慎重に。
+              </p>
+            </div>
+          </div>
+
+          <p className="stepnote">
+            目覚ましアプリはAndroid版です。iPhoneの方は「見守りWeb」から、見守り・チェックインでご参加いただけます。
+          </p>
+
+          <div className="assur">
+            <div className="assur-item">
+              <h4>見張らない</h4>
+              <p>
+                本人の画面はただの目覚まし時計。監視されている感覚を残しません。
+              </p>
+            </div>
+            <div className="assur-item">
+              <h4>誤爆しない</h4>
+              <p>
+                純粋なタイマーではなく、人の判断を介在。複数人の合意・猶予期間・本人の取消で守ります。
+              </p>
+            </div>
+            <div className="assur-item">
+              <h4>静かに、長く</h4>
+              <p>
+                依存を最小に、無料枠で。「静かに動き続けること」そのものを大切にします。
+              </p>
+            </div>
+          </div>
+
+          <p className="legacy-note">
+            そして——もしもの時には、あなたが遺した「最後の伝言」を、大切な人へ。本文は運営者にも読めないよう暗号化されます。
+          </p>
+
+          <div className="cta">
+            <Link to="/login" className="btn primary">
+              ログインする
+            </Link>
+            <Link to="/preview" className="prevlink">
+              ログインせずにデモ画面を見る →
+            </Link>
+          </div>
+        </section>
+
+        <footer>アサトモ · 一人暮らしの朝に、そっと寄り添う見守り</footer>
       </div>
     </div>
   );

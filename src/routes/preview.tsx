@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import type { DashboardRow } from '../domain/queries';
 import { encryptText, generateDek, wrapDek } from '../web/crypto';
@@ -121,6 +121,32 @@ function App() {
         fontFamily: 'var(--font-jp)',
       }}
     >
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '12px 16px',
+          borderBottom: '1px solid var(--line)',
+        }}
+      >
+        <Link
+          to="/"
+          style={{
+            color: 'var(--ink-2)',
+            textDecoration: 'none',
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          ← ホームへ
+        </Link>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+          デモ画面・サンプルデータ
+        </span>
+      </header>
+
       <nav
         style={{
           display: 'flex',

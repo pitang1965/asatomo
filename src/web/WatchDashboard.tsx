@@ -184,8 +184,8 @@ export function WatchDashboard({
   now,
   actions,
   /**
-   * 内部ヘッダー（みまもり ブランド＋状態ピル）を出すか。既定 true（プレビュー等の単独利用）。
-   * /watch では上位の共通ブランドヘッダー（アサトモ）があるので false にして二重ブランドを避ける。
+   * 内部ヘッダー（アサトモWeb ブランド＋状態ピル）を出すか。既定 true（プレビュー等の単独利用）。
+   * /watch では上位の共通ブランドヘッダー（アサトモWeb）があるので false にして二重ブランドを避ける。
    */
   showHeader = true,
 }: {
@@ -201,8 +201,15 @@ export function WatchDashboard({
       {showHeader ? (
         <header className="watch__head">
           <div className="watch__brand">
-            <span className="watch__sun" />
-            みまもり
+            <img
+              src="/apple-touch-icon.png"
+              alt=""
+              aria-hidden
+              width={24}
+              height={24}
+              className="watch__brandicon"
+            />
+            アサトモWeb
           </div>
           {alerts.length > 0 ? (
             <span className="pill pill--warn">
