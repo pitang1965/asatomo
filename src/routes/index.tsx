@@ -90,15 +90,19 @@ const lpCss = `
 .landing .step .ico{font-size:30px;margin-bottom:12px}
 .landing .step h3{margin:0 0 8px;font-size:17px}
 .landing .step p{margin:0;color:var(--ink-2);font-size:14px}
-.landing .stepnote{text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.7;max-width:40em;margin:-14px auto 6px}
+.landing .stepnote{text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.7;max-width:40em;margin:0 auto 6px}
+.landing .relrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 10px;max-width:46em;margin:-14px auto 20px}
+.landing .relrow .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--ink-2)}
+.landing .relrow .chip b{color:var(--ink);font-weight:600}
+.landing .relrow .arrow{color:var(--accent);font-weight:700}
 .landing .assur{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:22px 0 8px}
 .landing .assur-item{padding:16px 4px 6px;border-top:2px solid var(--accent)}
 .landing .assur-item h4{margin:0 0 6px;font-size:15.5px}
 .landing .assur-item p{margin:0;color:var(--ink-2);font-size:13.5px}
 .landing .legacy-note{text-align:center;max-width:42em;margin:36px auto 0;color:var(--ink-2);font-size:15px;padding:22px;background:var(--surface-2);border-radius:18px;text-wrap:balance}
 .landing .cta{text-align:center;margin:40px 0 6px;display:flex;flex-direction:column;align-items:center;gap:14px}
-.landing .btn{appearance:none;border:0;font-family:inherit;cursor:pointer;font-size:15px;font-weight:600;border-radius:13px;padding:14px 32px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
-.landing .btn.primary{background:var(--accent);color:#fff}
+.landing .btn{appearance:none;border:0;font-family:inherit;cursor:pointer;font-size:15px;font-weight:600;border-radius:13px;padding:14px 40px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:auto;max-width:100%}
+.landing .btn.primary{background:var(--accent);color:#fff;min-width:240px}
 .landing .prevlink{color:var(--accent);font-size:13.5px;text-decoration:none}
 .landing footer{text-align:center;color:var(--ink-3);font-size:12.5px;padding:44px 20px 0;margin-top:32px;border-top:1px solid var(--line)}
 @media (max-width:720px){.landing .steps,.landing .assur{grid-template-columns:1fr}}
@@ -165,8 +169,20 @@ function Landing() {
             </div>
           </div>
 
+          <p className="relrow">
+            <span className="chip">
+              🔔 <b>アサトモ目覚まし</b>（Android・毎朝の道具）
+            </span>
+            <span className="arrow" aria-hidden>
+              →
+            </span>
+            <span className="chip">
+              🌤️ <b>アサトモWeb</b>（見守り・伝言の本体／元気も伝わります）
+            </span>
+          </p>
+
           <p className="stepnote">
-            目覚ましアプリはAndroid版です。iPhoneの方は「見守りWeb」から、見守り・チェックインでご参加いただけます。
+            「アサトモ目覚まし」はAndroid版のみです。iPhoneの方は「アサトモWeb」で、見守りも、ご自身の元気を届けることもできます。
           </p>
 
           <div className="assur">
@@ -196,7 +212,7 @@ function Landing() {
 
           <div className="cta">
             <Link to="/login" className="btn primary">
-              ログインする
+              はじめる
             </Link>
             <Link to="/preview" className="prevlink">
               ログインせずにデモ画面を見る →
@@ -204,7 +220,18 @@ function Landing() {
           </div>
         </section>
 
-        <footer>アサトモ · 一人暮らしの朝に、そっと寄り添う見守り</footer>
+        <footer>
+          <p style={{ margin: '0 0 8px' }}>
+            <Link to="/privacy" className="prevlink">
+              プライバシーポリシー
+            </Link>
+            <span style={{ margin: '0 8px', color: 'var(--ink-3)' }}>·</span>
+            <Link to="/terms" className="prevlink">
+              利用規約
+            </Link>
+          </p>
+          アサトモ · 一人暮らしの朝に、そっと寄り添う見守り
+        </footer>
       </div>
     </div>
   );
