@@ -40,6 +40,7 @@ const btn: CSSProperties = {
   font: 'inherit',
   display: 'block',
   width: '100%',
+  boxSizing: 'border-box',
   padding: '12px 16px',
   borderRadius: 12,
   fontWeight: 600,

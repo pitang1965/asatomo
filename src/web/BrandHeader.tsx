@@ -8,9 +8,18 @@ import { type CSSProperties, useState } from 'react';
  *     自己識別できる「アサトモWeb」に。ハブ＝スポーク構造は不変で、家族名「アサトモ」
  *     単体はオンボーディング初回銘板に残す）。
  *   - 右: ハンバーガー。最頻でない管理をタブから追い出してここへ畳む。
- *     当面は「アカウント」1項目のみ（利用規約・プライバシーポリシーはページ整備後に追加）。
+ *     「アカウント」＋（区切り線の下に）利用規約・プライバシーポリシー。
  *     ログアウトはメニューに直接置かず、アカウント画面に集約する。
  */
+const itemStyle: CSSProperties = {
+  display: 'block',
+  padding: '10px 12px',
+  borderRadius: 8,
+  fontSize: 14,
+  color: 'var(--ink)',
+  textDecoration: 'none',
+};
+
 const barStyle: CSSProperties = {
   position: 'sticky',
   top: 0,
@@ -92,16 +101,23 @@ export function BrandHeader() {
               <Link
                 to="/account"
                 onClick={() => setOpen(false)}
-                style={{
-                  display: 'block',
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  color: 'var(--ink)',
-                  textDecoration: 'none',
-                }}
+                style={itemStyle}
               >
                 アカウント
+              </Link>
+              <Link
+                to="/terms"
+                onClick={() => setOpen(false)}
+                style={{ ...itemStyle, borderTop: '1px solid var(--line)' }}
+              >
+                利用規約
+              </Link>
+              <Link
+                to="/privacy"
+                onClick={() => setOpen(false)}
+                style={itemStyle}
+              >
+                プライバシーポリシー
               </Link>
             </div>
           </>

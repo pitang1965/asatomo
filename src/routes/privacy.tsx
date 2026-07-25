@@ -282,6 +282,27 @@ function PrivacyPage() {
             </a>
           </p>
         </Section>
+
+        <div
+          style={{
+            marginTop: 8,
+            paddingTop: 20,
+            borderTop: '1px solid var(--line)',
+            textAlign: 'center',
+          }}
+        >
+          <Link
+            to="/"
+            style={{
+              ...linkStyle,
+              fontSize: 14,
+              display: 'inline-block',
+              padding: '10px 16px',
+            }}
+          >
+            ← トップに戻る
+          </Link>
+        </div>
       </div>
     </div>
   );

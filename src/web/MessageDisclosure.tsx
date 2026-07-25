@@ -77,7 +77,8 @@ export function MessageDisclosure({
         <form onSubmit={onSubmit}>
           <input
             className="unlock__input"
-            type="password"
+            type="text"
+            autoComplete="off"
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
             placeholder="合言葉"
