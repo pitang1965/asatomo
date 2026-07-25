@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { QRCodeSVG } from 'qrcode.react';
 import { type CSSProperties, useEffect, useState } from 'react';
 import { fetchMe } from '../server/functions';
 
@@ -287,6 +288,7 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
   if (link)
     return (
       <div style={cardBox}>
+        {/* 遠くの人へ：リンクをコピーして送る（既存の経路）。 */}
         <p
           style={{
             fontSize: 12,
@@ -295,7 +297,8 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
             margin: 0,
           }}
         >
-          このリンクを、見守り合いたい相手に送ってください（7日で失効）。
+          <strong style={{ color: 'var(--ink)' }}>送るなら</strong>
+          ：このリンクをコピーして、見守り合いたい相手に送ってください（7日で失効）。
         </p>
         <input
           readOnly
@@ -331,6 +334,50 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
         >
           {copied ? 'コピーしました ✓' : 'リンクをコピー'}
         </button>
+
+        {/* 目の前の人へ：その場でカメラに読ませる。QR は使い切りトークンURLを
+            画像化しただけ（別概念ではない）。保存・シェアは付けない＝対面以外の
+            経路を増やさない（ADR-0005 再利用リンク却下／なふだ ADR-0013 と整合）。 */}
+        <div
+          style={{
+            marginTop: 14,
+            paddingTop: 14,
+            borderTop: '1px solid var(--line)',
+          }}
+        >
+          <p
+            style={{
+              fontSize: 12,
+              color: 'var(--ink-2)',
+              lineHeight: 1.7,
+              margin: 0,
+            }}
+          >
+            <strong style={{ color: 'var(--ink)' }}>目の前の人になら</strong>
+            ：このQRコードを相手のカメラで読み取ってもらってください（読み取れないときは上のリンクを送ってください）。
+          </p>
+          {/* ダークモードでも反転せず白地・黒モジュールで固定。暗背景でも浮くよう
+              白の角丸プレートで囲う（quiet zone だけに頼らない）。読み取り成功が命。 */}
+          <div
+            style={{
+              display: 'inline-block',
+              marginTop: 10,
+              padding: 12,
+              background: '#fff',
+              borderRadius: 12,
+              lineHeight: 0,
+            }}
+          >
+            <QRCodeSVG
+              value={link}
+              size={220}
+              level="M"
+              marginSize={4}
+              bgColor="#FFFFFF"
+              fgColor="#000000"
+            />
+          </div>
+        </div>
       </div>
     );
 

@@ -29,6 +29,7 @@
     "@tanstack/react-start": "^1.168.28",
     "better-auth": "^1.6.23",
     "drizzle-orm": "latest",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "zod": "^4.4.3"
