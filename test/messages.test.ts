@@ -8,11 +8,12 @@ import {
   deleteMessage,
   listMessages,
   resolveDisclosure,
+  resolveDisclosureForRecipient,
   setMessageRecipients,
   updateMessage,
 } from '../src/domain/messages';
 import { DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
-import { makeTestDb, seedSubject } from './helpers';
+import { makeTestDb, seedCertification, seedSubject } from './helpers';
 
 const NOW = new Date('2026-07-14T12:00:00Z');
 const cfg = { ...DEFAULT_DOMAIN_CONFIG, now: NOW };
@@ -228,6 +229,102 @@ describe('開示解決（T5の配信ペイロード）', () => {
       recipientEmail: 'mother@example.test',
       passphraseHint: '犬の名前',
     });
+  });
+});
+
+describe('受取人ごとの開示解決（開示画面C・ADR-0011）', () => {
+  // 開示ゲート成立を模す: その本人の death_certifications に outcome='disclosed' を1本入れる。
+  async function markDisclosed(subjectUserId: string): Promise<void> {
+    await db.insert(schema.deathCertifications).values({
+      subjectUserId,
+      stage: 'disclosed',
+      outcome: 'disclosed',
+      disclosedAt: NOW,
+    });
+  }
+
+  it('開示成立前は空を返す（ゲート・成立前は暗号文を出さない）', async () => {
+    const s = await seedSubject(db);
+    const c1 = await makeRecipient(s, 'mother@example.test', '犬の名前');
+    const created = await createMessage(
+      db,
+      {
+        subjectUserId: s,
+        ...content,
+        recipients: [{ connectionId: c1, wrappedDek: 'd3JhcA==' }],
+      },
+      cfg,
+    );
+    if (!created.ok) throw new Error('setup');
+
+    // 進行中エピソード（未開示）があってもゲートは通さない。
+    await seedCertification(db, s, { stage: 'voting' });
+    expect(await resolveDisclosureForRecipient(db, c1)).toHaveLength(0);
+  });
+
+  it('開示成立後は 差出人名・ヒント・暗号材料 を返す', async () => {
+    const s = await seedSubject(db);
+    const c1 = await makeRecipient(s, 'mother@example.test', '犬の名前');
+    const created = await createMessage(
+      db,
+      {
+        subjectUserId: s,
+        ...content,
+        recipients: [{ connectionId: c1, wrappedDek: 'd3JhcA==' }],
+      },
+      cfg,
+    );
+    if (!created.ok) throw new Error('setup');
+    await markDisclosed(s);
+
+    const rows = await resolveDisclosureForRecipient(db, c1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      messageId: created.messageId,
+      ciphertext: content.ciphertext,
+      iv: content.iv,
+      wrappedDek: 'd3JhcA==',
+      fromName: s, // seedSubject は name=id で作る
+      passphraseHint: '犬の名前',
+    });
+  });
+
+  it('同一受取人宛の複数伝言をまとめて返す（合言葉1回で全開封の土台）', async () => {
+    const s = await seedSubject(db);
+    const c1 = await makeRecipient(s, 'mother@example.test', '犬の名前');
+    for (const w of ['ZDE=', 'ZDI=']) {
+      const r = await createMessage(
+        db,
+        {
+          subjectUserId: s,
+          ...content,
+          recipients: [{ connectionId: c1, wrappedDek: w }],
+        },
+        cfg,
+      );
+      if (!r.ok) throw new Error('setup');
+    }
+    await markDisclosed(s);
+
+    const rows = await resolveDisclosureForRecipient(db, c1);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.wrappedDek).sort()).toEqual(['ZDE=', 'ZDI=']);
+  });
+
+  it('未知の connectionId（UUID書式・該当なし）は空を返す（中立応答）', async () => {
+    expect(
+      await resolveDisclosureForRecipient(
+        db,
+        '00000000-0000-0000-0000-000000000000',
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('UUID書式でない connectionId も空を返す（DBへ渡さず中立化。ADR-0011 §2）', async () => {
+    // uuid 列へ 'xxx' を渡すと Postgres が例外を投げ、公開ルートがエラー画面になって
+    // 中立性が壊れる。書式段階で弾き、未知IDと同一の空応答にする。
+    expect(await resolveDisclosureForRecipient(db, 'xxx')).toHaveLength(0);
+    expect(await resolveDisclosureForRecipient(db, '')).toHaveLength(0);
   });
 });
 

@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
+import { Route as DisclosureConnectionIdRouteImport } from './routes/disclosure.$connectionId'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as AppWatchRouteImport } from './routes/_app.watch'
 import { Route as AppMessagesRouteImport } from './routes/_app.messages'
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
 const JoinTokenRoute = JoinTokenRouteImport.update({
   id: '/join/$token',
   path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisclosureConnectionIdRoute = DisclosureConnectionIdRouteImport.update({
+  id: '/disclosure/$connectionId',
+  path: '/disclosure/$connectionId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/messages': typeof AppMessagesRoute
   '/watch': typeof AppWatchRoute
   '/api/$': typeof ApiSplatRoute
+  '/disclosure/$connectionId': typeof DisclosureConnectionIdRoute
   '/join/$token': typeof JoinTokenRoute
   '/account/delete': typeof AppAccountDeleteRoute
   '/death/$subjectId': typeof AppDeathSubjectIdRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/messages': typeof AppMessagesRoute
   '/watch': typeof AppWatchRoute
   '/api/$': typeof ApiSplatRoute
+  '/disclosure/$connectionId': typeof DisclosureConnectionIdRoute
   '/join/$token': typeof JoinTokenRoute
   '/account/delete': typeof AppAccountDeleteRoute
   '/death/$subjectId': typeof AppDeathSubjectIdRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/_app/messages': typeof AppMessagesRoute
   '/_app/watch': typeof AppWatchRoute
   '/api/$': typeof ApiSplatRoute
+  '/disclosure/$connectionId': typeof DisclosureConnectionIdRoute
   '/join/$token': typeof JoinTokenRoute
   '/_app/account_/delete': typeof AppAccountDeleteRoute
   '/_app/death/$subjectId': typeof AppDeathSubjectIdRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/watch'
     | '/api/$'
+    | '/disclosure/$connectionId'
     | '/join/$token'
     | '/account/delete'
     | '/death/$subjectId'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/watch'
     | '/api/$'
+    | '/disclosure/$connectionId'
     | '/join/$token'
     | '/account/delete'
     | '/death/$subjectId'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/_app/messages'
     | '/_app/watch'
     | '/api/$'
+    | '/disclosure/$connectionId'
     | '/join/$token'
     | '/_app/account_/delete'
     | '/_app/death/$subjectId'
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiSplatRoute: typeof ApiSplatRoute
+  DisclosureConnectionIdRoute: typeof DisclosureConnectionIdRoute
   JoinTokenRoute: typeof JoinTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -287,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/join/$token'
       fullPath: '/join/$token'
       preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disclosure/$connectionId': {
+      id: '/disclosure/$connectionId'
+      path: '/disclosure/$connectionId'
+      fullPath: '/disclosure/$connectionId'
+      preLoaderRoute: typeof DisclosureConnectionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/$': {
@@ -394,6 +414,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiSplatRoute: ApiSplatRoute,
+  DisclosureConnectionIdRoute: DisclosureConnectionIdRoute,
   JoinTokenRoute: JoinTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

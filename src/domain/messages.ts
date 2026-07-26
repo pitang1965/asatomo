@@ -1,6 +1,12 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, exists, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../db';
-import { connections, legacyMessages, messageRecipients } from '../db/schema';
+import {
+  connections,
+  deathCertifications,
+  legacyMessages,
+  messageRecipients,
+  user,
+} from '../db/schema';
 import type { DomainConfig } from './monitoring';
 
 /**
@@ -229,6 +235,65 @@ export async function resolveDisclosure(db: Db, subjectUserId: string) {
     )
     .innerJoin(connections, eq(messageRecipients.connectionId, connections.id))
     .where(eq(legacyMessages.subjectUserId, subjectUserId));
+}
+
+// connectionId は uuid 列と突き合わせる。書式不正の値を WHERE に渡すと Postgres が
+// 「invalid input syntax for type uuid」を投げ、公開ルートがエラー画面になって中立性が壊れる
+// （書式不正だけ他と区別できてしまう。ADR-0011 §2）。DB へ渡す前に書式を弾き、未知IDと同一挙動にする。
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ─── 開示画面(C)用: 受取人ごとの単件解決（ADR-0011） ────────────────────────
+//   公開ルート /disclosure/{connectionId} が呼ぶ。connectionId だけを受け取り、その受取人宛で
+//   「開示成立済み」の全伝言をまとめて返す（合言葉は受取人ごとに1つなので1回入力で全て解ける）。
+//   開示ゲートは exists(death_certifications outcome='disclosed') を WHERE に埋め込む
+//   ＝成立前は行が返らず暗号文を取り出せない（TOCTOU なし）。書式不正・成立前・不正 connectionId・
+//   削除済みはいずれも空配列で区別がつかない（中立応答。ADR-0011 §2）。
+//   バッチ用の resolveDisclosure（通知層）とは役割が違うので別関数として持つ。
+export async function resolveDisclosureForRecipient(
+  db: Db,
+  connectionId: string,
+) {
+  // uuid 書式でなければ DB に触れず空を返す（未知IDと同じ中立応答。上記コメント）。
+  if (!UUID_RE.test(connectionId)) return [];
+  return db
+    .select({
+      messageId: legacyMessages.id,
+      ciphertext: legacyMessages.ciphertext,
+      iv: legacyMessages.iv,
+      cipherAlgo: legacyMessages.cipherAlgo,
+      wrappedDek: messageRecipients.wrappedDek,
+      // 差出人名は本人の表示名（暗号化対象外）。ヒントは受取人（つながり）ごとに1つ。
+      fromName: user.name,
+      passphraseHint: connections.passphraseHint,
+    })
+    .from(messageRecipients)
+    .innerJoin(
+      legacyMessages,
+      eq(messageRecipients.messageId, legacyMessages.id),
+    )
+    .innerJoin(connections, eq(messageRecipients.connectionId, connections.id))
+    .innerJoin(user, eq(connections.subjectUserId, user.id))
+    .where(
+      and(
+        eq(messageRecipients.connectionId, connectionId),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(deathCertifications)
+            .where(
+              and(
+                eq(
+                  deathCertifications.subjectUserId,
+                  connections.subjectUserId,
+                ),
+                eq(deathCertifications.outcome, 'disclosed'),
+              ),
+            ),
+        ),
+      ),
+    )
+    .orderBy(desc(legacyMessages.createdAt));
 }
 
 // ─── ヘルパ: 宛先がすべて本人のつながりか ───────────────────────────────────

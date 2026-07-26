@@ -121,7 +121,7 @@ describe('宛先解決＋通知（Notifications）', () => {
     expect(emailCalls).toHaveLength(1);
     expect(emailCalls[0]?.to).toBe('mother@example.test');
     expect(emailCalls[0]?.msg.text).toContain(
-      `${notifyCfg.webBaseUrl}/message/${msg.messageId}/${contact.connectionId}`,
+      `${notifyCfg.webBaseUrl}/disclosure/${contact.connectionId}`,
     );
     expect(emailCalls[0]?.msg.text).toContain('犬の名前');
   });

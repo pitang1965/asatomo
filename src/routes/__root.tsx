@@ -1,5 +1,6 @@
 import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import { NotFoundCard } from '../web/NotFoundCard';
 import appCss from '../web/watch.css?url';
 
 /** ルートドキュメント。watch.css（夜明けパレット）を全ページに適用する。 */
@@ -73,6 +74,9 @@ export const Route = createRootRoute({
     ],
   }),
   shellComponent: RootDocument,
+  // アプリ全体の未マッチURL（例: /xxx）の 404。ルート単位の「データ無し」中立ページ
+  // （/disclosure の unavailable 等）も同じ NotFoundCard を使い、表示を揃える。
+  notFoundComponent: NotFoundCard,
 });
 
 function RootDocument({ children }: { children: ReactNode }) {

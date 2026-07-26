@@ -70,7 +70,12 @@ const rows: DashboardRow[] = [
 ];
 
 type Screen = 'dash' | 'death' | 'msg';
-type Packed = { ciphertext: string; iv: string; wrappedDek: string };
+type Packed = {
+  messageId: string;
+  ciphertext: string;
+  iv: string;
+  wrappedDek: string;
+};
 
 function App() {
   const [screen, setScreen] = useState<Screen>('dash');
@@ -85,7 +90,7 @@ function App() {
         dek,
       );
       const wrappedDek = await wrapDek(dek, 'ポチ');
-      setPacked({ ciphertext, iv, wrappedDek });
+      setPacked({ messageId: 'demo', ciphertext, iv, wrappedDek });
     })();
   }, []);
 
@@ -201,7 +206,7 @@ function App() {
           <MessageDisclosure
             fromName="健太"
             hint="最初に飼った犬の名前（デモ: ポチ）"
-            {...packed}
+            messages={[packed]}
           />
         ) : (
           <p style={{ textAlign: 'center', color: 'var(--ink-3)' }}>準備中…</p>

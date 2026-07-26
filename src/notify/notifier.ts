@@ -128,15 +128,23 @@ export function createNotifications(
     async discloseMessages(subjectUserId, _certificationId) {
       const name = (await getUserName(db, subjectUserId)) ?? '大切な方';
       const payloads = await resolveDisclosure(db, subjectUserId);
+      // 受取人（connection）ごとに1通へ集約（ADR-0011 §3）。同じ人へ複数の伝言があっても、
+      // メールは1通・リンクは /disclosure/{connectionId} 一つ（合言葉1回で全て開ける）。
+      // email/hint は受取人ごとに一意なので、その connection の先頭行から取れば足りる。
+      const byConnection = new Map<string, (typeof payloads)[number]>();
+      for (const p of payloads) {
+        if (!byConnection.has(p.connectionId))
+          byConnection.set(p.connectionId, p);
+      }
       await Promise.all(
-        payloads.map(async (p) => {
+        [...byConnection.values()].map(async (p) => {
           const to =
             p.recipientEmail ??
             (p.recipientUserId
               ? await getUserEmail(db, p.recipientUserId)
               : null);
           if (!to) return;
-          const link = `${config.webBaseUrl}/message/${p.messageId}/${p.connectionId}`;
+          const link = `${config.webBaseUrl}/disclosure/${p.connectionId}`;
           const hint = p.passphraseHint
             ? `\n合言葉のヒント: ${p.passphraseHint}`
             : '';

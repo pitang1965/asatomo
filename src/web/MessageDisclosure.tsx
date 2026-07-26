@@ -26,32 +26,40 @@ export function OpenedLetter({
 
 type Status = 'locked' | 'opening' | 'open' | 'error';
 
-export function MessageDisclosure({
-  fromName,
-  hint,
-  ciphertext,
-  iv,
-  wrappedDek,
-}: {
-  fromName: string;
-  hint?: string;
+/** 端末内で復号する単位（受取人ごとに複数ありうる。合言葉は受取人ごとに1つ。ADR-0011）。 */
+export interface DisclosurePacked {
+  messageId: string;
   ciphertext: string;
   iv: string;
   wrappedDek: string;
+}
+
+export function MessageDisclosure({
+  fromName,
+  hint,
+  messages,
+}: {
+  fromName: string;
+  hint?: string | null;
+  /** この受取人宛の開示成立済みの伝言。合言葉を一度入力すれば全て解ける（ADR-0011 §3）。 */
+  messages: DisclosurePacked[];
 }) {
   const [passphrase, setPassphrase] = useState('');
   const [status, setStatus] = useState<Status>('locked');
-  const [text, setText] = useState('');
+  const [letters, setLetters] = useState<{ id: string; text: string }[]>([]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setStatus('opening');
     try {
-      const opened = await openMessage(
-        { ciphertext, iv, wrappedDek },
-        passphrase,
+      // 同じ合言葉で各伝言の wrappedDek を順に解く。1つでも失敗したら合言葉違いとして扱う。
+      const opened = await Promise.all(
+        messages.map(async (m) => ({
+          id: m.messageId,
+          text: await openMessage(m, passphrase),
+        })),
       );
-      setText(opened);
+      setLetters(opened);
       setStatus('open');
     } catch {
       setStatus('error');
@@ -61,7 +69,9 @@ export function MessageDisclosure({
   if (status === 'open')
     return (
       <div className="watch">
-        <OpenedLetter fromName={fromName} text={text} />
+        {letters.map((l) => (
+          <OpenedLetter key={l.id} fromName={fromName} text={l.text} />
+        ))}
       </div>
     );
 

@@ -9,7 +9,10 @@ import {
   getInvitationPreview,
   type InvitationInvalidReason,
 } from '../domain/invitations';
-import { listMessages } from '../domain/messages';
+import {
+  listMessages,
+  resolveDisclosureForRecipient,
+} from '../domain/messages';
 import { DEFAULT_DOMAIN_CONFIG } from '../domain/monitoring';
 import {
   type ActivityEntry,
@@ -415,3 +418,54 @@ export const fetchMessagesPage = createServerFn({ method: 'GET' }).handler(
     };
   },
 );
+
+/**
+ * 受取人の開示画面(C)の材料（ADR-0011）。公開ルート /disclosure/{connectionId} が呼ぶ。
+ * **セッションを要求しない**（純Web受取人はアカウントを持たない）。認可は推測不能な
+ * connectionId ＋ ドメイン側の開示ゲート（death_certifications outcome='disclosed'）だけ。
+ * 成立前・不正 connectionId・削除済みはすべて 'unavailable' に束ね、理由を出さない
+ * （存在を隠す中立応答。ADR-0011 §2）。復号はこの後ブラウザ内で（ADR-0002）。
+ */
+export type DisclosureData =
+  | { status: 'unconfigured'; message: string }
+  | { status: 'unavailable' }
+  | {
+      status: 'ok';
+      fromName: string;
+      hint: string | null;
+      messages: {
+        messageId: string;
+        ciphertext: string;
+        iv: string;
+        wrappedDek: string;
+      }[];
+    };
+
+export const fetchDisclosure = createServerFn({ method: 'GET' })
+  .validator(z.object({ connectionId: z.string().min(1) }))
+  .handler(async ({ data }): Promise<DisclosureData> => {
+    let app: ReturnType<typeof createRequestApp>;
+    try {
+      app = createRequestApp(getServerEnv());
+    } catch (e) {
+      if (e instanceof ConfigError)
+        return { status: 'unconfigured', message: e.message };
+      throw e;
+    }
+
+    const rows = await resolveDisclosureForRecipient(app.db, data.connectionId);
+    if (rows.length === 0) return { status: 'unavailable' };
+
+    // fromName / hint は受取人（つながり）ごとに一意なので先頭から取る。
+    return {
+      status: 'ok',
+      fromName: rows[0].fromName,
+      hint: rows[0].passphraseHint,
+      messages: rows.map((r) => ({
+        messageId: r.messageId,
+        ciphertext: r.ciphertext,
+        iv: r.iv,
+        wrappedDek: r.wrappedDek,
+      })),
+    };
+  });
