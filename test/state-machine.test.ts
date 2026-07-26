@@ -493,6 +493,34 @@ describe('Cron 監視tick', () => {
     expect((await stateOf(s))?.state).toBe('normal');
   });
 
+  it('T1: 旅行モード期限切れで自動再開・古い沈黙を即検知（自動復帰の中核）', async () => {
+    // 旅行中はシグナルを送らないのが想定内。期限が過去に切れた本人は監視対象へ戻り、
+    // 復帰時刻を新基準にせず lastSignalAt 基準で即 unresponsive 判定される（即時判定・現状維持）。
+    const s = await seedSubject(db, {
+      state: 'normal',
+      lastSignalAt: hoursAgo(40, NOW), // 窓30h超過（旅行中に貯まった沈黙）
+      travelUntil: hoursAgo(1, NOW), // 1時間前に期限切れ → 自動再開
+    });
+    const { calls, notifier } = mockNotifier();
+    const res = await runMonitoringTick(db, notifier, cronCfg);
+    expect(res.unresponsive).toBe(1);
+    expect((await stateOf(s))?.state).toBe('unresponsive');
+    expect((await latestCert(s))?.outcome).toBe('in_progress');
+    expect(calls.unresponsive).toEqual([s]); // 本人へ通知（見守り者アラートは12h後の別段階）
+  });
+
+  it('T1: 旅行モード期限=現在ちょうどは再開扱い（境界 lte）', async () => {
+    const s = await seedSubject(db, {
+      state: 'normal',
+      lastSignalAt: hoursAgo(40, NOW),
+      travelUntil: NOW, // travelUntil <= now を満たす境界
+    });
+    const { notifier } = mockNotifier();
+    const res = await runMonitoringTick(db, notifier, cronCfg);
+    expect(res.unresponsive).toBe(1);
+    expect((await stateOf(s))?.state).toBe('unresponsive');
+  });
+
   it('T1: 一度もシグナルが無い本人は対象外', async () => {
     const s = await seedSubject(db, { state: 'normal', lastSignalAt: null });
     const { notifier } = mockNotifier();
