@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { type CSSProperties, useState } from 'react';
 import { fetchAccount } from '../server/functions';
 import { Avatar } from '../web/Avatar';
@@ -63,18 +63,20 @@ function Account({
   userEmail: string;
   userImage: string | null;
 }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function logout() {
     setBusy(true);
+    // signOut のレスポンスがセッションCookieを削除する。失敗しても（オフライン等）
+    // ここで握り潰さず、必ず遷移まで進める（サーバー側がセッションの正）。
     try {
       await authClient.signOut();
-      await router.invalidate();
-      window.location.href = '/';
     } catch {
-      setBusy(false);
+      // ネットワーク不調など。下の遷移でサーバーが未ログインを確定させる。
     }
+    // replace で /account を履歴から外す（戻る操作で bfcache の認証済み画面を復元させない）。
+    // 遷移先は /login。no-store（worker.ts）と併せ、必ずサーバーの最新セッションで判定させる。
+    window.location.replace('/login');
   }
 
   return (
