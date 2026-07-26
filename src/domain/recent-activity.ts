@@ -16,6 +16,7 @@ const VERB: Record<SignalKind, string> = {
   // 「いってきます」は留守（家が無人）の開示になるためぼかす（記録は outing のまま。CONTEXT.md 近況）。
   outing: '元気にしていました',
   homecoming: '帰ってきました',
+  wake: '起きました',
 };
 
 export function relativeJa(from: Date, now: Date): string {
@@ -58,6 +59,7 @@ const TRUE_LABEL: Record<SignalKind, string> = {
   web_checkin: 'Webでチェックインしました',
   outing: '「いってきます」を送りました',
   homecoming: '「ただいま」を送りました',
+  wake: '「おはよう」を送りました',
 };
 
 export function signalTrueLabel(kind: SignalKind): string {

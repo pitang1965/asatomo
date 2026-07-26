@@ -18,6 +18,7 @@ import {
   getDeathConfirmInfo,
   getSubjectActivityHistory,
   getSubjectConnections,
+  getSubjectTravelUntil,
   getSubjectWatchers,
   getWatcherDashboard,
   hasAcceptedWatcher,
@@ -86,6 +87,8 @@ export type MeData =
       userName: string;
       watchersTotal: number;
       watchersLiving: number;
+      /** 旅行モードの期限（ISO 文字列）。停止していなければ null。 */
+      travelUntil: string | null;
     };
 
 export const fetchMe = createServerFn({ method: 'GET' }).handler(
@@ -108,11 +111,13 @@ export const fetchMe = createServerFn({ method: 'GET' }).handler(
       session.user.id,
       DEFAULT_DOMAIN_CONFIG,
     );
+    const travelUntil = await getSubjectTravelUntil(app.db, session.user.id);
     return {
       status: 'ok',
       userName: session.user.name,
       watchersTotal: watchers.length,
       watchersLiving: watchers.filter((w) => w.isLiving).length,
+      travelUntil: travelUntil?.toISOString() ?? null,
     };
   },
 );
@@ -124,6 +129,8 @@ export const fetchMe = createServerFn({ method: 'GET' }).handler(
 export type WatchData =
   | { status: 'unconfigured'; message: string }
   | { status: 'signed_out' }
+  // 取得失敗（DB/接続の一時障害）。画面は「様子を取得できませんでした」を出して再読み込みを促す。
+  | { status: 'error' }
   | { status: 'ok'; rows: DashboardRow[] };
 
 export const fetchWatch = createServerFn({ method: 'GET' }).handler(
@@ -141,10 +148,16 @@ export const fetchWatch = createServerFn({ method: 'GET' }).handler(
     const session = await app.auth.api.getSession({ headers: request.headers });
     if (!session) return { status: 'signed_out' };
 
-    return {
-      status: 'ok',
-      rows: await getWatcherDashboard(app.db, session.user.id),
-    };
+    // 一覧取得だけを try で包む（未設定・未ログインは上で確定済み）。ここで投げると
+    // ルート全体がエラー境界に落ちるため、判別可能な error として返し画面側で穏当に扱う。
+    try {
+      return {
+        status: 'ok',
+        rows: await getWatcherDashboard(app.db, session.user.id),
+      };
+    } catch {
+      return { status: 'error' };
+    }
   },
 );
 

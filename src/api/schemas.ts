@@ -16,6 +16,7 @@ const signalKind = z.enum([
   'web_checkin',
   'outing',
   'homecoming',
+  'wake',
 ]);
 
 const recipient = z.object({

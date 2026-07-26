@@ -28,11 +28,12 @@ const page: CSSProperties = {
   fontFamily: 'var(--font-jp)',
 };
 
+// コンテンツ幅は全タブ共通の 560（下タブ切り替えで幅がジャンプしないよう統一）。
 const card: CSSProperties = {
   background: 'var(--surface)',
   borderRadius: 16,
   padding: 20,
-  maxWidth: 480,
+  maxWidth: 560,
   margin: '16px auto',
   boxShadow: 'var(--shadow-sm)',
 };

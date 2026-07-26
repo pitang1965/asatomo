@@ -284,6 +284,22 @@ export async function getSubjectWatchers(
   }));
 }
 
+/**
+ * 本人自身の旅行モード状態（見守り一時停止の期限）。/me の旅行モードカード用。
+ * subjectSettings 行が無い（まだ本人化していない）場合は null＝停止していない扱い。
+ */
+export async function getSubjectTravelUntil(
+  db: Db,
+  subjectUserId: string,
+): Promise<Date | null> {
+  const rows = await db
+    .select({ travelUntil: subjectSettings.travelUntil })
+    .from(subjectSettings)
+    .where(eq(subjectSettings.userId, subjectUserId))
+    .limit(1);
+  return rows[0]?.travelUntil ?? null;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 
 export interface DeathConfirmInfo {

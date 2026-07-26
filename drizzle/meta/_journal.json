@@ -43,6 +43,13 @@
       "when": 1784642679004,
       "tag": "0005_account_deletion_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785021635539,
+      "tag": "0006_classy_oracle",
+      "breakpoints": true
     }
   ]
 }

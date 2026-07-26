@@ -15,8 +15,10 @@ export const Route = createFileRoute('/_app/me')({
   component: MePage,
 });
 
+// コンテンツ幅は全タブ共通の 560（/watch・/messages と一致）。下タブ切り替えで幅が
+// ジャンプしないよう、わたし系（/me・/activity・/connections）もこの値に揃える。
 const wrap: CSSProperties = {
-  maxWidth: 480,
+  maxWidth: 560,
   margin: '0 auto',
   padding: '12px 16px 0',
 };
@@ -41,6 +43,7 @@ function MePage() {
     <Me
       watchersTotal={data.watchersTotal}
       watchersLiving={data.watchersLiving}
+      travelUntil={data.travelUntil}
     />
   );
 }
@@ -48,9 +51,11 @@ function MePage() {
 function Me({
   watchersTotal,
   watchersLiving,
+  travelUntil,
 }: {
   watchersTotal: number;
   watchersLiving: number;
+  travelUntil: string | null;
 }) {
   const isSubject = watchersTotal > 0;
   const [signalNotice, setSignalNotice] = useState('');
@@ -113,6 +118,9 @@ function Me({
                 color: 'var(--ink)',
               }}
             >
+              <span aria-hidden="true" style={{ marginRight: 6 }}>
+                📣
+              </span>
               いまの様子を伝える
             </p>
             <div
@@ -125,12 +133,14 @@ function Me({
             >
               {(
                 [
-                  ['meal', 'ごはん'],
-                  ['sleep', 'おやすみ'],
-                  ['outing', 'いってきます'],
-                  ['homecoming', 'ただいま'],
+                  // アイコンはモバイル（MainActivity）と揃える。
+                  ['wake', 'おはよう', '☀️'],
+                  ['meal', 'ごはん', '🍚'],
+                  ['sleep', 'おやすみ', '🌙'],
+                  ['outing', 'いってきます', '👋'],
+                  ['homecoming', 'ただいま', '🏠'],
                 ] as const
-              ).map(([kind, label]) => (
+              ).map(([kind, label, icon]) => (
                 <button
                   key={kind}
                   type="button"
@@ -147,6 +157,9 @@ function Me({
                     color: 'var(--ink)',
                   }}
                 >
+                  <span aria-hidden="true" style={{ marginRight: 6 }}>
+                    {icon}
+                  </span>
                   {label}
                 </button>
               ))}
@@ -180,10 +193,14 @@ function Me({
             ) : null}
           </div>
 
-          {/* 3. 見守ってくれる人（人数は常時／2人未満だけ警告。決定6） */}
+          {/* 3. あなたを見守ってくれる人（人数は常時／2人未満だけ警告。決定6）
+                 主語を明示し「あなたが見守っている人」(=仲間タブ/逆向き)との一字違いの取り違えを防ぐ。 */}
           <div style={cardBox}>
             <p style={{ margin: 0, fontSize: 14, color: 'var(--ink)' }}>
-              見守ってくれる人：<strong>{watchersTotal}人</strong>
+              <span aria-hidden="true" style={{ marginRight: 6 }}>
+                👥
+              </span>
+              あなたを見守ってくれる人：<strong>{watchersTotal}人</strong>
             </p>
             {watchersLiving < 2 ? (
               <p
@@ -209,7 +226,10 @@ function Me({
             </p>
           </div>
 
-          {/* 4. 見守り合いに誘う（成立済みには用済みなので最下部） */}
+          {/* 4. 旅行モード（見守りの一時休止。モバイルと機能を揃える） */}
+          <TravelMode initialUntil={travelUntil} />
+
+          {/* 5. 見守り合いに誘う（成立済みには用済みなので最下部） */}
           <Invite onNotice={setNotice} />
         </>
       ) : (
@@ -247,6 +267,189 @@ function Me({
       )}
     </div>
   );
+}
+
+/**
+ * 旅行モード（見守りの一時休止）。モバイル（MainActivity）と機能を揃える。
+ * 期限まで見守りを止め、期限が来たらサーバー側で自動再開する（最長30日はサーバーが強制）。
+ * 見守ってくれる人には「旅行中」として伝わる（監視は止まっても存在は隠さない）。
+ */
+function TravelMode({ initialUntil }: { initialUntil: string | null }) {
+  const [until, setUntil] = useState<string | null>(initialUntil);
+  const [date, setDate] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const active = until != null && new Date(until) > new Date();
+
+  // 入力の許容範囲：最短「明日」〜最長「30日後」（サーバーの上限に合わせる）。
+  const min = ymd(addDays(new Date(), 1));
+  const max = ymd(addDays(new Date(), 30));
+
+  async function enter() {
+    if (!date) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      // 帰宅日いっぱいまで休止（その日の終わりに再開）。
+      const untilIso = new Date(`${date}T23:59:59`).toISOString();
+      const res = await fetch('/api/travel', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ until: untilIso }),
+      });
+      if (!res.ok) throw new Error(`travel failed: ${res.status}`);
+      setUntil(untilIso);
+      setMsg(`旅行モードにしました（${formatMd(untilIso)} まで）。`);
+    } catch {
+      setMsg('設定できませんでした。期間が長すぎないか確認してください。');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exit() {
+    setBusy(true);
+    setMsg('');
+    try {
+      const res = await fetch('/api/travel', { method: 'DELETE' });
+      if (!res.ok) throw new Error(`travel clear failed: ${res.status}`);
+      setUntil(null);
+      setDate('');
+      setMsg('旅行モードを解除しました。見守りを再開します。');
+    } catch {
+      setMsg('解除できませんでした。時間をおいてお試しください。');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={cardBox}>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          fontWeight: 600,
+          color: 'var(--ink)',
+        }}
+      >
+        <span aria-hidden="true" style={{ marginRight: 6 }}>
+          🧳
+        </span>
+        旅行モード
+      </p>
+      {active ? (
+        <>
+          <p
+            style={{
+              margin: '10px 0 0',
+              fontSize: 12.5,
+              color: 'var(--ink-2)',
+              lineHeight: 1.8,
+            }}
+          >
+            見守りをお休み中です（<strong>{formatMd(until as string)}</strong>{' '}
+            まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。
+          </p>
+          <button
+            type="button"
+            onClick={exit}
+            disabled={busy}
+            style={travelBtn}
+          >
+            旅行モードを解除する
+          </button>
+        </>
+      ) : (
+        <>
+          <p
+            style={{
+              margin: '10px 0 0',
+              fontSize: 12.5,
+              color: 'var(--ink-2)',
+              lineHeight: 1.8,
+            }}
+          >
+            留守や生活リズムの変化で誤って通知が飛ばないよう、見守りを一時お休みします。期限が来たら自動で再開します（最長30日）。
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              alignItems: 'center',
+              marginTop: 10,
+            }}
+          >
+            <label style={{ fontSize: 12.5, color: 'var(--ink)' }}>
+              帰る日：{' '}
+              <input
+                type="date"
+                value={date}
+                min={min}
+                max={max}
+                onChange={(e) => setDate(e.target.value)}
+                style={{
+                  fontSize: 13,
+                  padding: '6px 8px',
+                  borderRadius: 8,
+                  border: '1px solid var(--line)',
+                  background: 'var(--surface-2)',
+                  color: 'var(--ink)',
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={enter}
+              disabled={busy || !date}
+              style={{ ...travelBtn, marginTop: 0, opacity: date ? 1 : 0.6 }}
+            >
+              旅行モードにする
+            </button>
+          </div>
+        </>
+      )}
+      {msg ? (
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ink-2)' }}>
+          {msg}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+const travelBtn: CSSProperties = {
+  appearance: 'none',
+  marginTop: 10,
+  border: '1px solid var(--line)',
+  cursor: 'pointer',
+  padding: '8px 14px',
+  borderRadius: 999,
+  fontWeight: 600,
+  fontSize: 13,
+  background: 'var(--surface-2)',
+  color: 'var(--ink)',
+};
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+/** <input type="date"> 用のローカル日付文字列（YYYY-MM-DD）。 */
+function ymd(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/** 「M月D日」表示（旅行モードの期限用）。 */
+function formatMd(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
 /** 招待リンクの発行＋コピー。CTA はわたしに一本化（ADR-0008 §実装決定5）。 */

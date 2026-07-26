@@ -52,6 +52,7 @@ export const signalKind = pgEnum('signal_kind', [
   'web_checkin', // Webからのチェックイン（Android非所持の本人。ダッシュボード表示で自動記録）
   'outing', // 「いってきます」ボタン（外出。近況ではぼかして見せる — CONTEXT.md 近況）
   'homecoming', // 「ただいま」ボタン（帰宅）
+  'wake', // 「おはよう」ボタン（起床）
 ]);
 
 /** 見守り者の招待状態（見守りは責務なので承諾が要る。純粋な受取人には不要）。 */

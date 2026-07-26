@@ -44,12 +44,59 @@ const emptyCard: CSSProperties = {
   textAlign: 'center',
 };
 
+// ダッシュボード(.watch: max-width 560・左右 padding 18)と幅・余白を揃えて上部に置く。
+const intro: CSSProperties = {
+  maxWidth: 560,
+  margin: '0 auto',
+  padding: '22px 18px 0',
+};
+const introTitle: CSSProperties = {
+  margin: 0,
+  fontSize: 17,
+  fontWeight: 700,
+  color: 'var(--ink)',
+};
+const introBody: CSSProperties = {
+  margin: '8px 0 0',
+  fontSize: 12.5,
+  lineHeight: 1.8,
+  color: 'var(--ink-2)',
+};
+
 function WatchPage() {
   const data = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
   const [notice, setNotice] = useState('');
   const [pendingSubjectId, setPendingSubjectId] = useState<string | null>(null);
+
+  // 取得失敗（DB/接続の一時障害）は接続確認を促し、再読み込みの導線を出す（モバイルと同じ扱い）。
+  if (data.status === 'error')
+    return (
+      <div style={emptyCard}>
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ink)' }}>
+          様子を取得できませんでした。接続を確認してください。
+        </p>
+        <button
+          type="button"
+          onClick={() => router.invalidate()}
+          style={{
+            appearance: 'none',
+            marginTop: 14,
+            border: '1px solid var(--line)',
+            cursor: 'pointer',
+            padding: '8px 16px',
+            borderRadius: 999,
+            fontWeight: 600,
+            fontSize: 13,
+            background: 'var(--surface-2)',
+            color: 'var(--ink)',
+          }}
+        >
+          再読み込み
+        </button>
+      </div>
+    );
 
   if (data.status !== 'ok')
     return (
@@ -130,6 +177,14 @@ function WatchPage() {
 
   return (
     <div>
+      {/* 画面内の総称は「見守っている人」を保つ（下タブ「仲間」を総称に流用しない・決定4）。
+          逆向きの /connections「あなたを見守ってくれている人」と主語で明確に区別する。 */}
+      <div style={intro}>
+        <h1 style={introTitle}>あなたが見守っている人</h1>
+        <p style={introBody}>
+          あなたが「元気かな」と気にかけている人です。近況をそっと確認できます。
+        </p>
+      </div>
       {notice ? (
         <p
           style={{

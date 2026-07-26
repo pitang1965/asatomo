@@ -37,6 +37,14 @@ const card: CSSProperties = {
   boxShadow: '0 4px 20px rgb(0 0 0 / 0.06)',
 };
 
+// 全内容を包む枠。他タブ（/me）と同じく 560 幅＋左右 16px の余白にし、カードの実効幅を揃える
+// （カード自身は maxWidth 560 だが、この枠の内側 528 に収まるので他タブと同じ見た目になる）。
+const wrap: CSSProperties = {
+  maxWidth: 560,
+  margin: '0 auto',
+  padding: '0 16px',
+};
+
 const input: CSSProperties = {
   font: 'inherit',
   fontSize: 14,
@@ -77,74 +85,77 @@ function MessagesPage() {
 
   return (
     <div style={page}>
-      <h1
-        style={{
-          textAlign: 'center',
-          fontSize: 20,
-          color: 'var(--ink)',
-          margin: '8px 0 0',
-          paddingTop: 12,
-        }}
-      >
-        最後の伝言
-      </h1>
-      <p
-        style={{
-          textAlign: 'center',
-          fontSize: 12,
-          color: 'var(--ink-3)',
-          margin: '6px 16px 0',
-        }}
-      >
-        本文はこの端末の中で暗号化されます。運営者にも読めません。
-        合言葉を忘れると誰にも復元できないため、大切に保管してください。
-      </p>
-
-      <div style={card}>
-        <label style={{ ...labelStyle, marginTop: 0 }}>
-          編集用パスワード（全伝言共通・あなただけの秘密）
-          <input
-            style={input}
-            type={hidePass ? 'password' : 'text'}
-            autoComplete="off"
-            placeholder="例: 自分しか知らない思い出の言葉（4文字以上）"
-            value={masterPass}
-            onChange={(e) => setMasterPass(e.target.value)}
-          />
-        </label>
-        <label
+      {/* 見出し・説明・カードすべてを 560 の枠に収め、他タブとカードの実効幅を揃える。 */}
+      <div style={wrap}>
+        <h1
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 12,
-            color: 'var(--ink-2)',
-            marginTop: 8,
+            textAlign: 'center',
+            fontSize: 20,
+            color: 'var(--ink)',
+            margin: '8px 0 0',
+            paddingTop: 12,
           }}
         >
-          <input
-            type="checkbox"
-            checked={hidePass}
-            onChange={(e) => setHidePass(e.target.checked)}
-          />
-          パスワードや合言葉を伏せ字にする（人に画面を見られたくないとき）
-        </label>
-        <p style={{ fontSize: 11, color: 'var(--ink-3)', margin: '8px 0 0' }}>
-          読み返し・編集・保存に使います。保存すると、あなた自身もこのパスワードなしでは読み返せなくなります（運営者にも読めない仕組みのため）。
-          宛先の合言葉（相手と共有するもの）とは別物です。誰にも教えない一生ものを1つ決めてください。
+          最後の伝言
+        </h1>
+        <p
+          style={{
+            textAlign: 'center',
+            fontSize: 12,
+            color: 'var(--ink-3)',
+            margin: '6px 0 0',
+          }}
+        >
+          本文はこの端末の中で暗号化されます。運営者にも読めません。
+          合言葉を忘れると誰にも復元できないため、大切に保管してください。
         </p>
-      </div>
 
-      <MessageList
-        messages={data.messages}
-        connections={data.connections}
-        masterPass={masterPass}
-      />
-      <CreateForm
-        connections={data.connections}
-        masterPass={masterPass}
-        hidePass={hidePass}
-      />
+        <div style={card}>
+          <label style={{ ...labelStyle, marginTop: 0 }}>
+            編集用パスワード（全伝言共通・あなただけの秘密）
+            <input
+              style={input}
+              type={hidePass ? 'password' : 'text'}
+              autoComplete="off"
+              placeholder="例: 自分しか知らない思い出の言葉（4文字以上）"
+              value={masterPass}
+              onChange={(e) => setMasterPass(e.target.value)}
+            />
+          </label>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12,
+              color: 'var(--ink-2)',
+              marginTop: 8,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={hidePass}
+              onChange={(e) => setHidePass(e.target.checked)}
+            />
+            パスワードや合言葉を伏せ字にする（人に画面を見られたくないとき）
+          </label>
+          <p style={{ fontSize: 11, color: 'var(--ink-3)', margin: '8px 0 0' }}>
+            読み返し・編集・保存に使います。保存すると、あなた自身もこのパスワードなしでは読み返せなくなります（運営者にも読めない仕組みのため）。
+            宛先の合言葉（相手と共有するもの）とは別物です。誰にも教えない一生ものを1つ決めてください。
+          </p>
+        </div>
+
+        <MessageList
+          messages={data.messages}
+          connections={data.connections}
+          masterPass={masterPass}
+        />
+        <CreateForm
+          connections={data.connections}
+          masterPass={masterPass}
+          hidePass={hidePass}
+        />
+      </div>
     </div>
   );
 }
