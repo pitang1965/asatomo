@@ -1,5 +1,6 @@
 package com.asatomo.app
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -14,10 +15,25 @@ import android.provider.Settings as AndroidSettings
  */
 object AlarmAudio {
 
-    /** アラーム音量が 0（ミュート）か。true なら目覚ましが鳴らない。 */
+    /**
+     * アラーム音量が 0（ミュート）か。true なら目覚ましが鳴らない。
+     *
+     * ただし DND（おやすみモード）中は false を返す（＝警告を出さない）。DND 中は端末によって
+     * getStreamVolume(STREAM_ALARM) が実設定と無関係に 0 を返し誤報になる一方、アラームは
+     * USAGE_ALARM で DND を貫通して鳴る。DND は扱わない方針（ADR-0009 決定2・3）に合わせる。
+     */
     fun isMuted(context: Context): Boolean {
+        if (isDndActive(context)) return false
         val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         return am.getStreamVolume(AudioManager.STREAM_ALARM) == 0
+    }
+
+    /** おやすみモード（DND）が有効か。読み取りのみ（設定変更はしない）で権限不要。 */
+    private fun isDndActive(context: Context): Boolean {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val filter = nm.currentInterruptionFilter
+        return filter != NotificationManager.INTERRUPTION_FILTER_ALL &&
+            filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
     }
 
     /**
