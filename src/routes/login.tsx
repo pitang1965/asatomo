@@ -12,11 +12,11 @@ import { authClient } from '../web/auth-client';
  */
 export const Route = createFileRoute('/login')({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
-    // オープンリダイレクト防止: 自サイト内の絶対パスのみ許可（//evil.com 等は弾く）。
+    // オープンリダイレクト防止: 自サイト内の絶対パスのみ許可。
+    // 先頭は '/'、2文字目は '/' でも '\' でもない（//evil.com・/\evil.com を弾く。
+    // ブラウザは Location の '\' を '/' に正規化するため \ も別オリジンになりうる）。
     redirect:
-      typeof search.redirect === 'string' &&
-      search.redirect.startsWith('/') &&
-      !search.redirect.startsWith('//')
+      typeof search.redirect === 'string' && /^\/[^/\\]/.test(search.redirect)
         ? search.redirect
         : undefined,
   }),
