@@ -21,7 +21,8 @@
     "android:build": "bash scripts/build-android.sh",
     "android:build:release": "bash scripts/build-android.sh release",
     "android:install": "bash scripts/build-android.sh debug --install",
-    "android:reinstall": "bash scripts/build-android.sh debug --reinstall"
+    "android:reinstall": "bash scripts/build-android.sh debug --reinstall",
+    "android:install:release": "pwsh -File scripts/install-android-wifi.ps1"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
