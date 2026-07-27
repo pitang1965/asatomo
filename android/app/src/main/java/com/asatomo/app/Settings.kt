@@ -20,6 +20,11 @@ class Settings(context: Context) {
         get() = prefs.getString("userName", "") ?: ""
         set(v) = prefs.edit().putString("userName", v).apply()
 
+    /** 表示用のメールアドレス（ログイン応答から）。設定画面でどのアカウントか一目で分かるように。 */
+    var userEmail: String
+        get() = prefs.getString("userEmail", "") ?: ""
+        set(v) = prefs.edit().putString("userEmail", v).apply()
+
     /** シグナルを送れる状態か（ログイン済みか）。 */
     val isConfigured: Boolean
         get() = sessionToken.isNotEmpty()
@@ -71,6 +76,7 @@ class Settings(context: Context) {
         prefs.edit()
             .remove("sessionToken")
             .remove("userName")
+            .remove("userEmail")
             .remove("alarmHour")
             .remove("alarmMinute")
             .remove("lastAppOpenSentAtMs")

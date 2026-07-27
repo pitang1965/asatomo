@@ -82,8 +82,12 @@ object AuthClient {
                     ?: json.optString("token").takeIf { it.isNotEmpty() }
                     ?: error("セッショントークンが応答にありません")
             settings.sessionToken = token
-            val name = json.optJSONObject("user")?.optString("name") ?: ""
+            val user = json.optJSONObject("user")
+            val name = user?.optString("name") ?: ""
             settings.userName = name
+            // メールも保存（設定画面でどのアカウントか一目で分かるように。名前だけだと別メールの
+            // 別アカウントと見分けにくい）。
+            settings.userEmail = user?.optString("email") ?: ""
             return name
         } finally {
             conn.disconnect()

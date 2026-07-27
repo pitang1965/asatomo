@@ -102,6 +102,14 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
+            // 名前だけだと別メールの別アカウントと見分けにくいので、メールも併記する。
+            if (settings.userEmail.isNotEmpty()) {
+                Text(
+                    settings.userEmail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             Spacer(Modifier.weight(1f))
 
