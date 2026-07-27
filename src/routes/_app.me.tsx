@@ -349,7 +349,8 @@ function TravelMode({ initialUntil }: { initialUntil: string | null }) {
               lineHeight: 1.8,
             }}
           >
-            見守りをお休み中です（<strong>{formatMd(until as string)}</strong>{' '}
+            あなたへの見守りをお休み中です（
+            <strong>{formatMd(until as string)}</strong>{' '}
             まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。
           </p>
           <button
@@ -371,7 +372,7 @@ function TravelMode({ initialUntil }: { initialUntil: string | null }) {
               lineHeight: 1.8,
             }}
           >
-            留守や生活リズムの変化で誤って通知が飛ばないよう、見守りを一時お休みします。期限が来たら自動で再開します（最長30日）。
+            旅行などで生活リズムが変わると、いつもの様子が届かず、見守ってくれる人によけいな心配をかけてしまうことがあります。その間だけ、あなたへの見守りを一時お休みにできます。期限が来たら自動で再開します（最長30日）。
           </p>
           <div
             style={{

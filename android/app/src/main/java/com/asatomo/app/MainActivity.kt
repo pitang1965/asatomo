@@ -430,7 +430,7 @@ private fun MainScreen() {
                 val travelActive = travelUntilMs > System.currentTimeMillis()
                 if (travelActive) {
                     Text(
-                        "見守りをお休み中です（${formatMd(travelUntilMs)} まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。",
+                        "あなたへの見守りをお休み中です（${formatMd(travelUntilMs)} まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     OutlinedButton(onClick = { exitTravel() }, enabled = !travelBusy) {
@@ -438,7 +438,7 @@ private fun MainScreen() {
                     }
                 } else {
                     Text(
-                        "留守や生活リズムの変化で誤って通知が飛ばないよう、見守りを一時お休みします。期限が来たら自動で再開します（最長30日）。",
+                        "旅行などで生活リズムが変わると、いつもの様子が届かず、見守ってくれる人によけいな心配をかけてしまうことがあります。その間だけ、あなたへの見守りを一時お休みにできます。期限が来たら自動で再開します（最長30日）。",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     OutlinedButton(onClick = { enterTravel() }, enabled = !travelBusy) {
