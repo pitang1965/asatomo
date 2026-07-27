@@ -224,8 +224,3 @@ npm run deploy         # build:cf → wrangler deploy
 | [0007](docs/adr/0007-account-deletion-model.md) | 即時・不可逆のハード削除 | 復元性ではなく「情報つきの摩擦」で誤削除を防ぐ |
 | [0011](docs/adr/0011-recipient-disclosure-access-and-unit.md) | 公開開示ルートは推測不能 ID ＋状態ゲート＋中立404 | ログイン不要と、存在の秘匿を両立 |
 
----
-
-## ライセンス
-
-個人開発・非公開プロダクト（ポートフォリオ公開用）。コードの再利用については著者までご相談ください。
