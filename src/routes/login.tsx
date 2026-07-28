@@ -101,11 +101,21 @@ function LoginPage() {
           >
             Google でログイン
           </button>
-          {/* Facebook / LINE は未実装（backlog 項目17）のため一時的に非表示。
-              押しても失敗する導線を出さない（クローズドテストの第一印象を損ねないため）。
+          <button
+            type="button"
+            style={btn}
+            onClick={() =>
+              authClient.signIn.oauth2({
+                providerId: 'line',
+                callbackURL: back,
+              })
+            }
+          >
+            LINE でログイン
+          </button>
+          {/* Facebook は未実装（backlog 項目17）のため一時的に非表示。
               実装時に、下記のボタンを復活させる:
-                authClient.signIn.social({ provider: 'facebook', callbackURL: back })
-                authClient.signIn.oauth2({ providerId: 'line', callbackURL: back }) */}
+                authClient.signIn.social({ provider: 'facebook', callbackURL: back }) */}
         </div>
         <p
           style={{
@@ -115,6 +125,10 @@ function LoginPage() {
             lineHeight: 1.7,
           }}
         >
+          {/* メールアドレス取得の明示（通知・利用目的・同意を1画面に集約）。
+              LINE のメールアドレス取得権限審査で提出するスクショの根拠になる。 */}
+          ログイン時に、お名前・メールアドレス・プロフィール画像を取得し、アカウント作成・本人確認に利用します。
+          <br />
           ログインすることで、
           <Link to="/terms" style={{ color: 'var(--accent)' }}>
             利用規約

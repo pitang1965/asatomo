@@ -108,7 +108,7 @@ function PrivacyPage() {
           <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
             <li>
               <strong style={{ color: 'var(--ink)' }}>アカウント情報</strong>
-              ：Googleでのログイン時に取得する氏名・メールアドレス・プロフィール画像
+              ：Google・LINE等の外部サービスでのログイン時に取得する氏名・メールアドレス・プロフィール画像
             </li>
             <li>
               <strong style={{ color: 'var(--ink)' }}>

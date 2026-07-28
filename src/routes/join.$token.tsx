@@ -219,11 +219,21 @@ function JoinPage() {
           >
             Google でログイン
           </button>
-          {/* Facebook / LINE は未実装（backlog 項目17）のため一時的に非表示。
-              押しても失敗する導線を出さない（/login と同じ方針で揃える）。
-              実装時に、下記のボタンを復活させる:
-                authClient.signIn.social({ provider: 'facebook', callbackURL: `/join/${token}` })
-                authClient.signIn.oauth2({ providerId: 'line', callbackURL: `/join/${token}` }) */}
+          <button
+            type="button"
+            style={btn}
+            onClick={() =>
+              authClient.signIn.oauth2({
+                providerId: 'line',
+                callbackURL: `/join/${token}`,
+              })
+            }
+          >
+            LINE でログイン
+          </button>
+          {/* Facebook は未実装（backlog 項目17）のため一時的に非表示。
+              /login と同じ方針で揃える。実装時に下記を復活させる:
+                authClient.signIn.social({ provider: 'facebook', callbackURL: `/join/${token}` }) */}
         </div>
         <p
           style={{

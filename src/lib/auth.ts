@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { bearer, genericOAuth } from 'better-auth/plugins';
+import { bearer } from 'better-auth/plugins';
+import { genericOAuth, line } from 'better-auth/plugins/generic-oauth';
 import { createDb } from '../db';
 import * as schema from '../db/schema';
 
@@ -49,29 +50,46 @@ export function createAuth(env: AuthEnv) {
       clientSecret: env.FACEBOOK_CLIENT_SECRET,
     };
 
+  // LINE は資格情報が揃っているときだけ genericOAuth に登録する（未設定分の毎リクエスト
+  // 警告を避ける。socialProviders の gating と同方針）。
+  const oauthConfig =
+    env.LINE_CLIENT_ID && env.LINE_CLIENT_SECRET
+      ? [
+          // LINE Login（OIDC）。email は id_token から取得するため、LINE Developers 側で
+          // Email permission の承認と、コールバック
+          //   {BETTER_AUTH_URL}/api/auth/oauth2/callback/line
+          // の登録が前提。line() ヘルパーは既定 scope に openid/profile/email を含み、
+          // pkce と userinfo(id_token) 取得を面倒みる。
+          line({
+            providerId: 'line',
+            clientId: env.LINE_CLIENT_ID,
+            clientSecret: env.LINE_CLIENT_SECRET,
+            pkce: true,
+          }),
+        ]
+      : [];
+
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, { provider: 'pg', schema }),
     socialProviders,
+    account: {
+      accountLinking: {
+        enabled: true,
+        // LINE の email は id_token 経由で受け取るが line() ヘルパーは emailVerified:false を
+        // 返す。trustedProviders に載せないと、同一 email の既存ユーザーへ紐付けできず
+        // account_not_linked になる。accountLinking は必ず account の下に置く
+        // （トップレベルだと better-auth に無視される）。
+        trustedProviders: ['google', 'facebook', 'line'],
+      },
+    },
     plugins: [
       // 本人側 Android アプリはセッショントークンを Authorization: Bearer で送る
       // （Cookie 管理はネイティブに不向き）。bearer が無いと getSession はヘッダ経由の
       // トークンを検証できない（src/api/session.ts の前提）。
       bearer(),
-      genericOAuth({
-        config: [
-          {
-            providerId: 'line',
-            clientId: env.LINE_CLIENT_ID,
-            clientSecret: env.LINE_CLIENT_SECRET,
-            authorizationUrl: 'https://access.line.me/oauth2/v2.1/authorize',
-            tokenUrl: 'https://api.line.me/oauth2/v2.1/token',
-            userInfoUrl: 'https://api.line.me/v2/profile',
-            scopes: ['profile', 'openid'],
-          },
-        ],
-      }),
+      genericOAuth({ config: oauthConfig }),
     ],
   });
 }
