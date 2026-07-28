@@ -231,6 +231,8 @@ function Me({
 
           {/* 5. 見守り合いに誘う（成立済みには用済みなので最下部） */}
           <Invite onNotice={setNotice} />
+          {/* まだ使っていない人への周知（招待＝つながり作成とは別。CONTEXT.md「紹介」） */}
+          <IntroduceButton />
         </>
       ) : (
         /* 見守ってくれる人が0人＝勧誘の空状態カードに差し替え（決定6） */
@@ -257,6 +259,7 @@ function Me({
               見守り合いに誘うと、あなたの「今日も元気」も相手に届くようになります。
             </p>
             <Invite onNotice={setNotice} />
+            <IntroduceButton />
           </div>
           <p style={{ textAlign: 'center', fontSize: 12 }}>
             <Link to="/activity" style={{ color: 'var(--ink-2)' }}>
@@ -453,11 +456,41 @@ function formatMd(iso: string): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
+/**
+ * 「アサトモを紹介する」導線。招待（つながりを作る）とは別に、まだ使っていない人へ
+ * サービスそのものを知らせる（CONTEXT.md「紹介」）。押すと ?intro でランディングを開き、
+ * ログイン中でも中身を確認しつつ共有シートで送れる（index.tsx の IntroBar）。
+ */
+function IntroduceButton() {
+  return (
+    <Link
+      to="/"
+      search={{ intro: true }}
+      style={{
+        display: 'block',
+        textAlign: 'center',
+        marginTop: 8,
+        padding: '10px 16px',
+        borderRadius: 12,
+        fontWeight: 600,
+        fontSize: 14,
+        border: '1px solid var(--line)',
+        background: 'var(--surface-2)',
+        color: 'var(--ink)',
+        textDecoration: 'none',
+      }}
+    >
+      🌤️ アサトモを紹介する
+    </Link>
+  );
+}
+
 /** 招待リンクの発行＋コピー。CTA はわたしに一本化（ADR-0008 §実装決定5）。 */
 function Invite({ onNotice }: { onNotice: (m: string) => void }) {
   const [link, setLink] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedRich, setCopiedRich] = useState(false);
 
   async function createInvite() {
     setBusy(true);
@@ -486,6 +519,19 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
       setCopied(true);
     } catch {
       setCopied(false);
+    }
+  }
+
+  // 招待は対面以外の経路を増やさない方針（ADR-0005）のため共有シートは使わず、
+  // 既存のコピー経路のまま「一言（紹介文）を頭に付けた版」を足すだけにする。
+  async function copyInviteRich() {
+    if (!link) return;
+    const text = `アサトモで、朝の「今日も元気」をそっと見守り合いませんか。\n下のリンクから参加できます（7日で失効）。\n${link}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedRich(true);
+    } catch {
+      setCopiedRich(false);
     }
   }
 
@@ -520,24 +566,45 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
             boxSizing: 'border-box',
           }}
         />
-        <button
-          type="button"
-          onClick={copyInvite}
-          style={{
-            appearance: 'none',
-            border: 0,
-            cursor: 'pointer',
-            marginTop: 8,
-            padding: '8px 14px',
-            borderRadius: 10,
-            fontWeight: 600,
-            fontSize: 13,
-            background: 'var(--accent)',
-            color: '#fff',
-          }}
+        <div
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}
         >
-          {copied ? 'コピーしました ✓' : 'リンクをコピー'}
-        </button>
+          <button
+            type="button"
+            onClick={copyInvite}
+            style={{
+              appearance: 'none',
+              border: 0,
+              cursor: 'pointer',
+              padding: '8px 14px',
+              borderRadius: 10,
+              fontWeight: 600,
+              fontSize: 13,
+              background: 'var(--accent)',
+              color: '#fff',
+            }}
+          >
+            {copied ? 'コピーしました ✓' : 'リンクをコピー'}
+          </button>
+          {/* 一言添えて送りたい人向け（紹介文＋リンク）。相手が固い文面に戸惑わないよう。 */}
+          <button
+            type="button"
+            onClick={copyInviteRich}
+            style={{
+              appearance: 'none',
+              border: '1px solid var(--line)',
+              cursor: 'pointer',
+              padding: '8px 14px',
+              borderRadius: 10,
+              fontWeight: 600,
+              fontSize: 13,
+              background: 'var(--surface-2)',
+              color: 'var(--ink)',
+            }}
+          >
+            {copiedRich ? 'コピーしました ✓' : '紹介文付きでコピー'}
+          </button>
+        </div>
 
         {/* 目の前の人へ：その場でカメラに読ませる。QR は使い切りトークンURLを
             画像化しただけ（別概念ではない）。保存・シェアは付けない＝対面以外の
@@ -582,6 +649,29 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
             />
           </div>
         </div>
+
+        {/* 発行後にこの表示を畳んで元の状態へ戻す手段（無いと行き止まりになる）。
+            リンク自体はサーバー側で7日後に失効するので、ここは表示のクローズのみ。 */}
+        <button
+          type="button"
+          onClick={() => {
+            setLink(null);
+            setCopied(false);
+            setCopiedRich(false);
+          }}
+          style={{
+            appearance: 'none',
+            border: 0,
+            cursor: 'pointer',
+            marginTop: 14,
+            padding: '6px 4px',
+            fontSize: 13,
+            color: 'var(--ink-2)',
+            background: 'none',
+          }}
+        >
+          閉じる
+        </button>
       </div>
     );
 

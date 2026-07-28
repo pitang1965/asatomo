@@ -144,6 +144,13 @@ function LoginPage() {
             ログインせずにデモ画面を見る →
           </Link>
         </p>
+        {/* ログアウト直後の着地点。ここから素の URL を手打ちしなくてもトップ
+            （未ログインのランディング）へ戻れるように（行き止まり解消）。 */}
+        <p style={{ marginTop: 10, fontSize: 12 }}>
+          <Link to="/" style={{ color: 'var(--ink-2)' }}>
+            アサトモWebについて →
+          </Link>
+        </p>
       </div>
     </div>
   );

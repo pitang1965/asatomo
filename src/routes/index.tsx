@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import type { CSSProperties } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { fetchShell } from '../server/functions';
 
 /**
@@ -10,9 +10,20 @@ import { fetchShell } from '../server/functions';
  * ランディングは暫定・最小限。本格化は宣伝フェーズ（MEMORY の方針に従う）。
  */
 export const Route = createFileRoute('/')({
-  loader: async () => {
+  // ?intro のときだけ、ログイン中でもランディングを表示する（紹介プレビュー）。
+  // 送り手の「自分が見られないものは紹介できない」を解消する導線（CONTEXT.md「紹介」）。
+  // 友だちが実際に見るのはログアウト時の `/` と同一描画なので、これで確認を兼ねる。
+  validateSearch: (search: Record<string, unknown>): { intro?: boolean } => ({
+    intro:
+      search.intro === true || search.intro === '1' || search.intro === 'true'
+        ? true
+        : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ intro: search.intro }),
+  loader: async ({ deps }) => {
     const shell = await fetchShell();
-    if (shell.status === 'ok') throw redirect({ to: '/me' });
+    // 通常は既定タブ /me へ（ADR-0008）。ただし紹介プレビュー(?intro)は素通しする。
+    if (shell.status === 'ok' && !deps.intro) throw redirect({ to: '/me' });
     return shell;
   },
   component: Home,
@@ -20,9 +31,10 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const data = Route.useLoaderData();
+  const { intro } = Route.useSearch();
   if (data.status === 'unconfigured')
     return <SetupNotice message={data.message} />;
-  return <Landing />;
+  return <Landing intro={intro} />;
 }
 
 const page: CSSProperties = {
@@ -109,130 +121,225 @@ const lpCss = `
 @media (prefers-reduced-motion:no-preference){.landing .btn{transition:transform .12s ease}.landing .btn:hover{transform:translateY(-1px)}}
 `;
 
-function Landing() {
+/**
+ * 紹介プレビュー時（?intro）だけランディング最上部に出す帯。
+ *   - 「戻る」で送り手（多くはログイン中）が自分の画面 /me へ戻れる。
+ *   - 「友だちに送る」は共有シート（navigator.share）。素のドメイン `/` を送るので
+ *     受け手は未ログインのままランディングを読める（CONTEXT.md「紹介」）。
+ *     共有シート非対応（PC ブラウザ等）ではクリップボードへフォールバック。
+ *   - 招待トークンの再共有を絞る ADR-0005 とは対象が別（こちらは公開＝拡散前提のURL）。
+ */
+function IntroBar() {
+  const [copied, setCopied] = useState(false);
+
+  async function share() {
+    const url = `${window.location.origin}/`;
+    // 「アサトモ」は傘ブランド／ハブなので「アプリ」と呼ばない（CONTEXT.md：素の
+    // 「アプリ」はスマホ目覚ましを指す）。ここでは「サービス」と明示する。
+    const message = `朝の「今日も元気」をそっと見守り合うサービス「アサトモ」。\n下記のリンクで詳細をご確認のうえ、ぜひご参加ください。\n\n${url}`;
+    try {
+      // text と url を分けて渡すと、共有先（LINE 等）が text を捨てて url だけ
+      // 拾うことがある。文面＋URL を1つの text にまとめ、確実に文面を届ける。
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({ text: message });
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(message);
+        setCopied(true);
+      }
+    } catch {
+      // 共有シートのキャンセル・失敗は無視（ユーザー操作の取消を含む）。
+    }
+  }
+
   return (
-    <div className="landing">
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: LP固有CSSをスコープ注入 */}
-      <style dangerouslySetInnerHTML={{ __html: lpCss }} />
-      <div className="wrap">
-        <header className="masthead">
-          <div className="brandrow">
-            <img
-              src="/apple-touch-icon.png"
-              alt=""
-              aria-hidden
-              width={32}
-              height={32}
-              className="brandicon"
-            />
-            <span className="wordmark">アサトモ</span>
-          </div>
-          <h1 className="tagline">
-            目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる。
-          </h1>
-          <p className="subline">
-            一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う設計です。
-          </p>
-        </header>
-
-        <section className="lp">
-          <div className="steps">
-            <div className="step">
-              <div className="num">1</div>
-              <div className="ico" aria-hidden>
-                ⏰
-              </div>
-              <h3>朝、アラームを止める</h3>
-              <p>
-                いつもの目覚まし。止めるだけで、それが「無事」のサインになります。
-              </p>
-            </div>
-            <div className="step">
-              <div className="num">2</div>
-              <div className="ico" aria-hidden>
-                🌤️
-              </div>
-              <h3>そっと、伝わる</h3>
-              <p>
-                見守ってくれる人に「今日も元気そう」が届く。居場所ではなく、近況だけ。
-              </p>
-            </div>
-            <div className="step">
-              <div className="num">3</div>
-              <div className="ico" aria-hidden>
-                🕊️
-              </div>
-              <h3>もしもの時だけ</h3>
-              <p>
-                人の判断を経て、大切な人へ用意した言葉が届きます。急がず、慎重に。
-              </p>
-            </div>
-          </div>
-
-          <p className="relrow">
-            <span className="chip">
-              🔔 <b>アサトモ目覚まし</b>（Android・毎朝の道具）
-            </span>
-            <span className="arrow" aria-hidden>
-              →
-            </span>
-            <span className="chip">
-              🌤️ <b>アサトモWeb</b>（見守り・伝言の本体／元気も伝わります）
-            </span>
-          </p>
-
-          <p className="stepnote">
-            「アサトモ目覚まし」はAndroid版のみです。iPhoneの方は「アサトモWeb」で、見守りも、ご自身の元気を届けることもできます。
-          </p>
-
-          <div className="assur">
-            <div className="assur-item">
-              <h4>見張らない</h4>
-              <p>
-                本人の画面はただの目覚まし時計。監視されている感覚を残しません。
-              </p>
-            </div>
-            <div className="assur-item">
-              <h4>誤爆しない</h4>
-              <p>
-                純粋なタイマーではなく、人の判断を介在。複数人の合意・猶予期間・本人の取消で守ります。
-              </p>
-            </div>
-            <div className="assur-item">
-              <h4>静かに、長く</h4>
-              <p>
-                依存を最小に、無料枠で。「静かに動き続けること」そのものを大切にします。
-              </p>
-            </div>
-          </div>
-
-          <p className="legacy-note">
-            そして——もしもの時には、あなたが遺した「最後の伝言」を、大切な人へ。本文は運営者にも読めないよう暗号化されます。
-          </p>
-
-          <div className="cta">
-            <Link to="/login" className="btn primary">
-              はじめる
-            </Link>
-            <Link to="/preview" className="prevlink">
-              ログインせずにデモ画面を見る →
-            </Link>
-          </div>
-        </section>
-
-        <footer>
-          <p style={{ margin: '0 0 8px' }}>
-            <Link to="/privacy" className="prevlink">
-              プライバシーポリシー
-            </Link>
-            <span style={{ margin: '0 8px', color: 'var(--ink-3)' }}>·</span>
-            <Link to="/terms" className="prevlink">
-              利用規約
-            </Link>
-          </p>
-          アサトモ · 一人暮らしの朝に、そっと寄り添う見守り
-        </footer>
+    <>
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '10px 16px',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--line)',
+          fontFamily: 'var(--font-jp)',
+        }}
+      >
+        <Link
+          to="/me"
+          style={{
+            fontSize: 13,
+            color: 'var(--ink-2)',
+            textDecoration: 'none',
+          }}
+        >
+          ← 自分の画面に戻る
+        </Link>
+        <button
+          type="button"
+          onClick={share}
+          style={{
+            appearance: 'none',
+            border: 0,
+            cursor: 'pointer',
+            padding: '8px 16px',
+            borderRadius: 10,
+            fontWeight: 600,
+            fontSize: 13,
+            background: 'var(--accent)',
+            color: '#fff',
+          }}
+        >
+          {copied ? 'コピーしました ✓' : '友だちに送る'}
+        </button>
       </div>
-    </div>
+      <p
+        style={{
+          margin: 0,
+          padding: '6px 16px',
+          fontSize: 12,
+          color: 'var(--ink-3)',
+          textAlign: 'center',
+          background: 'var(--surface-2)',
+          fontFamily: 'var(--font-jp)',
+        }}
+      >
+        これは友だちに見える紹介ページです。
+      </p>
+    </>
+  );
+}
+
+function Landing({ intro }: { intro?: boolean }) {
+  return (
+    <>
+      {intro ? <IntroBar /> : null}
+      <div className="landing">
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: LP固有CSSをスコープ注入 */}
+        <style dangerouslySetInnerHTML={{ __html: lpCss }} />
+        <div className="wrap">
+          <header className="masthead">
+            <div className="brandrow">
+              <img
+                src="/apple-touch-icon.png"
+                alt=""
+                aria-hidden
+                width={32}
+                height={32}
+                className="brandicon"
+              />
+              <span className="wordmark">アサトモ</span>
+            </div>
+            <h1 className="tagline">
+              目覚ましを止めるだけで、大切な人に「今日も元気」が伝わる。
+            </h1>
+            <p className="subline">
+              一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う設計です。
+            </p>
+          </header>
+
+          <section className="lp">
+            <div className="steps">
+              <div className="step">
+                <div className="num">1</div>
+                <div className="ico" aria-hidden>
+                  ⏰
+                </div>
+                <h3>朝、アラームを止める</h3>
+                <p>
+                  いつもの目覚まし。止めるだけで、それが「無事」のサインになります。
+                </p>
+              </div>
+              <div className="step">
+                <div className="num">2</div>
+                <div className="ico" aria-hidden>
+                  🌤️
+                </div>
+                <h3>そっと、伝わる</h3>
+                <p>
+                  見守ってくれる人に「今日も元気そう」が届く。居場所ではなく、近況だけ。
+                </p>
+              </div>
+              <div className="step">
+                <div className="num">3</div>
+                <div className="ico" aria-hidden>
+                  🕊️
+                </div>
+                <h3>もしもの時だけ</h3>
+                <p>
+                  人の判断を経て、大切な人へ用意した言葉が届きます。急がず、慎重に。
+                </p>
+              </div>
+            </div>
+
+            <p className="relrow">
+              <span className="chip">
+                🔔 <b>アサトモ目覚まし</b>（Android・毎朝の道具）
+              </span>
+              <span className="arrow" aria-hidden>
+                →
+              </span>
+              <span className="chip">
+                🌤️ <b>アサトモWeb</b>（見守り・伝言の本体／元気も伝わります）
+              </span>
+            </p>
+
+            <p className="stepnote">
+              「アサトモ目覚まし」はAndroid版のみです。iPhoneの方は「アサトモWeb」で、見守りも、ご自身の元気を届けることもできます。
+            </p>
+
+            <div className="assur">
+              <div className="assur-item">
+                <h4>見張らない</h4>
+                <p>
+                  本人の画面はただの目覚まし時計。監視されている感覚を残しません。
+                </p>
+              </div>
+              <div className="assur-item">
+                <h4>誤爆しない</h4>
+                <p>
+                  純粋なタイマーではなく、人の判断を介在。複数人の合意・猶予期間・本人の取消で守ります。
+                </p>
+              </div>
+              <div className="assur-item">
+                <h4>静かに、長く</h4>
+                <p>
+                  依存を最小に、無料枠で。「静かに動き続けること」そのものを大切にします。
+                </p>
+              </div>
+            </div>
+
+            <p className="legacy-note">
+              そして——もしもの時には、あなたが遺した「最後の伝言」を、大切な人へ。本文は運営者にも読めないよう暗号化されます。
+            </p>
+
+            <div className="cta">
+              <Link to="/login" className="btn primary">
+                はじめる
+              </Link>
+              <Link to="/preview" className="prevlink">
+                ログインせずにデモ画面を見る →
+              </Link>
+            </div>
+          </section>
+
+          <footer>
+            <p style={{ margin: '0 0 8px' }}>
+              <Link to="/privacy" className="prevlink">
+                プライバシーポリシー
+              </Link>
+              <span style={{ margin: '0 8px', color: 'var(--ink-3)' }}>·</span>
+              <Link to="/terms" className="prevlink">
+                利用規約
+              </Link>
+            </p>
+            アサトモ · 一人暮らしの朝に、そっと寄り添う見守り
+          </footer>
+        </div>
+      </div>
+    </>
   );
 }
