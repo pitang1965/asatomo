@@ -95,6 +95,8 @@ const lpCss = `
 .landing .wordmark{font-size:22px;font-weight:700;letter-spacing:.18em;padding-left:.18em}
 .landing .tagline{position:relative;font-size:clamp(26px,4.6vw,42px);font-weight:700;line-height:1.35;letter-spacing:.01em;text-wrap:balance;margin:0 auto;max-width:18em}
 .landing .subline{position:relative;color:var(--ink-2);max-width:34em;margin:20px auto 0;font-size:16px}
+.landing picture{display:contents}
+.landing .hero{position:relative;display:block;width:100%;max-width:620px;height:auto;aspect-ratio:968/700;margin:34px auto 0;border-radius:20px;box-shadow:0 12px 36px color-mix(in oklab,var(--accent) 22%,transparent);border:1px solid var(--line)}
 .landing .lp{padding:8px 0 8px}
 .landing .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:24px 0 34px}
 .landing .step{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px 22px;box-shadow:var(--shadow-sm);position:relative}
@@ -239,6 +241,17 @@ function Landing({ intro }: { intro?: boolean }) {
             <p className="subline">
               一人暮らしの朝を、誰かがゆるく知ってる安心。見張るのではなく、そっと寄り添う設計です。
             </p>
+            {/* WebPが本命。iOS14未満・WebP非対応環境はjpgへフォールバック（picture）。 */}
+            <picture>
+              <source srcSet="/hero.webp" type="image/webp" />
+              <img
+                src="/hero.jpg"
+                alt="ベッドで目を覚ました人が目覚ましを止めると、鳥が「今日も元気だよ」の合図を見守る人のスマホへ届けるイラスト"
+                width={968}
+                height={700}
+                className="hero"
+              />
+            </picture>
           </header>
 
           <section className="lp">

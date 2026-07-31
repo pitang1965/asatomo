@@ -1,5 +1,7 @@
 node_modules/
 dist/
+tmp/
+.scratch/
 .wrangler/
 .tanstack/
 .dev.vars
