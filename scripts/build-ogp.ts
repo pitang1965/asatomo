@@ -1,8 +1,8 @@
 /**
  * OGP画像(1200x630)生成スクリプト
  *
- * 素材:
- *   - public/hero-source.png : ヒーローイラスト(正方形想定)
+ * 素材(いずれも本番では配信しない・再生成の元):
+ *   - art/hero-source.png : ヒーローイラスト(正方形想定)
  *   - public/icons/icon-512.png : アサトモのロゴマーク
  *
  * 使い方:
@@ -20,7 +20,7 @@ import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
-const HERO = resolve(root, 'public/hero-source.png');
+const HERO = resolve(root, 'art/hero-source.png');
 const LOGO = resolve(root, 'public/icons/icon-512.png');
 const OUT_DIR = resolve(root, '.scratch');
 
