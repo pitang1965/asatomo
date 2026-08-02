@@ -10,7 +10,7 @@ export const Route = createFileRoute('/privacy')({
   component: PrivacyPage,
 });
 
-const UPDATED = '2026年7月25日';
+const UPDATED = '2026年8月2日';
 
 const page: CSSProperties = {
   background: 'var(--bg)',
@@ -50,12 +50,15 @@ const linkStyle: CSSProperties = { color: 'var(--accent)' };
 function Section({
   title,
   children,
+  id,
 }: {
   title: string;
   children: React.ReactNode;
+  /** アンカー用（例: /privacy#deletion で直接この節へ飛べる）。 */
+  id?: string;
 }) {
   return (
-    <section style={{ marginBottom: 30 }}>
+    <section id={id} style={{ marginBottom: 30, scrollMarginTop: 16 }}>
       <h2 style={h2}>{title}</h2>
       <div style={body}>{children}</div>
     </section>
@@ -240,20 +243,40 @@ function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="8. ユーザーの権利">
-          <p style={{ margin: 0 }}>ユーザーはいつでも以下の操作を行えます。</p>
-          <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
-            <li>ご自身の記録・見守り関係・最後の伝言の閲覧・編集・削除</li>
+        <Section title="8. ユーザーの権利・データの削除方法" id="deletion">
+          <p style={{ margin: 0 }}>
+            ユーザーはいつでも、ご自身のデータを閲覧・編集・削除できます。
+            <strong style={{ color: 'var(--ink)' }}>
+              アカウントを削除せずに、一部のデータだけを削除すること
+            </strong>
+            もできます。いずれの操作も、ご本人のアカウントでログインして行います。
+          </p>
+          <ul style={{ margin: '12px 0 0', paddingLeft: 20 }}>
             <li>
-              退会（アカウント削除）:
-              アカウント・見守り関係・生存シグナルの記録・最後の伝言・死亡認定に残る投票等を
+              <strong style={{ color: 'var(--ink)' }}>最後の伝言の削除</strong>
+              ：ログイン後「伝言」画面を開き、削除したい伝言の「削除」ボタンから、その伝言を個別に削除できます（本文・見出し・宛先ごと消えます）。宛先だけを外したい場合は、伝言を開いて「宛先を編集」から変更できます
+            </li>
+            <li>
+              <strong style={{ color: 'var(--ink)' }}>
+                つながり・見守り関係の削除
+              </strong>
+              ：ログイン後「仲間」画面から、対象のつながり（見守り者・見守り相手）を解除・削除できます
+            </li>
+            <li>
+              <strong style={{ color: 'var(--ink)' }}>
+                アカウントの削除（退会）
+              </strong>
+              ：ログイン後「アカウント」→「アカウントを削除する」から行えます。アカウント・見守り関係・生存シグナルの記録・最後の伝言・死亡認定に残る投票等を
               <strong style={{ color: 'var(--ink)' }}>即時・完全に削除</strong>
               します（復元できません）。あなたが見守っていた人には「見守りをやめた／利用をやめた」旨が穏当に通知され、削除前に依存者ごとの影響を確認できます
             </li>
           </ul>
-          <p style={{ margin: '8px 0 0' }}>
-            退会手順:
-            ログイン後、「アカウント」→「アカウントを削除する」から行えます。個人情報の開示・訂正・利用停止等のご請求は、下記お問い合わせ先までご連絡ください。
+          <p style={{ margin: '12px 0 0' }}>
+            上記の操作がご自身で行えない場合や、個人情報の開示・訂正・利用停止等のご請求は、下記お問い合わせ先（
+            <a href="mailto:info@nafuda.me" style={linkStyle}>
+              info@nafuda.me
+            </a>
+            ）までご連絡ください。ご本人確認のうえ対応します。
           </p>
         </Section>
 
