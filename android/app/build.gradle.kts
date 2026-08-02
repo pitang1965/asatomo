@@ -13,6 +13,15 @@ val localProps =
         if (f.exists()) f.inputStream().use { load(it) }
     }
 
+// Play 公開用アップロード署名鍵。keystore.properties は git に載せない。
+// 存在すれば正式署名、無ければ debug 署名へフォールバック（他環境でも壊れない）。
+val keystoreProps =
+    Properties().apply {
+        val f = rootProject.file("keystore.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+val hasReleaseSigning = keystoreProps.getProperty("storeFile") != null
+
 android {
     namespace = "com.asatomo.app"
     compileSdk {
@@ -37,6 +46,17 @@ android {
         )
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         // サーバーURLはビルド種別で固定（グリル決定: 実行時の接続設定UIは持たない）。
         // debug は adb reverse tcp:5173 tcp:5173 で PC の Vite dev サーバーへ届く。
@@ -49,9 +69,14 @@ android {
                 "BASE_URL",
                 "\"https://asatomo.nafuda.me\"",
             )
-            // 自分専用段階の暫定: debug 鍵で署名して実機に入れられるようにする
-            // （日常利用は本番を向く release を使う。Play 公開時に正式署名へ差し替え）。
-            signingConfig = signingConfigs.getByName("debug")
+            // keystore.properties があれば Play アップロード用の正式署名。
+            // 無ければ debug 署名へフォールバック（実機ドッグフード用ビルドを壊さない）。
+            signingConfig =
+                if (hasReleaseSigning) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
             optimization {
                 enable = false
             }

@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Play 公開用の署名鍵とその設定（絶対に git に載せない）
+keystore.properties
+*.jks
+*.keystore
