@@ -2,8 +2,10 @@ package com.asatomo.app
 
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -142,6 +145,20 @@ private fun LoginStep(
             },
         ) {
             Text(if (busy) "ログイン中…" else "Google でログイン")
+        }
+        Spacer(Modifier.size(12.dp))
+        // LINE は Google のような端末内 id_token 交換ができない（genericOAuth）ため、Custom Tab で
+        // Web の LINE OAuth を通し、完了後に asatomo://auth ディープリンク（AuthCallbackActivity）で
+        // セッションを受け取る。結果は別 Activity に戻るので、この画面の busy/next は使わない。
+        OutlinedButton(
+            enabled = !busy,
+            onClick = {
+                CustomTabsIntent.Builder()
+                    .build()
+                    .launchUrl(activity, Uri.parse("${BuildConfig.AUTH_ORIGIN}/native/line"))
+            },
+        ) {
+            Text("LINE でログイン")
         }
         error?.let {
             Spacer(Modifier.size(12.dp))

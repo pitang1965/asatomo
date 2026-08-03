@@ -62,11 +62,22 @@ android {
         // debug は adb reverse tcp:5173 tcp:5173 で PC の Vite dev サーバーへ届く。
         debug {
             buildConfigField("String", "BASE_URL", "\"http://127.0.0.1:5173\"")
+            // LINE ログイン（Custom Tab で開く Web OAuth）のオリジン。API 呼び出し（BASE_URL）は
+            // adb reverse 経由で 127.0.0.1 を使うが、OAuth は BETTER_AUTH_URL と同一オリジンで
+            // 完結させないと PKCE state Cookie が別オリジンに付いて失敗する。dev の BETTER_AUTH_URL
+            // は localhost:5173 なのでそれに合わせる（localhost も端末では loopback→adb reverse）。
+            buildConfigField("String", "AUTH_ORIGIN", "\"http://localhost:5173\"")
         }
         release {
             buildConfigField(
                 "String",
                 "BASE_URL",
+                "\"https://asatomo.nafuda.me\"",
+            )
+            // 本番は BASE_URL と同一オリジン（BETTER_AUTH_URL も同じ）なので OAuth も同オリジンで完結。
+            buildConfigField(
+                "String",
+                "AUTH_ORIGIN",
                 "\"https://asatomo.nafuda.me\"",
             )
             // 署名の振り分け（ドッグフードで「Googleログインできない」を構造的に防ぐ）:

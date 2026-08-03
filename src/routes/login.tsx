@@ -1,7 +1,19 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import type { CSSProperties } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 import { fetchShell } from '../server/functions';
 import { authClient } from '../web/auth-client';
+
+/**
+ * アプリ内ブラウザ（WebView）判定。LINE・Instagram 等の中で開かれると Cookie が隔離され、
+ * OAuth の state Cookie が戻り時に読めず「状態不一致」でログインが失敗する（Google も
+ * 埋め込み WebView を disallowed_useragent で拒否する。業界共通の制約）。UA で既知の
+ * アプリ内ブラウザを検知し、通常ブラウザで開き直すよう案内する。
+ */
+function isInAppBrowser(ua: string): boolean {
+  return /\bLine\/|FBAN|FBAV|FB_IAB|Instagram|Twitter|TikTok|musical_ly|Bytedance|KAKAOTALK|MicroMessenger/i.test(
+    ua,
+  );
+}
 
 /**
  * ログイン画面（/login）。ADR-0008（トップはランディング、ログインは分離）に伴い、
@@ -49,6 +61,31 @@ const card: CSSProperties = {
 function LoginPage() {
   const { redirect: back = '/' } = Route.useSearch();
 
+  // アプリ内ブラウザ判定はクライアントでのみ行う（SSR に navigator が無い）。初期 false で
+  // SSR と一致させ、マウント後に true へ切り替える（ハイドレーション不整合を避ける）。
+  const [inApp, setInApp] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    setInApp(isInAppBrowser(navigator.userAgent));
+  }, []);
+
+  const copyUrl = () => {
+    const url = window.location.href;
+    navigator.clipboard?.writeText(url).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      },
+      () => {
+        // クリップボード不可の環境では選択できるよう prompt で提示。
+        window.prompt(
+          'このURLをコピーして、ChromeやSafariで開いてください',
+          url,
+        );
+      },
+    );
+  };
+
   const btn: CSSProperties = {
     appearance: 'none',
     border: '1px solid var(--line)',
@@ -88,6 +125,47 @@ function LoginPage() {
           <br />
           お使いのアカウントでログインしてください。
         </p>
+        {inApp && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: '12px 14px',
+              borderRadius: 12,
+              background: '#fff7ed',
+              border: '1px solid #fdba74',
+              color: '#9a3412',
+              fontSize: 13,
+              lineHeight: 1.7,
+              textAlign: 'left',
+            }}
+          >
+            <strong>アプリ内の画面で開かれています。</strong>
+            <br />
+            このままだとログイン（特にLINE）が「状態不一致」で失敗することがあります。右上のメニュー（⋮
+            や … ）から
+            <strong>「ブラウザで開く」/「既定のブラウザで開く」</strong>
+            を選び、Chrome や Safari で開き直してください。
+            <button
+              type="button"
+              onClick={copyUrl}
+              style={{
+                appearance: 'none',
+                marginTop: 10,
+                border: '1px solid #fdba74',
+                background: '#fff',
+                color: '#9a3412',
+                borderRadius: 10,
+                padding: '8px 12px',
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              {copied ? '✓ URLをコピーしました' : 'このページのURLをコピー'}
+            </button>
+          </div>
+        )}
         <div style={{ marginTop: 20 }}>
           <button
             type="button"

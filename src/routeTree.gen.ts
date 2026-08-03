@@ -15,6 +15,8 @@ import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NativeLineRouteImport } from './routes/native.line'
+import { Route as NativeHandoffRouteImport } from './routes/native.handoff'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as DisclosureConnectionIdRouteImport } from './routes/disclosure.$connectionId'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
@@ -55,6 +57,16 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NativeLineRoute = NativeLineRouteImport.update({
+  id: '/native/line',
+  path: '/native/line',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NativeHandoffRoute = NativeHandoffRouteImport.update({
+  id: '/native/handoff',
+  path: '/native/handoff',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinTokenRoute = JoinTokenRouteImport.update({
@@ -133,6 +145,8 @@ export interface FileRoutesByFullPath {
   '/api/$': typeof ApiSplatRoute
   '/disclosure/$connectionId': typeof DisclosureConnectionIdRoute
   '/join/$token': typeof JoinTokenRoute
+  '/native/handoff': typeof NativeHandoffRoute
+  '/native/line': typeof NativeLineRoute
   '/account/delete': typeof AppAccountDeleteRoute
   '/death/$subjectId': typeof AppDeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -152,6 +166,8 @@ export interface FileRoutesByTo {
   '/api/$': typeof ApiSplatRoute
   '/disclosure/$connectionId': typeof DisclosureConnectionIdRoute
   '/join/$token': typeof JoinTokenRoute
+  '/native/handoff': typeof NativeHandoffRoute
+  '/native/line': typeof NativeLineRoute
   '/account/delete': typeof AppAccountDeleteRoute
   '/death/$subjectId': typeof AppDeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -173,6 +189,8 @@ export interface FileRoutesById {
   '/api/$': typeof ApiSplatRoute
   '/disclosure/$connectionId': typeof DisclosureConnectionIdRoute
   '/join/$token': typeof JoinTokenRoute
+  '/native/handoff': typeof NativeHandoffRoute
+  '/native/line': typeof NativeLineRoute
   '/_app/account_/delete': typeof AppAccountDeleteRoute
   '/_app/death/$subjectId': typeof AppDeathSubjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -194,6 +212,8 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/disclosure/$connectionId'
     | '/join/$token'
+    | '/native/handoff'
+    | '/native/line'
     | '/account/delete'
     | '/death/$subjectId'
     | '/api/auth/$'
@@ -213,6 +233,8 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/disclosure/$connectionId'
     | '/join/$token'
+    | '/native/handoff'
+    | '/native/line'
     | '/account/delete'
     | '/death/$subjectId'
     | '/api/auth/$'
@@ -233,6 +255,8 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/disclosure/$connectionId'
     | '/join/$token'
+    | '/native/handoff'
+    | '/native/line'
     | '/_app/account_/delete'
     | '/_app/death/$subjectId'
     | '/api/auth/$'
@@ -248,6 +272,8 @@ export interface RootRouteChildren {
   ApiSplatRoute: typeof ApiSplatRoute
   DisclosureConnectionIdRoute: typeof DisclosureConnectionIdRoute
   JoinTokenRoute: typeof JoinTokenRoute
+  NativeHandoffRoute: typeof NativeHandoffRoute
+  NativeLineRoute: typeof NativeLineRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -293,6 +319,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/native/line': {
+      id: '/native/line'
+      path: '/native/line'
+      fullPath: '/native/line'
+      preLoaderRoute: typeof NativeLineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/native/handoff': {
+      id: '/native/handoff'
+      path: '/native/handoff'
+      fullPath: '/native/handoff'
+      preLoaderRoute: typeof NativeHandoffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join/$token': {
@@ -416,6 +456,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSplatRoute: ApiSplatRoute,
   DisclosureConnectionIdRoute: DisclosureConnectionIdRoute,
   JoinTokenRoute: JoinTokenRoute,
+  NativeHandoffRoute: NativeHandoffRoute,
+  NativeLineRoute: NativeLineRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

@@ -48,6 +48,23 @@
             android:exported="false"
             android:theme="@style/Theme.Asatomo" />
 
+        <!-- ネイティブ LINE ログインの復帰口（Custom Tab → asatomo://auth ディープリンク）。
+             singleTask: Custom Tab から戻る際にインスタンスを積み増さない。
+             exported=true: 外部（ブラウザ）からの VIEW インテントを受けるため必須。 -->
+        <activity
+            android:name=".AuthCallbackActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@style/Theme.Asatomo">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="asatomo" android:host="auth" />
+            </intent-filter>
+        </activity>
+
         <!-- アラーム停止画面（ロック画面の上に表示・履歴に残さない）。 -->
         <activity
             android:name=".AlarmActivity"
