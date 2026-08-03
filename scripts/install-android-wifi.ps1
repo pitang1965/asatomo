@@ -50,7 +50,24 @@ if ($Build -or -not (Test-Path $apk)) {
     Warn "APK が未生成のためビルドします: $apk"
   }
   Say "ビルド中: build-android.sh $Variant"
-  & bash (Join-Path $scriptDir 'build-android.sh') $Variant
+  # 素の `bash` は WSL の bash（C:\Windows\System32\bash.exe）に解決され、Windows パスを
+  # Linux パスと誤解釈してビルドが落ちる（PWD が「C:Users...」に化ける）。必ず Git Bash を使う。
+  $gitBash = @(
+    "$env:ProgramFiles\Git\bin\bash.exe",
+    "${env:ProgramFiles(x86)}\Git\bin\bash.exe",
+    $(if ($g = (Get-Command git -ErrorAction SilentlyContinue).Source) {
+        Join-Path (Split-Path (Split-Path $g -Parent) -Parent) 'bin\bash.exe'
+      })
+  ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+  if (-not $gitBash) {
+    Warn "Git Bash が見つかりません（例: C:\Program Files\Git\bin\bash.exe）。Git for Windows を確認してください。"
+    exit 1
+  }
+  # Git Bash へは MSYS 形式（/c/Users/...）で渡す。Windows のバックスラッシュ絶対パスは
+  # エスケープとして食い潰され「C:Users...」に化けるため。
+  $bs = (Join-Path $scriptDir 'build-android.sh') -replace '\\', '/'
+  if ($bs -match '^([A-Za-z]):/(.*)$') { $bs = '/' + $Matches[1].ToLower() + '/' + $Matches[2] }
+  & $gitBash $bs $Variant
   if ($LASTEXITCODE -ne 0) { Warn "ビルドに失敗しました。"; exit 1 }
 }
 if (-not (Test-Path $apk)) {

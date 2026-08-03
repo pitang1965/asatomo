@@ -69,10 +69,19 @@ android {
                 "BASE_URL",
                 "\"https://asatomo.nafuda.me\"",
             )
-            // keystore.properties があれば Play アップロード用の正式署名。
-            // 無ければ debug 署名へフォールバック（実機ドッグフード用ビルドを壊さない）。
+            // 署名の振り分け（ドッグフードで「Googleログインできない」を構造的に防ぐ）:
+            //   - bundleRelease（Play へ上げる AAB）だけ Play アップロード鍵で署名する。
+            //   - assembleRelease（端末へ直接入れる APK）はデバッグ鍵で署名する。
+            // アップロード鍵は「Play へ渡す時専用」で、その SHA-1 は OAuth 未登録。この鍵で
+            // 署名した APK を実機に入れると Credential Manager が "No credentials available" を
+            // 返す（Google ログイン不可）。デバッグ鍵の SHA-1 は登録済みなのでログインが通る。
+            // keystore.properties が無い環境では常にデバッグ署名へフォールバック（他環境でも壊れない）。
+            // 注意: `./gradlew build` 等で assemble と bundle を同時実行すると APK もアップロード
+            // 署名になる。実機へ入れる時は assembleRelease 単独で（install スクリプトはそうしている）。
+            val isBundleTask =
+                gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
             signingConfig =
-                if (hasReleaseSigning) {
+                if (hasReleaseSigning && isBundleTask) {
                     signingConfigs.getByName("release")
                 } else {
                     signingConfigs.getByName("debug")
