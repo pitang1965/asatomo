@@ -1,7 +1,6 @@
 package com.asatomo.app
 
 import android.Manifest
-import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.net.Uri
@@ -62,11 +61,11 @@ import java.util.UUID
 import kotlinx.coroutines.launch
 
 /**
- * メイン画面（グリル決定: 未来スロット型）。
+ * メイン画面（グリル決定: 未来スロット型）。基本は目覚ましに徹し、見守られる側だけで使う人に
+ * 無関係な欄は出さない（対象がいる人だけに見守り欄を見せる）。
  *   - 毎朝の目覚まし（AlarmScheduler → AlarmReceiver → AlarmActivity）
- *   - いまの様子を伝える（ごはん / おやすみ / いってきます / ただいま）
- *   - 見守っている人（今回は Web リンク。次フェーズで近況一瞥に育つスロット。ADR-0006）
- *   - 旅行モード
+ *   - いまの様子を伝える（おはよう / ごはん / おやすみ / いってきます / ただいま）
+ *   - あなたが見守っている人（見守り対象が1人以上のときだけ表示。Web リンク。ADR-0006）
  *   - 右上 ⚙ → 設定画面（ログアウト等）
  *   - アプリ起動の自動シグナル（透明性の原則: 画面に明示する。CONTEXT.md 生存シグナル）
  */
@@ -112,18 +111,12 @@ private fun MainScreen() {
     val settings = remember { Settings(context) }
     val scope = rememberCoroutineScope()
 
-    // 旅行モード（サーバーが真実源。ここは端末側キャッシュのミラーで表示用）。
-    var travelUntilMs by remember { mutableStateOf(settings.travelUntilMs) }
-    var travelBusy by remember { mutableStateOf(false) }
-    var travelMsg by remember { mutableStateOf("") }
-
     var status by remember { mutableStateOf("") }
     var trackedWork by remember { mutableStateOf<UUID?>(null) }
     var trackedLabel by remember { mutableStateOf("") }
 
     // 見守りの一瞥（サーバー整形済み。null = 読み込み中）。attest 後は reload++ で再取得。
     var watchRows by remember { mutableStateOf<List<ApiClient.WatchSubject>?>(null) }
-    var watchError by remember { mutableStateOf(false) }
     var watchReload by remember { mutableStateOf(0) }
     var attestBusy by remember { mutableStateOf(false) }
 
@@ -131,7 +124,6 @@ private fun MainScreen() {
     var hasWatchers by remember { mutableStateOf(settings.hasWatchers) }
 
     LaunchedEffect(watchReload) {
-        watchError = false
         ApiClient.watchOverview(settings)
             .fold(
                 onSuccess = {
@@ -140,7 +132,7 @@ private fun MainScreen() {
                     hasWatchers = it.youAreWatched
                 },
                 onFailure = {
-                    watchError = true
+                    // 取得失敗時はカードを出さない（見守り対象0人と同じ扱い）。
                     watchRows = emptyList()
                 },
             )
@@ -190,69 +182,6 @@ private fun MainScreen() {
     fun send(kind: ApiClient.SignalKind, label: String) {
         trackedLabel = label
         trackedWork = SignalQueue.enqueue(context, kind)
-    }
-
-    fun formatMd(ms: Long): String {
-        val c = Calendar.getInstance().apply { timeInMillis = ms }
-        return "${c.get(Calendar.MONTH) + 1}/${c.get(Calendar.DAY_OF_MONTH)}"
-    }
-
-    fun enterTravel() {
-        // 初期表示・最小は「明日」、上限はサーバーの travelMaxDays（30日）に合わせる。
-        val tomorrow = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
-        val dlg =
-            DatePickerDialog(
-                context,
-                { _, y, m, d ->
-                    // 復帰日の終わり（23:59）まで留守扱い。この時刻を過ぎたら見守り自動再開。
-                    val until =
-                        Calendar.getInstance().apply {
-                            set(y, m, d, 23, 59, 59)
-                            set(Calendar.MILLISECOND, 0)
-                        }.timeInMillis
-                    travelBusy = true
-                    travelMsg = ""
-                    scope.launch {
-                        ApiClient.setTravel(settings, until)
-                            .fold(
-                                onSuccess = {
-                                    settings.travelUntilMs = until
-                                    travelUntilMs = until
-                                    travelMsg = "旅行モードにしました（${formatMd(until)} まで）"
-                                },
-                                onFailure = {
-                                    travelMsg = "設定できませんでした。期間が長すぎないか確認してください。"
-                                },
-                            )
-                        travelBusy = false
-                    }
-                },
-                tomorrow.get(Calendar.YEAR),
-                tomorrow.get(Calendar.MONTH),
-                tomorrow.get(Calendar.DAY_OF_MONTH),
-            )
-        val dayMs = 24L * 60 * 60 * 1000
-        dlg.datePicker.minDate = System.currentTimeMillis() + dayMs
-        // 29日後まで。選択日の 23:59 でも常にサーバー上限（now + 30日）内に収まる（弾かれ防止）。
-        dlg.datePicker.maxDate = System.currentTimeMillis() + 29 * dayMs
-        dlg.show()
-    }
-
-    fun exitTravel() {
-        travelBusy = true
-        travelMsg = ""
-        scope.launch {
-            ApiClient.clearTravel(settings)
-                .fold(
-                    onSuccess = {
-                        settings.travelUntilMs = 0L
-                        travelUntilMs = 0L
-                        travelMsg = "旅行モードを解除しました。見守りを再開します。"
-                    },
-                    onFailure = { travelMsg = "解除できませんでした。時間をおいてお試しください。" },
-                )
-            travelBusy = false
-        }
     }
 
     Scaffold(
@@ -352,6 +281,14 @@ private fun MainScreen() {
 
             // ── いまの様子を伝える ──
             SectionCard(title = "📣 いまの様子を伝える") {
+                // 「おはよう」＝見守られる側の能動的な生存/起床連絡。実質のメイン操作なので、
+                // ほかのボタンより目立つ塗り Button・全幅で最上段に置く。
+                Button(
+                    onClick = { send(ApiClient.SignalKind.WAKE, "おはよう") },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("☀️ おはよう")
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { send(ApiClient.SignalKind.MEAL, "ごはん") }) {
                         Text("🍚 ごはん")
@@ -382,71 +319,37 @@ private fun MainScreen() {
                 }
             }
 
-            // ── あなたが見守っている人（近況の一瞥＋代理確認。重いフローは Web へ。ADR-0006）
-            //    本画面は本人文脈（見守ってくれる人）と混在するため主語を明示する（CONTEXT.md 本人）。
-            SectionCard(title = "👀 あなたが見守っている人") {
-                val rows = watchRows
-                when {
-                    rows == null -> Text("読み込み中…", style = MaterialTheme.typography.bodySmall)
-                    watchError ->
-                        Text(
-                            "様子を取得できませんでした。接続を確認してください。",
-                            style = MaterialTheme.typography.bodySmall,
+            // ── あなたが見守っている人 ──
+            //    見守り対象が1人以上のときだけ表示（0人＝見守られる専用の人には無関係な欄を出さない）。
+            //    近況の一瞥＋代理確認。重いフローは Web へ（ADR-0006）。本人文脈（見守ってくれる人）と
+            //    混在するため主語を明示する（CONTEXT.md 本人）。
+            val watchingRows = watchRows
+            if (!watchingRows.isNullOrEmpty()) {
+                SectionCard(title = "👀 あなたが見守っている人") {
+                    watchingRows.forEach { row ->
+                        WatchRow(
+                            row = row,
+                            attestBusy = attestBusy,
+                            onAttest = {
+                                attestBusy = true
+                                scope.launch {
+                                    ApiClient.attest(settings, row.subjectUserId)
+                                    attestBusy = false
+                                    watchReload++
+                                }
+                            },
                         )
-                    rows.isEmpty() ->
-                        Text(
-                            "まだ見守っている人はいません。誘うのはWebからできます。",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    else ->
-                        rows.forEach { row ->
-                            WatchRow(
-                                row = row,
-                                attestBusy = attestBusy,
-                                onAttest = {
-                                    attestBusy = true
-                                    scope.launch {
-                                        ApiClient.attest(settings, row.subjectUserId)
-                                        attestBusy = false
-                                        watchReload++
-                                    }
-                                },
-                            )
-                        }
-                }
-                OutlinedButton(
-                    onClick = {
-                        CustomTabsIntent.Builder()
-                            .build()
-                            .launchUrl(context, Uri.parse(BuildConfig.BASE_URL))
-                    },
-                ) {
-                    Text("様子をWebで見る ↗")
-                }
-            }
-
-            // ── 旅行モード ──
-            SectionCard(title = "🧳 旅行モード") {
-                val travelActive = travelUntilMs > System.currentTimeMillis()
-                if (travelActive) {
-                    Text(
-                        "あなたへの見守りをお休み中です（${formatMd(travelUntilMs)} まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    OutlinedButton(onClick = { exitTravel() }, enabled = !travelBusy) {
-                        Text("旅行モードを解除する")
                     }
-                } else {
-                    Text(
-                        "旅行などで生活リズムが変わると、いつもの様子が届かず、見守ってくれる人によけいな心配をかけてしまうことがあります。その間だけ、あなたへの見守りを一時お休みにできます。期限が来たら自動で再開します（最長30日）。",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    OutlinedButton(onClick = { enterTravel() }, enabled = !travelBusy) {
-                        Text("旅行モードにする")
+                    // 高齢者には製品名より目的が分かりやすいので、改名せず目的ラベルのまま維持する。
+                    OutlinedButton(
+                        onClick = {
+                            CustomTabsIntent.Builder()
+                                .build()
+                                .launchUrl(context, Uri.parse(BuildConfig.BASE_URL))
+                        },
+                    ) {
+                        Text("様子をWebで見る ↗")
                     }
-                }
-                if (travelMsg.isNotEmpty()) {
-                    Text(travelMsg, style = MaterialTheme.typography.bodyMedium)
                 }
             }
 

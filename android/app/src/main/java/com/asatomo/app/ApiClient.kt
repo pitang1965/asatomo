@@ -16,6 +16,7 @@ object ApiClient {
     /** 生存シグナル種別（サーバーの signal_kind enum と一致させること）。 */
     enum class SignalKind(val wire: String) {
         ALARM_DISMISS("alarm_dismiss"),
+        WAKE("wake"),
         MEAL("meal"),
         SLEEP("sleep"),
         APP_OPEN("app_open"),
@@ -55,32 +56,6 @@ object ApiClient {
                     )
             }
             Result.failure(last ?: IllegalStateException("unreachable"))
-        }
-
-    /**
-     * 旅行モードを設定する。until は端末側で決めた復帰時刻（この時刻を過ぎたら見守り自動再開）。
-     * サーバーが上限日数（既定30日）を強制し、超過は 400 で PermanentFailure。
-     */
-    suspend fun setTravel(settings: Settings, untilMs: Long): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                request(
-                    settings,
-                    "POST",
-                    "/api/travel",
-                    JSONObject().put("until", Instant.ofEpochMilli(untilMs).toString()).toString(),
-                )
-                Unit
-            }
-        }
-
-    /** 旅行モードを解除して見守りを即再開する。 */
-    suspend fun clearTravel(settings: Settings): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                request(settings, "DELETE", "/api/travel", null)
-                Unit
-            }
         }
 
     /** 「見守っている人」一瞥の1行（サーバー整形済み。表示するだけ。ADR-0006）。 */
