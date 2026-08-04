@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { type CSSProperties, useEffect, useState } from 'react';
 import { fetchMe } from '../server/functions';
+import { track } from '../web/analytics';
 
 /**
  * 「わたし」タブ（/me）＝見られる側の全部。既定タブ（ADR-0008 §実装決定3・6）。
@@ -85,6 +86,8 @@ function Me({
         body: JSON.stringify({ kind, source: 'web' }),
       });
       if (!res.ok) throw new Error(`signal failed: ${res.status}`);
+      // 種別のみ送る（申告そのものに機微情報はない）。
+      track('signal_sent', { kind });
       setSignalNotice(`✓ 「${label}」が届きました`);
     } catch {
       setSignalNotice('送信できませんでした。時間をおいてお試しください。');
@@ -505,6 +508,8 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
       const { token } = (await res.json()) as { token: string };
       setLink(`${window.location.origin}/join/${token}`);
       setCopied(false);
+      // 招待リンクの発行（トークンは送らない。発行イベントのみ）。
+      track('invite_created');
     } catch {
       onNotice('招待リンクの作成に失敗しました。時間をおいてお試しください。');
     } finally {
@@ -517,6 +522,7 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
+      track('invite_link_copied', { variant: 'plain' });
     } catch {
       setCopied(false);
     }
@@ -530,6 +536,7 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedRich(true);
+      track('invite_link_copied', { variant: 'rich' });
     } catch {
       setCopiedRich(false);
     }

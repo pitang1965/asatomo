@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { type CSSProperties, useEffect, useState } from 'react';
 import { fetchShell } from '../server/functions';
+import { track } from '../web/analytics';
 import { authClient } from '../web/auth-client';
 
 /**
@@ -170,24 +171,26 @@ function LoginPage() {
           <button
             type="button"
             style={btn}
-            onClick={() =>
+            onClick={() => {
+              track('login_started', { provider: 'google' });
               authClient.signIn.social({
                 provider: 'google',
                 callbackURL: back,
-              })
-            }
+              });
+            }}
           >
             Google でログイン
           </button>
           <button
             type="button"
             style={btn}
-            onClick={() =>
+            onClick={() => {
+              track('login_started', { provider: 'line' });
               authClient.signIn.oauth2({
                 providerId: 'line',
                 callbackURL: back,
-              })
-            }
+              });
+            }}
           >
             LINE でログイン
           </button>

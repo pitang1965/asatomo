@@ -1,5 +1,6 @@
 import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import { Analytics } from '../web/analytics';
 import { NotFoundCard } from '../web/NotFoundCard';
 import appCss from '../web/watch.css?url';
 
@@ -111,6 +112,8 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         {children}
+        {/* PostHog（プロダクト解析）。本番ビルドかつキーがある時だけ init する。 */}
+        <Analytics />
         <Scripts />
         {/* サービスワーカー登録（ADR-0010: network-only の最小SW）。 */}
         <script

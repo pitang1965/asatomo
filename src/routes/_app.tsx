@@ -4,7 +4,9 @@ import {
   redirect,
   useLocation,
 } from '@tanstack/react-router';
+import { useEffect } from 'react';
 import { fetchShell } from '../server/functions';
+import { identify } from '../web/analytics';
 import { BottomTabs } from '../web/BottomTabs';
 import { BrandHeader } from '../web/BrandHeader';
 import { activeTab } from '../web/nav';
@@ -35,6 +37,11 @@ export const Route = createFileRoute('/_app')({
 function AppLayout() {
   const { pathname } = useLocation();
   const tab = activeTab(pathname);
+  // ログイン中のユーザーを解析にひも付ける（idのみ。以降のイベントが同一人物に紐づく）。
+  const { user } = Route.useRouteContext();
+  useEffect(() => {
+    if (user?.id) identify(user.id);
+  }, [user?.id]);
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
       <BrandHeader />

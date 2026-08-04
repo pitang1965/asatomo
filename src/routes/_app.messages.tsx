@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { type CSSProperties, useState } from 'react';
 import { fetchMessagesPage } from '../server/functions';
+import { track } from '../web/analytics';
 import {
   decryptPacked,
   decryptText,
@@ -585,6 +586,9 @@ function CreateForm({
         }),
       });
       if (!res.ok) throw new Error(String(res.status));
+
+      // 伝言作成（本文・見出し・合言葉は送らず、宛先の件数のみ）。
+      track('message_created', { recipient_count: selectedIds.length });
 
       // 変更のあったヒントを保存（つながり単位・平文でよい情報）。失敗しても本体は保存済み。
       await Promise.all(

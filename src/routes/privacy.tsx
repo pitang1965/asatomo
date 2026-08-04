@@ -10,7 +10,7 @@ export const Route = createFileRoute('/privacy')({
   component: PrivacyPage,
 });
 
-const UPDATED = '2026年8月2日';
+const UPDATED = '2026年8月4日';
 
 const page: CSSProperties = {
   background: 'var(--bg)',
@@ -145,6 +145,15 @@ function PrivacyPage() {
               <strong style={{ color: 'var(--ink)' }}>セッション情報</strong>
               ：ログイン時のIPアドレス・ブラウザのUser-Agent（不正アクセス検知のため）
             </li>
+            <li>
+              <strong style={{ color: 'var(--ink)' }}>
+                利用状況の解析情報
+              </strong>
+              ：どの画面が見られたか・ボタンの操作といった利用状況、端末・ブラウザの種別（サービス改善のため、解析ツールPostHogを利用）。
+              <strong style={{ color: 'var(--ink)' }}>
+                入力欄に打ち込んだ内容（合言葉・最後の伝言の本文など）や画面の録画は取得しません
+              </strong>
+            </li>
           </ul>
           <p style={{ margin: '12px 0 0' }}>
             アカウント情報は退会まで保管し、退会時に削除します（下記「7.
@@ -228,12 +237,28 @@ function PrivacyPage() {
                 Android版アプリでプッシュ通知を利用する場合に、通知の配信を担います。
               </p>
             </div>
+            <div>
+              <p style={{ margin: 0, color: 'var(--ink)', fontWeight: 600 }}>
+                PostHog（米国）
+              </p>
+              <p style={{ margin: 0 }}>
+                サービス改善のための利用状況の解析（どの画面が見られたか・操作・端末やブラウザの種別）を担います。入力内容や画面の録画は送信しません。詳細:{' '}
+                <a
+                  href="https://posthog.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={linkStyle}
+                >
+                  posthog.com/privacy
+                </a>
+              </p>
+            </div>
           </div>
         </Section>
 
         <Section title="6. Cookie およびローカルストレージの利用">
           <p style={{ margin: 0 }}>
-            本サービスはログイン状態の維持のためにCookieを使用します。また、Webチェックインの送信間隔の管理などのために、ブラウザのローカルストレージを使用します。ブラウザの設定でこれらを無効化できますが、ログイン機能などが利用できなくなる場合があります。
+            本サービスはログイン状態の維持のためにCookieを使用します。また、Webチェックインの送信間隔の管理や利用状況の解析（PostHog）のために、ブラウザのCookie・ローカルストレージを使用します。ブラウザの設定でこれらを無効化できますが、ログイン機能などが利用できなくなる場合があります。
           </p>
         </Section>
 
