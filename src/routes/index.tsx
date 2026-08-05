@@ -94,6 +94,9 @@ const lpCss = `
 .landing .brandicon{width:32px;height:32px;border-radius:9px;display:block;box-shadow:var(--shadow-sm)}
 .landing .wordmark{font-size:22px;font-weight:700;letter-spacing:.18em;padding-left:.18em}
 .landing .tagline{position:relative;font-size:clamp(26px,4.6vw,42px);font-weight:700;line-height:1.35;letter-spacing:.01em;text-wrap:balance;margin:0 auto;max-width:18em}
+/* 日本語は既定で文字単位に折り返すため、単語の途中(例:「元/気」)で割れる。
+   文節を inline-block の塊にして、改行を塊の境界だけに限定する。 */
+.landing .tagline .seg{display:inline-block}
 .landing .subline{position:relative;color:var(--ink-2);max-width:34em;margin:20px auto 0;font-size:16px}
 .landing picture{display:contents}
 .landing .hero{position:relative;display:block;width:100%;max-width:620px;height:auto;aspect-ratio:968/700;margin:34px auto 0;border-radius:20px;box-shadow:0 12px 36px color-mix(in oklab,var(--accent) 22%,transparent);border:1px solid var(--line)}
@@ -236,7 +239,9 @@ function Landing({ intro }: { intro?: boolean }) {
               <span className="wordmark">アサトモ</span>
             </div>
             <h1 className="tagline">
-              一人暮らしの「今日も元気」を、そっと伝え合う。
+              <span className="seg">一人暮らしの</span>
+              <span className="seg">「今日も元気」を、</span>
+              <span className="seg">そっと伝え合う。</span>
             </h1>
             <p className="subline">
               朝、目覚ましを止めるだけ。それが無事の合図になり、もしもの時も、誰かが気づいてくれます。相手は、友人でも、きょうだいでも、離れて暮らす親でも。見張るのではなく、そっと寄り添う見守り合いです。
