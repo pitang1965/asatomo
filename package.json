@@ -19,7 +19,8 @@
     "lint:fix": "biome check --write",
     "android:connect": "pwsh -File adb-wifi.ps1",
     "android:build": "bash scripts/build-android.sh",
-    "android:build:release": "bash scripts/build-android.sh release",
+    "android:build:release:apk": "bash scripts/build-android.sh release",
+    "android:build:release:aab": "bash scripts/build-android.sh release --bundle",
     "android:install": "bash scripts/build-android.sh debug --install",
     "android:reinstall": "bash scripts/build-android.sh debug --reinstall",
     "android:install:release": "bash scripts/install-android-wifi.sh"

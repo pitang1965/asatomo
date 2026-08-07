@@ -5,6 +5,7 @@
 # 使い方:
 #   scripts/build-android.sh                   # debug APK をビルド (assembleDebug)
 #   scripts/build-android.sh release           # release APK をビルド (assembleRelease)
+#   scripts/build-android.sh release --bundle  # release AAB をビルド (bundleRelease / Play提出用)
 #   scripts/build-android.sh debug --install   # ビルドして接続端末へインストール
 #   scripts/build-android.sh debug --reinstall # アンインストール→インストール（署名不一致対策）
 #   scripts/build-android.sh --clean           # クリーンしてから debug ビルド
@@ -43,6 +44,7 @@ VARIANT="debug"   # debug | release
 DO_CLEAN=0
 DO_INSTALL=0
 DO_UNINSTALL=0
+DO_BUNDLE=0
 APP_ID="com.asatomo.app"
 
 for arg in "$@"; do
@@ -51,25 +53,36 @@ for arg in "$@"; do
     --clean)       DO_CLEAN=1 ;;
     --install)     DO_INSTALL=1 ;;
     --reinstall)   DO_INSTALL=1; DO_UNINSTALL=1 ;;
+    --bundle)      DO_BUNDLE=1 ;;
     -h|--help)
       grep '^#' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
-      echo "エラー: 不明な引数 '$arg'（debug|release|--clean|--install|--reinstall|--help）" >&2
+      echo "エラー: 不明な引数 '$arg'（debug|release|--clean|--install|--reinstall|--bundle|--help）" >&2
       exit 1
       ;;
   esac
 done
 
-# variant を先頭大文字に（assembleDebug / assembleRelease）
+# --bundle は AAB（Play 提出用）を作る。AAB は実機へ直接 install できないので --install と併用不可。
+if [[ "$DO_BUNDLE" -eq 1 && "$DO_INSTALL" -eq 1 ]]; then
+  echo "エラー: --bundle（AAB）と --install/--reinstall は併用できません（AAB は実機へ直接入れられません）。" >&2
+  exit 1
+fi
+
+# variant を先頭大文字に（assembleDebug / assembleRelease / bundleRelease）
 VARIANT_CAP="$(tr '[:lower:]' '[:upper:]' <<< "${VARIANT:0:1}")${VARIANT:1}"
-ASSEMBLE_TASK="assemble${VARIANT_CAP}"
+if [[ "$DO_BUNDLE" -eq 1 ]]; then
+  BUILD_TASK="bundle${VARIANT_CAP}"
+else
+  BUILD_TASK="assemble${VARIANT_CAP}"
+fi
 
 # --- Gradle タスク組み立て --------------------------------------------------
 GRADLE_TASKS=()
 [[ "$DO_CLEAN" -eq 1 ]] && GRADLE_TASKS+=("clean")
-GRADLE_TASKS+=("$ASSEMBLE_TASK")
+GRADLE_TASKS+=("$BUILD_TASK")
 # --install は debug 前提（release は署名設定が別途必要）
 if [[ "$DO_INSTALL" -eq 1 ]]; then
   GRADLE_TASKS+=("install${VARIANT_CAP}")
@@ -100,10 +113,19 @@ fi
 ./gradlew "${GRADLE_TASKS[@]}"
 
 # --- 成果物の場所を表示 -----------------------------------------------------
-APK="${ANDROID_DIR}/app/build/outputs/apk/${VARIANT}/app-${VARIANT}.apk"
 echo "------------------------------------------------------------"
-if [[ -f "$APK" ]]; then
-  echo "✅ ビルド成功: ${APK}"
+if [[ "$DO_BUNDLE" -eq 1 ]]; then
+  AAB="${ANDROID_DIR}/app/build/outputs/bundle/${VARIANT}/app-${VARIANT}.aab"
+  if [[ -f "$AAB" ]]; then
+    echo "✅ ビルド成功（AAB / Play 提出用）: ${AAB}"
+  else
+    echo "✅ Gradle 完了（AAB: app/build/outputs/bundle/${VARIANT}/ を確認）"
+  fi
 else
-  echo "✅ Gradle 完了（APK: app/build/outputs/apk/${VARIANT}/ を確認）"
+  APK="${ANDROID_DIR}/app/build/outputs/apk/${VARIANT}/app-${VARIANT}.apk"
+  if [[ -f "$APK" ]]; then
+    echo "✅ ビルド成功: ${APK}"
+  else
+    echo "✅ Gradle 完了（APK: app/build/outputs/apk/${VARIANT}/ を確認）"
+  fi
 fi
