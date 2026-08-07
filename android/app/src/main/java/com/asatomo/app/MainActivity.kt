@@ -147,6 +147,16 @@ private fun MainScreen() {
                 },
             )
         }
+    var canSkipAlarmToday by
+        remember { mutableStateOf(AlarmScheduler.canSkipToday(context)) }
+    var alarmSkippedToday by
+        remember { mutableStateOf(AlarmScheduler.isAlarmSkippedToday(context)) }
+    var tomorrowAlarmFailed by
+        remember {
+            mutableStateOf(
+                alarmSkippedToday && settings.skippedAlarmRescheduleFailed,
+            )
+        }
 
     // アラーム音量が0＝目覚ましが鳴らない状態の警告（ADR-0009）。アラーム設定済みのときだけ意味を持つ。
     // 前面復帰のたびに読み直す（サウンド設定から戻った時・別アプリで音量を変えた時も鮮度を保つ）。
@@ -158,6 +168,11 @@ private fun MainScreen() {
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
+                    canSkipAlarmToday = AlarmScheduler.canSkipToday(context)
+                    val skippedToday = AlarmScheduler.isAlarmSkippedToday(context)
+                    alarmSkippedToday = skippedToday
+                    tomorrowAlarmFailed =
+                        skippedToday && settings.skippedAlarmRescheduleFailed
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -243,6 +258,33 @@ private fun MainScreen() {
                         fontWeight = FontWeight.Bold,
                     )
                 }
+                if (alarmSkippedToday && !tomorrowAlarmFailed) {
+                    Text(
+                        "次は明日 $alarmText に鳴ります",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (tomorrowAlarmFailed) {
+                    Text(
+                        "⚠ 明日のアラームをセットできませんでした。設定を確認してください。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                } else if (canSkipAlarmToday) {
+                    Button(
+                        onClick = {
+                            AlarmScheduler.skipToday(context)
+                            canSkipAlarmToday = AlarmScheduler.canSkipToday(context)
+                            val skippedToday = AlarmScheduler.isAlarmSkippedToday(context)
+                            alarmSkippedToday = skippedToday
+                            tomorrowAlarmFailed =
+                                skippedToday && settings.skippedAlarmRescheduleFailed
+                            send(ApiClient.SignalKind.WAKE, "起きました")
+                        },
+                    ) {
+                        Text("今日はもう起きています")
+                    }
+                }
                 // 道具の不調として平易に告げる（監視感・技術語・「マナーモード解除」は書かない。ADR-0009 決定6）。
                 if (alarmMuted) {
                     Text(
@@ -266,6 +308,9 @@ private fun MainScreen() {
                             context,
                             { _, h, m ->
                                 alarmText = AlarmScheduler.setDailyAlarm(context, h, m)
+                                canSkipAlarmToday = AlarmScheduler.canSkipToday(context)
+                                alarmSkippedToday = AlarmScheduler.isAlarmSkippedToday(context)
+                                tomorrowAlarmFailed = false
                                 // セット直後の教育の瞬間: 今セットしたのに音が0なら即警告する。
                                 alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
                             },

@@ -41,6 +41,16 @@ class Settings(context: Context) {
     val hasAlarm: Boolean
         get() = alarmHour >= 0 && alarmMinute >= 0
 
+    /** 早起きして当日分を鳴らさない日に、ローカル日付（YYYY-MM-DD）を保存する。 */
+    var skippedAlarmDate: String?
+        get() = prefs.getString("skippedAlarmDate", null)
+        set(v) = prefs.edit().putString("skippedAlarmDate", v).apply()
+
+    /** 早起きスキップ後、翌日の再予約に失敗しているか。 */
+    var skippedAlarmRescheduleFailed: Boolean
+        get() = prefs.getBoolean("skippedAlarmRescheduleFailed", false)
+        set(v) = prefs.edit().putBoolean("skippedAlarmRescheduleFailed", v).apply()
+
     /** 自動 app_open シグナルの最終送信時刻（連続起動でのスパム防止スロットル用）。 */
     var lastAppOpenSentAtMs: Long
         get() = prefs.getLong("lastAppOpenSentAtMs", 0L)
@@ -66,6 +76,8 @@ class Settings(context: Context) {
             .remove("userEmail")
             .remove("alarmHour")
             .remove("alarmMinute")
+            .remove("skippedAlarmDate")
+            .remove("skippedAlarmRescheduleFailed")
             .remove("lastAppOpenSentAtMs")
             .remove("travelUntilMs")
             .remove("hasWatchers")
