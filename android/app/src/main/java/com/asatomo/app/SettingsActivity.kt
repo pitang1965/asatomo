@@ -155,7 +155,7 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
 
             Spacer(Modifier.size(4.dp))
             Text(
-                "アサトモ目覚まし ${BuildConfig.VERSION_NAME}",
+                "アサトモ目覚まし ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
