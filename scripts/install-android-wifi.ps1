@@ -14,7 +14,8 @@
     npm run android:install:release            # 接続確認 → release APK を実機へ
     npm run android:install:release -- -Build  # ビルドしてから実機へ（build:release 省略）
     npm run android:install:release -- -Variant debug
-    pwsh scripts/install-android-wifi.ps1      # npm を介さない同等
+    bash scripts/install-android-wifi.sh       # npm を介さない同等
+    pwsh scripts/install-android-wifi.ps1      # PowerShell を直接使う場合
 
   前提:
     - 端末の「ワイヤレスデバッグ」が ON。未接続なら自動で adb-wifi.ps1 を呼ぶ
@@ -45,8 +46,36 @@ if (-not (Test-Path $adb)) {
 }
 
 # --- 1. 必要ならビルド --------------------------------------------------------
-if ($Build -or -not (Test-Path $apk)) {
-  if (-not $Build) {
+# APK があっても、ソースが APK より新しいと「古い成果物を入れ直す」だけになり反映されない。
+# VSCode の NPM スクリプトパネルからは引数（-Build）を渡せないため、-Build 未指定でも
+# 「APK にコンパイルされるソース（android/app/src とビルド設定）が APK より新しければ
+# 自動でリビルド」する。何も変えていなければ従来どおり即インストール（高速パス）。
+$needBuild = [bool]$Build -or -not (Test-Path $apk)
+if (-not $needBuild) {
+  $apkTime = (Get-Item $apk).LastWriteTimeUtc
+  $watch = @()
+  $srcDir = Join-Path $repoRoot 'android/app/src'
+  if (Test-Path $srcDir) {
+    $watch += Get-ChildItem -Path $srcDir -Recurse -File -ErrorAction SilentlyContinue
+  }
+  foreach ($rel in @(
+      'android/app/build.gradle', 'android/app/build.gradle.kts',
+      'android/build.gradle', 'android/build.gradle.kts',
+      'android/gradle.properties', 'android/variables.gradle',
+      'capacitor.config.ts', 'capacitor.config.json')) {
+    $p = Join-Path $repoRoot $rel
+    if (Test-Path $p) { $watch += Get-Item $p }
+  }
+  $newest = ($watch | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).LastWriteTimeUtc
+  if ($newest -and $newest -gt $apkTime) {
+    Warn "ソースが APK より新しいため自動でリビルドします。"
+    Warn "  APK       : $($apkTime.ToLocalTime())"
+    Warn "  最新ソース: $($newest.ToLocalTime())"
+    $needBuild = $true
+  }
+}
+if ($needBuild) {
+  if (-not $Build -and -not (Test-Path $apk)) {
     Warn "APK が未生成のためビルドします: $apk"
   }
   Say "ビルド中: build-android.sh $Variant"
@@ -88,7 +117,7 @@ function Get-ConnectedDevices {
 $devices = @(Get-ConnectedDevices)
 if ($devices.Count -eq 0) {
   Say "接続済みの端末がありません。Wi-Fi 接続を試みます（adb-wifi.ps1）…"
-  & (Join-Path $scriptDir 'adb-wifi.ps1')
+  & (Join-Path $repoRoot 'adb-wifi.ps1')
   $devices = @(Get-ConnectedDevices)
 }
 if ($devices.Count -eq 0) {

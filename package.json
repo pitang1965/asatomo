@@ -17,12 +17,12 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check",
     "lint:fix": "biome check --write",
-    "android:connect": "pwsh -File scripts/adb-wifi.ps1",
+    "android:connect": "pwsh -File adb-wifi.ps1",
     "android:build": "bash scripts/build-android.sh",
     "android:build:release": "bash scripts/build-android.sh release",
     "android:install": "bash scripts/build-android.sh debug --install",
     "android:reinstall": "bash scripts/build-android.sh debug --reinstall",
-    "android:install:release": "pwsh -File scripts/install-android-wifi.ps1"
+    "android:install:release": "bash scripts/install-android-wifi.sh"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

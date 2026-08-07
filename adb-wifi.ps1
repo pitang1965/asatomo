@@ -17,8 +17,8 @@
     npm run android:connect            # ← 日常: 前回値/mDNSで再接続。ダメなら「ポート番号だけ」聞く
     npm run android:connect -- 37045   # 変わったポート番号だけ渡す（IPは前回値を再利用）
     npm run android:connect -- 192.168.1.23:37045   # IPごと変わった時だけ ip:port
-    pwsh scripts/adb-wifi.ps1          # npm を介さない同等（直接呼び出し）
-    pwsh scripts/adb-wifi.ps1 -Pair 192.168.1.23:41000 -Code 123456  # 初回ペアのみ
+    pwsh adb-wifi.ps1                  # npm を介さない同等（直接呼び出し・リポジトリ直下）
+    pwsh adb-wifi.ps1 -Pair 192.168.1.23:41000 -Code 123456  # 初回ペアのみ
 
   端末側の値の在り処:
     設定 → 開発者オプション → ワイヤレスデバッグ（ON）→ 項目をタップ
@@ -39,6 +39,28 @@ $lastFile = "$env:LOCALAPPDATA\asatomo-adb-last.txt"
 
 function Say($m) { Write-Host $m -ForegroundColor Cyan }
 
+# adb を実行し、出力を「文字化けしない文字列」で返す。
+#   adb は日本語のエラー文も UTF-8 で出力する。一方この開発機のコンソールは chcp 932
+#   （[Console]::OutputEncoding = shift_jis）なので、既定の `& $adb` は UTF-8 バイトを
+#   Shift-JIS として解釈してしまい `謗･邯壽ｸ…` と化ける。そこで adb の出力を
+#   StandardOutputEncoding=UTF-8 で明示デコードして受け取る（pwsh 本来の出力は不変）。
+function Invoke-Adb {
+  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$AdbArgs)
+  $psi = [System.Diagnostics.ProcessStartInfo]::new()
+  $psi.FileName = $adb
+  foreach ($a in $AdbArgs) { [void]$psi.ArgumentList.Add($a) }
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $psi.UseShellExecute = $false
+  $psi.StandardOutputEncoding = [System.Text.UTF8Encoding]::new($false)
+  $psi.StandardErrorEncoding = [System.Text.UTF8Encoding]::new($false)
+  $p = [System.Diagnostics.Process]::Start($psi)
+  $out = $p.StandardOutput.ReadToEnd()
+  $err = $p.StandardError.ReadToEnd()
+  $p.WaitForExit()
+  return (($out + $err) -split "`r?`n" | Where-Object { $_ -ne '' })
+}
+
 # 前回の接続先と、そこから取り出した IP（ポートだけ入力/合成する時の土台）。
 $lastEndpoint = if (Test-Path $lastFile) { (Get-Content $lastFile -Raw).Trim() } else { "" }
 $lastIp = if ($lastEndpoint -match '^(\d{1,3}(?:\.\d{1,3}){3}):\d+$') { $Matches[1] } else { "" }
@@ -46,17 +68,17 @@ $lastIp = if ($lastEndpoint -match '^(\d{1,3}(?:\.\d{1,3}){3}):\d+$') { $Matches
 # 1回接続を試し、成功（connected / already connected）したかを返す。
 function Connect-To($ep) {
   Say "接続: $ep"
-  $out = & $adb connect $ep 2>&1
+  $out = Invoke-Adb connect $ep
   $out | ForEach-Object { Write-Host "  $_" }
   return [bool]($out -match 'connected to')
 }
 
-& $adb start-server | Out-Null
+Invoke-Adb start-server | Out-Null
 
 # 初回ペア（指定時のみ）。ペアは一度きり。以降は connect だけで戻る。
 if ($Pair -and $Code) {
   Say "ペア設定中: $Pair"
-  & $adb pair $Pair $Code
+  Invoke-Adb pair $Pair $Code | ForEach-Object { Write-Host "  $_" }
 }
 
 # 引数がポート番号だけなら、前回IPと合成する（変わるのはポートだけ、という前提）。
@@ -78,7 +100,7 @@ if (-not $Endpoint -and $lastEndpoint) {
 
 if (-not $Endpoint) {
   Say "mDNS で端末を探索中…（端末のワイヤレスデバッグ画面を開いたままにしてください）"
-  $svc = & $adb mdns services 2>$null
+  $svc = Invoke-Adb mdns services
   $line = $svc | Where-Object { $_ -match '_adb-tls-connect\._tcp' } | Select-Object -First 1
   if ($line) {
     $Endpoint = ($line -split '\s+')[-1]
@@ -92,10 +114,10 @@ if ($Endpoint) { $connected = Connect-To $Endpoint }
 
 while (-not $connected) {
   if ($lastIp) {
-    $p = Read-Host "接続できません。端末『IPアドレスとポート』の新しいポート番号だけ入力（IP=$lastIp / 空Enterで中止）"
+    $p = Read-Host "接続できません。端末『IPアドレスとポート』を入力（ポート番号だけなら IP=$lastIp と合成 / IPが変わったら ip:port を丸ごと / 空Enterで中止）"
     $p = $p.Trim()
     if (-not $p) { break }
-    $Endpoint = if ($p -match '^\d+$') { "${lastIp}:$p" } else { $p }  # 気が変わって ip:port を入れてもよい
+    $Endpoint = if ($p -match '^\d+$') { "${lastIp}:$p" } else { $p }  # IPが変わったら ip:port を丸ごと入れる
   } else {
     $e = Read-Host "接続できません。端末の ip:port を入力（例 192.168.1.23:37045 / 空Enterで中止）"
     $e = $e.Trim()
@@ -113,7 +135,7 @@ if (-not $connected) {
 $Endpoint | Set-Content $lastFile -NoNewline   # 次回のために記憶（IP変更もここで追随）
 
 # dev サーバー転送を張る（本番URLで試すなら不要だが、張っても無害）。
-& $adb reverse "tcp:$Port" "tcp:$Port" 2>$null
+Invoke-Adb reverse "tcp:$Port" "tcp:$Port" | Out-Null
 
 Say "----- 現在の接続 -----"
-& $adb devices
+Invoke-Adb devices | ForEach-Object { Write-Host $_ }
