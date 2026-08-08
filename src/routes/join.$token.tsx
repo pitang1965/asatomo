@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { fetchInvitePreview } from '../server/functions';
 import { authClient } from '../web/auth-client';
 
@@ -14,53 +15,13 @@ export const Route = createFileRoute('/join/$token')({
   component: JoinPage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-  display: 'grid',
-  placeItems: 'center',
-  padding: 24,
-};
-
-const card: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 20,
-  padding: '32px 28px',
-  maxWidth: 400,
-  width: '100%',
-  boxShadow: '0 8px 32px rgb(0 0 0 / 0.08)',
-  textAlign: 'center',
-};
-
-const btn: CSSProperties = {
-  appearance: 'none',
-  border: '1px solid var(--line)',
-  cursor: 'pointer',
-  font: 'inherit',
-  display: 'block',
-  width: '100%',
-  boxSizing: 'border-box',
-  padding: '12px 16px',
-  borderRadius: 12,
-  fontWeight: 600,
-  fontSize: 14,
-  background: 'var(--surface-2)',
-  color: 'var(--ink)',
-  marginTop: 10,
-};
-
-const primaryBtn: CSSProperties = {
-  ...btn,
-  background: 'var(--accent)',
-  color: '#fff',
-  border: 0,
-};
-
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={page}>
-      <div style={card}>{children}</div>
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      {/* カード外枠は旧 content-box 実測（maxWidth400 + 左右padding28×2 = 456px）＝max-w-114。 */}
+      <div className="w-full max-w-114 rounded-[20px] bg-card px-7 py-8 text-center shadow-[0_8px_32px_rgb(0_0_0/0.08)]">
+        {children}
+      </div>
     </div>
   );
 }
@@ -94,10 +55,8 @@ function JoinPage() {
   if (data.status === 'unconfigured')
     return (
       <Shell>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)' }}>
-          サーバーが未設定です
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+        <h1 className="text-lg text-foreground">サーバーが未設定です</h1>
+        <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {data.message}
         </p>
       </Shell>
@@ -107,18 +66,11 @@ function JoinPage() {
     const c = INVALID_COPY[data.reason] ?? INVALID_COPY.not_found;
     return (
       <Shell>
-        <p style={{ fontSize: 26, marginBottom: 4 }} aria-hidden>
+        <p className="mb-1 text-[26px]" aria-hidden>
           🌥️
         </p>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)' }}>{c.title}</h1>
-        <p
-          style={{
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-            marginTop: 8,
-          }}
-        >
+        <h1 className="text-lg text-foreground">{c.title}</h1>
+        <p className="mt-2 text-[13px] leading-[1.8] text-muted-foreground">
           {c.body}
         </p>
       </Shell>
@@ -136,25 +88,22 @@ function JoinPage() {
           aria-hidden
           width={56}
           height={56}
-          style={{ display: 'block', margin: '0 auto 8px', borderRadius: 12 }}
+          className="mx-auto mb-2 block rounded-xl"
         />
-        <h1 style={{ fontSize: 18, color: 'var(--ink)' }}>つながりました</h1>
-        <p
-          style={{
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-            marginTop: 8,
-          }}
-        >
+        <h1 className="text-lg text-foreground">つながりました</h1>
+        <p className="mt-2 text-[13px] leading-[1.8] text-muted-foreground">
           {done.mutual
             ? `${inviterName}さんと見守り合いを始めました。おたがいの「今日も元気」がそっと伝わります。`
             : `${inviterName}さんの見守りに加わりました。`}
         </p>
-        <div style={{ marginTop: 20 }}>
-          <Link to="/" style={{ ...primaryBtn, textDecoration: 'none' }}>
-            見守りページへ
-          </Link>
+        <div className="mt-5">
+          <Button
+            asChild
+            size="lg"
+            className="h-auto w-full py-3 font-semibold"
+          >
+            <Link to="/">見守りページへ</Link>
+          </Button>
         </div>
       </Shell>
     );
@@ -162,21 +111,12 @@ function JoinPage() {
   if (isSelf)
     return (
       <Shell>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)' }}>
-          あなた自身の招待リンクです
-        </h1>
-        <p
-          style={{
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-            marginTop: 8,
-          }}
-        >
+        <h1 className="text-lg text-foreground">あなた自身の招待リンクです</h1>
+        <p className="mt-2 text-[13px] leading-[1.8] text-muted-foreground">
           このリンクを見守ってほしい相手に送ってください。
         </p>
-        <div style={{ marginTop: 20 }}>
-          <Link to="/" style={{ color: 'var(--accent)' }}>
+        <div className="mt-5">
+          <Link to="/" className="text-primary hover:underline">
             ← 見守りページへ戻る
           </Link>
         </div>
@@ -186,30 +126,25 @@ function JoinPage() {
   if (!signedIn)
     return (
       <Shell>
-        <p style={{ fontSize: 26, marginBottom: 4 }} aria-hidden>
+        <p className="mb-1 text-[26px]" aria-hidden>
           🤝
         </p>
-        <h1 style={{ fontSize: 20, color: 'var(--ink)' }}>
+        <h1 className="text-xl text-foreground">
           {inviterName}さんが
           <br />
           見守り合いに誘っています
         </h1>
-        <p
-          style={{
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-            marginTop: 8,
-          }}
-        >
+        <p className="mt-2 text-[13px] leading-[1.8] text-muted-foreground">
           見守り合うと、おたがいの「今日も元気」がそっと伝わります。
           <br />
           まずはお使いのアカウントでログインしてください。
         </p>
-        <div style={{ marginTop: 20 }}>
-          <button
+        <div className="mt-5 flex flex-col gap-2.5">
+          <Button
             type="button"
-            style={btn}
+            variant="secondary"
+            size="lg"
+            className="w-full border border-border font-semibold"
             onClick={() =>
               authClient.signIn.social({
                 provider: 'google',
@@ -218,10 +153,12 @@ function JoinPage() {
             }
           >
             Google でログイン
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            style={btn}
+            variant="secondary"
+            size="lg"
+            className="w-full border border-border font-semibold"
             onClick={() =>
               authClient.signIn.oauth2({
                 providerId: 'line',
@@ -230,25 +167,18 @@ function JoinPage() {
             }
           >
             LINE でログイン
-          </button>
+          </Button>
           {/* Facebook は未実装（backlog 項目17）のため一時的に非表示。
               /login と同じ方針で揃える。実装時に下記を復活させる:
                 authClient.signIn.social({ provider: 'facebook', callbackURL: `/join/${token}` }) */}
         </div>
-        <p
-          style={{
-            marginTop: 16,
-            fontSize: 11,
-            color: 'var(--ink-3)',
-            lineHeight: 1.7,
-          }}
-        >
+        <p className="mt-4 text-balance text-[11px] leading-[1.7] text-muted-foreground/80">
           ログインすることで、
-          <Link to="/terms" style={{ color: 'var(--accent)' }}>
+          <Link to="/terms" className="text-primary hover:underline">
             利用規約
           </Link>
           と
-          <Link to="/privacy" style={{ color: 'var(--accent)' }}>
+          <Link to="/privacy" className="text-primary hover:underline">
             プライバシーポリシー
           </Link>
           に同意したものとみなします。
@@ -276,57 +206,44 @@ function JoinPage() {
 
   return (
     <Shell>
-      <p style={{ fontSize: 26, marginBottom: 4 }} aria-hidden>
+      <p className="mb-1 text-[26px]" aria-hidden>
         🤝
       </p>
-      <h1 style={{ fontSize: 20, color: 'var(--ink)' }}>
+      <h1 className="text-xl text-foreground">
         {inviterName}さんが
         <br />
         見守り合いに誘っています
       </h1>
-      <p
-        style={{
-          fontSize: 13,
-          color: 'var(--ink-2)',
-          lineHeight: 1.8,
-          marginTop: 8,
-        }}
-      >
+      <p className="mt-2 text-[13px] leading-[1.8] text-muted-foreground">
         「見守り合う」を選ぶと、あなたが{inviterName}さんを見守り、
         {inviterName}さんもあなたを見守ります。急かし合うものではなく、
         ゆるく「元気そう」を知り合うだけです。
       </p>
       {error ? (
-        <p style={{ color: 'var(--bad, #b14)', fontSize: 13, marginTop: 12 }}>
-          {error}
-        </p>
+        <p className="mt-3 text-[13px] text-destructive">{error}</p>
       ) : null}
-      <div style={{ marginTop: 20 }}>
-        <button
+      <div className="mt-5 flex flex-col gap-2.5">
+        <Button
           type="button"
-          style={primaryBtn}
+          size="lg"
+          className="h-auto w-full py-3 font-semibold"
           disabled={pending}
           onClick={() => accept(true)}
         >
           見守り合う
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          style={btn}
+          variant="secondary"
+          size="lg"
+          className="w-full border border-border font-semibold"
           disabled={pending}
           onClick={() => accept(false)}
         >
           今は見守るだけにする
-        </button>
+        </Button>
       </div>
-      <p
-        style={{
-          fontSize: 12,
-          color: 'var(--ink-2)',
-          lineHeight: 1.7,
-          marginTop: 14,
-        }}
-      >
+      <p className="mt-3.5 text-xs leading-[1.7] text-muted-foreground">
         「見守るだけ」でも、あとから見守り合いに切り替えられます。
       </p>
     </Shell>

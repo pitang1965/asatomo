@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import type { DashboardRow } from '../domain/queries';
 import { encryptText, generateDek, wrapDek } from '../web/crypto';
 import { DeathConfirm } from '../web/DeathConfirm';
@@ -95,81 +96,39 @@ function App() {
   }, []);
 
   const tab = (id: Screen, label: string) => (
-    <button
+    <Button
       type="button"
+      variant={screen === id ? 'default' : 'secondary'}
       onClick={() => {
         setScreen(id);
         setNotice('');
       }}
-      style={{
-        appearance: 'none',
-        border: 0,
-        cursor: 'pointer',
-        font: 'inherit',
-        padding: '8px 14px',
-        borderRadius: 999,
-        fontWeight: 600,
-        fontSize: 13,
-        background: screen === id ? 'var(--accent)' : 'var(--surface-2)',
-        color: screen === id ? '#fff' : 'var(--ink-2)',
-      }}
+      className="h-auto rounded-full px-3.5 py-2 text-[13px] font-semibold"
     >
       {label}
-    </button>
+    </Button>
   );
 
   return (
-    <div
-      style={{
-        background: 'var(--bg)',
-        minHeight: '100vh',
-        fontFamily: 'var(--font-jp)',
-      }}
-    >
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          padding: '12px 16px',
-          borderBottom: '1px solid var(--line)',
-        }}
-      >
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <Link
           to="/"
-          style={{
-            color: 'var(--ink-2)',
-            textDecoration: 'none',
-            fontSize: 14,
-            fontWeight: 600,
-          }}
+          className="text-sm font-semibold text-muted-foreground hover:underline"
         >
           ← ホームへ
         </Link>
-        <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-          デモ画面・サンプルデータ
-        </span>
+        <span className="text-xs text-(--ink-3)">デモ画面・サンプルデータ</span>
       </header>
 
-      <nav
-        style={{
-          display: 'flex',
-          gap: 8,
-          justifyContent: 'center',
-          padding: 16,
-          flexWrap: 'wrap',
-        }}
-      >
+      <nav className="flex flex-wrap justify-center gap-2 p-4">
         {tab('dash', 'ダッシュボード')}
         {tab('death', '死亡確認')}
         {tab('msg', '最後の伝言')}
       </nav>
 
       {notice ? (
-        <p style={{ textAlign: 'center', color: 'var(--good)', fontSize: 13 }}>
-          {notice}
-        </p>
+        <p className="text-center text-[13px] text-(--good)">{notice}</p>
       ) : null}
 
       {screen === 'dash' ? (
@@ -209,7 +168,7 @@ function App() {
             messages={[packed]}
           />
         ) : (
-          <p style={{ textAlign: 'center', color: 'var(--ink-3)' }}>準備中…</p>
+          <p className="text-center text-(--ink-3)">準備中…</p>
         )
       ) : null}
     </div>
