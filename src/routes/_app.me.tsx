@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { QRCodeSVG } from 'qrcode.react';
-import { type CSSProperties, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { fetchMe } from '../server/functions';
 import { track } from '../web/analytics';
 
@@ -18,25 +20,23 @@ export const Route = createFileRoute('/_app/me')({
 
 // コンテンツ幅は全タブ共通の 560（/watch・/messages と一致）。下タブ切り替えで幅が
 // ジャンプしないよう、わたし系（/me・/activity・/connections）もこの値に揃える。
-const wrap: CSSProperties = {
-  maxWidth: 560,
-  margin: '0 auto',
-  padding: '12px 16px 0',
-};
+// Preflight で box-sizing:border-box のため、px-4（左右16px×2）を足した 592px を外枠に
+// 指定して内容幅 560 を保つ（未移行タブの content-box 実測 560+padding と一致）。
+const wrap = 'mx-auto max-w-148 px-4 pt-3';
 
-const cardBox: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 14,
-  padding: 14,
-  marginBottom: 10,
-  boxShadow: '0 4px 16px rgb(0 0 0 / 0.06)',
-};
+// カード共通。旧 cardBox（角丸14・padding14・下marginn10・淡い影）と同一。
+const card =
+  'mb-2.5 rounded-[14px] bg-card p-3.5 shadow-[0_4px_16px_rgb(0_0_0/0.06)]';
+
+// ピル型ボタン（様子ボタン・旅行モードボタン）。旧 pill/travelBtn と同一の見た目。
+const pill =
+  'h-auto rounded-full border border-border px-3.5 py-2 text-[13px] font-semibold';
 
 function MePage() {
   const data = Route.useLoaderData();
   if (data.status !== 'ok')
     return (
-      <p style={{ textAlign: 'center', padding: 40, color: 'var(--ink-2)' }}>
+      <p className="p-10 text-center text-muted-foreground">
         読み込めませんでした。
       </p>
     );
@@ -95,16 +95,9 @@ function Me({
   }
 
   return (
-    <div style={wrap}>
+    <div className={wrap}>
       {notice ? (
-        <p
-          style={{
-            textAlign: 'center',
-            color: 'var(--good)',
-            fontSize: 13,
-            margin: '0 0 8px',
-          }}
-        >
+        <p className="mt-0 mb-2 text-center text-[13px] text-(--good)">
           {notice}
         </p>
       ) : null}
@@ -112,28 +105,14 @@ function Me({
       {isSubject ? (
         <>
           {/* 1. 様子を伝える（最頻・最上部） */}
-          <div style={cardBox}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--ink)',
-              }}
-            >
-              <span aria-hidden="true" style={{ marginRight: 6 }}>
+          <div className={card}>
+            <p className="m-0 text-sm font-semibold text-foreground">
+              <span aria-hidden="true" className="mr-1.5">
                 📣
               </span>
               いまの様子を伝える
             </p>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-                marginTop: 10,
-              }}
-            >
+            <div className="mt-2.5 flex flex-wrap gap-2">
               {(
                 [
                   // アイコンはモバイル（MainActivity）と揃える。
@@ -144,86 +123,55 @@ function Me({
                   ['homecoming', 'ただいま', '🏠'],
                 ] as const
               ).map(([kind, label, icon]) => (
-                <button
+                <Button
                   key={kind}
                   type="button"
+                  variant="secondary"
+                  className={pill}
                   onClick={() => sendSignal(kind, label)}
-                  style={{
-                    appearance: 'none',
-                    border: '1px solid var(--line)',
-                    cursor: 'pointer',
-                    padding: '8px 14px',
-                    borderRadius: 999,
-                    fontWeight: 600,
-                    fontSize: 13,
-                    background: 'var(--surface-2)',
-                    color: 'var(--ink)',
-                  }}
                 >
-                  <span aria-hidden="true" style={{ marginRight: 6 }}>
+                  <span aria-hidden="true" className="mr-1.5">
                     {icon}
                   </span>
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
             {/* 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。 */}
-            <p
-              style={{
-                margin: '10px 0 0',
-                fontSize: 11,
-                color: 'var(--ink-2)',
-                lineHeight: 1.6,
-              }}
-            >
+            <p className="mt-2.5 mb-0 text-[11px] leading-[1.6] text-muted-foreground">
               このページを開いたことも「元気」として自動で伝わります。
             </p>
-            <p style={{ margin: '8px 0 0', fontSize: 12 }}>
-              <Link to="/activity" style={{ color: 'var(--accent)' }}>
+            <p className="mt-2 mb-0 text-xs">
+              <Link to="/activity" className="text-primary hover:underline">
                 あなたの記録を見る（相手にどう見えるか）→
               </Link>
             </p>
             {signalNotice ? (
-              <p
-                style={{
-                  margin: '8px 0 0',
-                  fontSize: 12,
-                  color: 'var(--good)',
-                }}
-              >
-                {signalNotice}
-              </p>
+              <p className="mt-2 mb-0 text-xs text-(--good)">{signalNotice}</p>
             ) : null}
           </div>
 
           {/* 3. あなたを見守ってくれる人（人数は常時／2人未満だけ警告。決定6）
                  主語を明示し「あなたが見守っている人」(=仲間タブ/逆向き)との一字違いの取り違えを防ぐ。 */}
-          <div style={cardBox}>
-            <p style={{ margin: 0, fontSize: 14, color: 'var(--ink)' }}>
-              <span aria-hidden="true" style={{ marginRight: 6 }}>
+          <div className={card}>
+            <p className="m-0 text-sm text-foreground">
+              <span aria-hidden="true" className="mr-1.5">
                 👥
               </span>
               あなたを見守ってくれる人：<strong>{watchersTotal}人</strong>
             </p>
             {watchersLiving < 2 ? (
-              <p
-                style={{
-                  margin: '8px 0 0',
-                  fontSize: 12.5,
-                  lineHeight: 1.8,
-                  color: 'var(--ink)',
-                  background: 'var(--warn-soft)',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                }}
-              >
+              <p className="mt-2 mb-0 rounded-[10px] bg-(--warn-soft) px-3 py-2.5 text-[12.5px] leading-[1.8] text-foreground">
                 このままだと、もしものときに
                 <strong>最後の伝言を届けられません</strong>
                 。見守ってくれる人が2人になると届けられるようになります。
               </p>
             ) : null}
-            <p style={{ margin: '10px 0 0', fontSize: 12 }}>
-              <Link to="/connections" style={{ color: 'var(--ink-2)' }}>
+            <p className="mt-2.5 mb-0 text-xs">
+              <Link
+                to="/connections"
+                className="text-muted-foreground hover:underline"
+              >
                 見守ってくれている人を確認・整理する →
               </Link>
             </p>
@@ -240,32 +188,21 @@ function Me({
       ) : (
         /* 見守ってくれる人が0人＝勧誘の空状態カードに差し替え（決定6） */
         <>
-          <div style={cardBox}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--ink)',
-              }}
-            >
+          <div className={card}>
+            <p className="m-0 text-sm font-semibold text-foreground">
               あなたを見守ってくれる人は、まだいません。
             </p>
-            <p
-              style={{
-                margin: '8px 0 14px',
-                fontSize: 13,
-                color: 'var(--ink-2)',
-                lineHeight: 1.8,
-              }}
-            >
+            <p className="mt-2 mb-3.5 text-[13px] leading-[1.8] text-muted-foreground">
               見守り合いに誘うと、あなたの「今日も元気」も相手に届くようになります。
             </p>
             <Invite onNotice={setNotice} />
             <IntroduceButton />
           </div>
-          <p style={{ textAlign: 'center', fontSize: 12 }}>
-            <Link to="/activity" style={{ color: 'var(--ink-2)' }}>
+          <p className="text-center text-xs">
+            <Link
+              to="/activity"
+              className="text-muted-foreground hover:underline"
+            >
               あなたの記録を見る（何が記録されるか）→
             </Link>
           </p>
@@ -331,114 +268,69 @@ function TravelMode({ initialUntil }: { initialUntil: string | null }) {
   }
 
   return (
-    <div style={cardBox}>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 14,
-          fontWeight: 600,
-          color: 'var(--ink)',
-        }}
-      >
-        <span aria-hidden="true" style={{ marginRight: 6 }}>
+    <div className={card}>
+      <p className="m-0 text-sm font-semibold text-foreground">
+        <span aria-hidden="true" className="mr-1.5">
           🧳
         </span>
         旅行モード
       </p>
       {active ? (
         <>
-          <p
-            style={{
-              margin: '10px 0 0',
-              fontSize: 12.5,
-              color: 'var(--ink-2)',
-              lineHeight: 1.8,
-            }}
-          >
+          <p className="mt-2.5 mb-0 text-[12.5px] leading-[1.8] text-muted-foreground">
             あなたへの見守りをお休み中です（
             <strong>{formatMd(until as string)}</strong>{' '}
             まで）。期限が来たら自動で再開します。見守ってくれる人にも「旅行中」と伝わっています。
           </p>
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            className={`${pill} mt-2.5`}
             onClick={exit}
             disabled={busy}
-            style={travelBtn}
           >
             旅行モードを解除する
-          </button>
+          </Button>
         </>
       ) : (
         <>
-          <p
-            style={{
-              margin: '10px 0 0',
-              fontSize: 12.5,
-              color: 'var(--ink-2)',
-              lineHeight: 1.8,
-            }}
-          >
+          <p className="mt-2.5 mb-0 text-[12.5px] leading-[1.8] text-muted-foreground">
             旅行などで生活リズムが変わると、いつもの様子が届かず、見守ってくれる人によけいな心配をかけてしまうことがあります。その間だけ、あなたへの見守りを一時お休みにできます。期限が来たら自動で再開します（最長30日）。
           </p>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              alignItems: 'center',
-              marginTop: 10,
-            }}
-          >
-            <label style={{ fontSize: 12.5, color: 'var(--ink)' }}>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <label
+              htmlFor="travel-return-date"
+              className="text-[12.5px] text-foreground"
+            >
               帰る日：{' '}
-              <input
+              <Input
+                id="travel-return-date"
                 type="date"
                 value={date}
                 min={min}
                 max={max}
                 onChange={(e) => setDate(e.target.value)}
-                style={{
-                  fontSize: 13,
-                  padding: '6px 8px',
-                  borderRadius: 8,
-                  border: '1px solid var(--line)',
-                  background: 'var(--surface-2)',
-                  color: 'var(--ink)',
-                }}
+                className="inline w-auto"
               />
             </label>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              className={pill}
               onClick={enter}
               disabled={busy || !date}
-              style={{ ...travelBtn, marginTop: 0, opacity: date ? 1 : 0.6 }}
             >
               旅行モードにする
-            </button>
+            </Button>
           </div>
         </>
       )}
       {msg ? (
-        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ink-2)' }}>
-          {msg}
-        </p>
+        <p className="mt-2 mb-0 text-xs text-muted-foreground">{msg}</p>
       ) : null}
     </div>
   );
 }
-
-const travelBtn: CSSProperties = {
-  appearance: 'none',
-  marginTop: 10,
-  border: '1px solid var(--line)',
-  cursor: 'pointer',
-  padding: '8px 14px',
-  borderRadius: 999,
-  fontWeight: 600,
-  fontSize: 13,
-  background: 'var(--surface-2)',
-  color: 'var(--ink)',
-};
 
 function addDays(d: Date, n: number): Date {
   const r = new Date(d);
@@ -466,25 +358,15 @@ function formatMd(iso: string): string {
  */
 function IntroduceButton() {
   return (
-    <Link
-      to="/"
-      search={{ intro: true }}
-      style={{
-        display: 'block',
-        textAlign: 'center',
-        marginTop: 8,
-        padding: '10px 16px',
-        borderRadius: 12,
-        fontWeight: 600,
-        fontSize: 14,
-        border: '1px solid var(--line)',
-        background: 'var(--surface-2)',
-        color: 'var(--ink)',
-        textDecoration: 'none',
-      }}
+    <Button
+      asChild
+      variant="secondary"
+      className="mt-2 h-auto w-full rounded-xl border border-border py-2.5 text-sm font-semibold"
     >
-      🌤️ アサトモを紹介する
-    </Link>
+      <Link to="/" search={{ intro: true }}>
+        🌤️ アサトモを紹介する
+      </Link>
+    </Button>
   );
 }
 
@@ -544,108 +426,48 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
 
   if (link)
     return (
-      <div style={cardBox}>
+      <div className={card}>
         {/* 遠くの人へ：リンクをコピーして送る（既存の経路）。 */}
-        <p
-          style={{
-            fontSize: 12,
-            color: 'var(--ink-2)',
-            lineHeight: 1.7,
-            margin: 0,
-          }}
-        >
-          <strong style={{ color: 'var(--ink)' }}>送るなら</strong>
+        <p className="m-0 text-xs leading-[1.7] text-muted-foreground">
+          <strong className="text-foreground">送るなら</strong>
           ：このリンクをコピーして、見守り合いたい相手に送ってください（7日で失効）。
         </p>
-        <input
+        <Input
           readOnly
           value={link}
           onFocus={(e) => e.currentTarget.select()}
-          style={{
-            width: '100%',
-            marginTop: 8,
-            padding: '8px 10px',
-            borderRadius: 8,
-            border: '1px solid var(--line)',
-            background: 'var(--surface-2)',
-            color: 'var(--ink)',
-            fontSize: 12,
-            boxSizing: 'border-box',
-          }}
+          className="mt-2 text-xs"
         />
-        <div
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}
-        >
-          <button
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
             type="button"
             onClick={copyInvite}
-            style={{
-              appearance: 'none',
-              border: 0,
-              cursor: 'pointer',
-              padding: '8px 14px',
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 13,
-              background: 'var(--accent)',
-              color: '#fff',
-            }}
+            className="h-auto rounded-[10px] px-3.5 py-2 text-[13px] font-semibold"
           >
             {copied ? 'コピーしました ✓' : 'リンクをコピー'}
-          </button>
+          </Button>
           {/* 一言添えて送りたい人向け（紹介文＋リンク）。相手が固い文面に戸惑わないよう。 */}
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={copyInviteRich}
-            style={{
-              appearance: 'none',
-              border: '1px solid var(--line)',
-              cursor: 'pointer',
-              padding: '8px 14px',
-              borderRadius: 10,
-              fontWeight: 600,
-              fontSize: 13,
-              background: 'var(--surface-2)',
-              color: 'var(--ink)',
-            }}
+            className="h-auto rounded-[10px] border border-border px-3.5 py-2 text-[13px] font-semibold"
           >
             {copiedRich ? 'コピーしました ✓' : '紹介文付きでコピー'}
-          </button>
+          </Button>
         </div>
 
         {/* 目の前の人へ：その場でカメラに読ませる。QR は使い切りトークンURLを
             画像化しただけ（別概念ではない）。保存・シェアは付けない＝対面以外の
             経路を増やさない（ADR-0005 再利用リンク却下／なふだ ADR-0013 と整合）。 */}
-        <div
-          style={{
-            marginTop: 14,
-            paddingTop: 14,
-            borderTop: '1px solid var(--line)',
-          }}
-        >
-          <p
-            style={{
-              fontSize: 12,
-              color: 'var(--ink-2)',
-              lineHeight: 1.7,
-              margin: 0,
-            }}
-          >
-            <strong style={{ color: 'var(--ink)' }}>目の前の人になら</strong>
+        <div className="mt-3.5 border-t border-border pt-3.5">
+          <p className="m-0 text-xs leading-[1.7] text-muted-foreground">
+            <strong className="text-foreground">目の前の人になら</strong>
             ：このQRコードを相手のカメラで読み取ってもらってください（読み取れないときは上のリンクを送ってください）。
           </p>
           {/* ダークモードでも反転せず白地・黒モジュールで固定。暗背景でも浮くよう
               白の角丸プレートで囲う（quiet zone だけに頼らない）。読み取り成功が命。 */}
-          <div
-            style={{
-              display: 'inline-block',
-              marginTop: 10,
-              padding: 12,
-              background: '#fff',
-              borderRadius: 12,
-              lineHeight: 0,
-            }}
-          >
+          <div className="mt-2.5 inline-block rounded-xl bg-white p-3 leading-0">
             <QRCodeSVG
               value={link}
               size={220}
@@ -659,48 +481,30 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
 
         {/* 発行後にこの表示を畳んで元の状態へ戻す手段（無いと行き止まりになる）。
             リンク自体はサーバー側で7日後に失効するので、ここは表示のクローズのみ。 */}
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setLink(null);
             setCopied(false);
             setCopiedRich(false);
           }}
-          style={{
-            appearance: 'none',
-            border: 0,
-            cursor: 'pointer',
-            marginTop: 14,
-            padding: '6px 4px',
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            background: 'none',
-          }}
+          className="mt-3.5 h-auto px-1 py-1.5 text-[13px] font-normal text-muted-foreground"
         >
           閉じる
-        </button>
+        </Button>
       </div>
     );
 
   return (
-    <button
+    <Button
       type="button"
+      variant="secondary"
       onClick={createInvite}
       disabled={busy}
-      style={{
-        appearance: 'none',
-        border: '1px solid var(--line)',
-        cursor: 'pointer',
-        width: '100%',
-        padding: '10px 16px',
-        borderRadius: 12,
-        fontWeight: 600,
-        fontSize: 14,
-        background: 'var(--surface-2)',
-        color: 'var(--ink)',
-      }}
+      className="h-auto w-full rounded-xl border border-border py-2.5 text-sm font-semibold"
     >
       🤝 見守り合いに誘う
-    </button>
+    </Button>
   );
 }
