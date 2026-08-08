@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { fetchMe } from '../server/functions';
 import { track } from '../web/analytics';
@@ -24,9 +25,9 @@ export const Route = createFileRoute('/_app/me')({
 // 指定して内容幅 560 を保つ（未移行タブの content-box 実測 560+padding と一致）。
 const wrap = 'mx-auto max-w-148 px-4 pt-3';
 
-// カード共通。旧 cardBox（角丸14・padding14・下marginn10・淡い影）と同一。
-const card =
-  'mb-2.5 rounded-[14px] bg-card p-3.5 shadow-[0_4px_16px_rgb(0_0_0/0.06)]';
+// /me は多数のカードを積むため、既定より密（角丸14・padding3.5）にする意図的な差。
+// 見た目の地色・影は Card 部品が持ち、ここでは密度の上書きだけを渡す（cn で後勝ち）。
+const card = 'mb-2.5 rounded-[14px] p-3.5';
 
 // ピル型ボタン（様子ボタン・旅行モードボタン）。旧 pill/travelBtn と同一の見た目。
 const pill =
@@ -105,7 +106,7 @@ function Me({
       {isSubject ? (
         <>
           {/* 1. 様子を伝える（最頻・最上部） */}
-          <div className={card}>
+          <Card className={card}>
             <p className="m-0 text-sm font-semibold text-foreground">
               <span aria-hidden="true" className="mr-1.5">
                 📣
@@ -149,11 +150,11 @@ function Me({
             {signalNotice ? (
               <p className="mt-2 mb-0 text-xs text-(--good)">{signalNotice}</p>
             ) : null}
-          </div>
+          </Card>
 
           {/* 3. あなたを見守ってくれる人（人数は常時／2人未満だけ警告。決定6）
                  主語を明示し「あなたが見守っている人」(=仲間タブ/逆向き)との一字違いの取り違えを防ぐ。 */}
-          <div className={card}>
+          <Card className={card}>
             <p className="m-0 text-sm text-foreground">
               <span aria-hidden="true" className="mr-1.5">
                 👥
@@ -175,7 +176,7 @@ function Me({
                 見守ってくれている人を確認・整理する →
               </Link>
             </p>
-          </div>
+          </Card>
 
           {/* 4. 旅行モード（見守りの一時休止。モバイルと機能を揃える） */}
           <TravelMode initialUntil={travelUntil} />
@@ -188,7 +189,7 @@ function Me({
       ) : (
         /* 見守ってくれる人が0人＝勧誘の空状態カードに差し替え（決定6） */
         <>
-          <div className={card}>
+          <Card className={card}>
             <p className="m-0 text-sm font-semibold text-foreground">
               あなたを見守ってくれる人は、まだいません。
             </p>
@@ -197,7 +198,7 @@ function Me({
             </p>
             <Invite onNotice={setNotice} />
             <IntroduceButton />
-          </div>
+          </Card>
           <p className="text-center text-xs">
             <Link
               to="/activity"
@@ -268,7 +269,7 @@ function TravelMode({ initialUntil }: { initialUntil: string | null }) {
   }
 
   return (
-    <div className={card}>
+    <Card className={card}>
       <p className="m-0 text-sm font-semibold text-foreground">
         <span aria-hidden="true" className="mr-1.5">
           🧳
@@ -328,7 +329,7 @@ function TravelMode({ initialUntil }: { initialUntil: string | null }) {
       {msg ? (
         <p className="mt-2 mb-0 text-xs text-muted-foreground">{msg}</p>
       ) : null}
-    </div>
+    </Card>
   );
 }
 
@@ -426,7 +427,7 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
 
   if (link)
     return (
-      <div className={card}>
+      <Card className={card}>
         {/* 遠くの人へ：リンクをコピーして送る（既存の経路）。 */}
         <p className="m-0 text-xs leading-[1.7] text-muted-foreground">
           <strong className="text-foreground">送るなら</strong>
@@ -493,7 +494,7 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
         >
           閉じる
         </Button>
-      </div>
+      </Card>
     );
 
   return (

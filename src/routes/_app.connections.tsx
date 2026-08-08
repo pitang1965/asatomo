@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
+import { Card } from '@/components/ui/card';
 import type { SubjectWatcher } from '../domain/queries';
 import { fetchConnectionsPage } from '../server/functions';
 import { RowMenu } from '../web/RowMenu';
@@ -22,10 +23,9 @@ export const Route = createFileRoute('/_app/connections')({
   component: ConnectionsPage,
 });
 
-// コンテンツ幅は全タブ共通。box-sizing:border-box のため外枠は旧 content-box の実測
-// （maxWidth560 + padding20×2 = 600px）に合わせて max-w-150。
-const card =
-  'mx-auto my-4 max-w-150 rounded-2xl bg-card p-5 shadow-(--shadow-sm)';
+// カードのレイアウト（見た目は Card 部品が持つ）。box-sizing:border-box のため外枠は
+// 旧 content-box の実測（maxWidth560 + padding20×2 = 600px）に合わせて max-w-150。
+const cardW = 'mx-auto my-4 max-w-150';
 
 function ConnectionsPage() {
   const data = Route.useLoaderData();
@@ -75,7 +75,7 @@ function Roster({ initial }: { initial: SubjectWatcher[] }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={card}>
+      <Card className={cardW}>
         <h1 className="m-0 text-[17px] text-foreground">
           あなたを見守ってくれている人
         </h1>
@@ -134,7 +134,7 @@ function Roster({ initial }: { initial: SubjectWatcher[] }) {
             })}
           </ul>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -142,7 +142,7 @@ function Roster({ initial }: { initial: SubjectWatcher[] }) {
 function Center({ title, body }: { title: string; body: string }) {
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
-      <div className={`${card} text-center`}>
+      <Card className={`${cardW} text-center`}>
         <h1 className="mb-3 text-lg text-foreground">{title}</h1>
         <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
@@ -152,7 +152,7 @@ function Center({ title, body }: { title: string; body: string }) {
             ← トップへ
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchMessagesPage } from '../server/functions';
@@ -26,11 +27,9 @@ export const Route = createFileRoute('/_app/messages')({
   component: MessagesPage,
 });
 
-// カード共通。box-sizing:border-box のため外枠は旧 content-box の実測（maxWidth560 +
-// padding20×2 = 600px）… ではなく、この画面はカードを wrap(560) の内側に置くため 560 幅で
-// フィットする（旧コメント参照）。standalone の Center も同じ 560 外枠にしたいので max-w-140。
-const card =
-  'mx-auto my-4 max-w-140 rounded-2xl bg-card p-5 shadow-[0_4px_20px_rgb(0_0_0/0.06)]';
+// カードのレイアウト（見た目は Card 部品が持つ）。この画面はカードを wrap(560) の内側に
+// 置くため 560 幅でフィットする。standalone の Center も同じ 560 外枠にしたいので max-w-140。
+const cardW = 'mx-auto my-4 max-w-140';
 
 // ラベル（旧 labelStyle）。
 const labelCls = 'mt-3.5 block text-xs font-semibold text-muted-foreground';
@@ -71,7 +70,7 @@ function MessagesPage() {
           合言葉を忘れると誰にも復元できないため、大切に保管してください。
         </p>
 
-        <div className={card}>
+        <Card className={cardW}>
           <label
             htmlFor="msg-master-pass"
             className="block text-xs font-semibold text-muted-foreground"
@@ -99,7 +98,7 @@ function MessagesPage() {
             読み返し・編集・保存に使います。保存すると、あなた自身もこのパスワードなしでは読み返せなくなります（運営者にも読めない仕組みのため）。
             宛先の合言葉（相手と共有するもの）とは別物です。誰にも教えない一生ものを1つ決めてください。
           </p>
-        </div>
+        </Card>
 
         <MessageList
           messages={data.messages}
@@ -119,7 +118,7 @@ function MessagesPage() {
 function Center({ title, body }: { title: string; body: string }) {
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
-      <div className={`${card} text-center`}>
+      <Card className={`${cardW} text-center`}>
         <h1 className="mb-3 text-lg text-foreground">{title}</h1>
         <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
@@ -129,7 +128,7 @@ function Center({ title, body }: { title: string; body: string }) {
             ← トップへ
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -155,11 +154,11 @@ function MessageList({
 
   if (messages.length === 0)
     return (
-      <div className={`${card} text-center`}>
+      <Card className={`${cardW} text-center`}>
         <p className="text-[13px] text-muted-foreground">
           まだ伝言はありません。下のフォームから作成できます。
         </p>
-      </div>
+      </Card>
     );
 
   return (
@@ -236,7 +235,7 @@ function MessageCard({
   }
 
   return (
-    <div className={card}>
+    <Card className={cardW}>
       <div className="text-xs text-(--ink-3)">
         {new Date(msg.createdAt).toLocaleString('ja-JP')} 作成 ・ 宛先:{' '}
         {recipientNames.length > 0 ? recipientNames.join('、') : '（未指定）'}
@@ -295,7 +294,7 @@ function MessageCard({
         </div>
       )}
       {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
-    </div>
+    </Card>
   );
 }
 
@@ -547,7 +546,7 @@ function CreateForm({
   }
 
   return (
-    <div className={card}>
+    <Card className={cardW}>
       <h2 className="m-0 text-base text-foreground">新しい伝言</h2>
 
       <label htmlFor="msg-label" className={labelCls}>
@@ -648,6 +647,6 @@ function CreateForm({
           ))}
         </ul>
       ) : null}
-    </div>
+    </Card>
   );
 }

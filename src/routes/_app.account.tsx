@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { fetchAccount } from '../server/functions';
 import { Avatar } from '../web/Avatar';
 import { authClient } from '../web/auth-client';
@@ -18,9 +19,9 @@ export const Route = createFileRoute('/_app/account')({
   component: AccountPage,
 });
 
-// カード共通。旧 card（角丸16・padding20・淡い影）と同一。box-sizing:border-box のため
-// 外枠は旧 content-box の実測（maxWidth480 + padding20×2 = 520px）に合わせて max-w-130。
-const card = 'mx-auto max-w-130 rounded-2xl bg-card p-5 shadow-(--shadow-sm)';
+// カードのレイアウト（見た目は Card 部品が持つ）。box-sizing:border-box のため外枠は
+// 旧 content-box の実測（maxWidth480 + padding20×2 = 520px）に合わせて max-w-130。
+const cardW = 'mx-auto max-w-130';
 
 function AccountPage() {
   const data = Route.useLoaderData();
@@ -71,7 +72,7 @@ function Account({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={`${card} my-4`}>
+      <Card className={`${cardW} my-4`}>
         {/* プロフィール要約 */}
         <div className="flex items-center gap-3.5">
           <Avatar name={userName} image={userImage} size={56} />
@@ -96,10 +97,10 @@ function Account({
         >
           {busy ? 'ログアウト中…' : 'ログアウト'}
         </Button>
-      </div>
+      </Card>
 
       {/* 削除は明確に区切って最下部へ。文言は率直に（ADR-0007。婉曲にしない）。 */}
-      <div className={`${card} mt-2 mb-4`}>
+      <Card className={`${cardW} mt-2 mb-4`}>
         <p className="m-0 text-xs leading-[1.8] text-muted-foreground">
           アサトモの利用をやめ、アカウントと保存したデータを完全に削除します。
         </p>
@@ -109,7 +110,7 @@ function Account({
         >
           アカウントを削除する
         </Link>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -117,7 +118,7 @@ function Account({
 function Center({ title, body }: { title: string; body: string }) {
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
-      <div className={`${card} text-center`}>
+      <Card className={`${cardW} text-center`}>
         <h1 className="mb-3 text-lg text-foreground">{title}</h1>
         <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
@@ -127,7 +128,7 @@ function Center({ title, body }: { title: string; body: string }) {
             ← トップへ
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   );
 }
