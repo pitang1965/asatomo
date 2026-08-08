@@ -1,5 +1,7 @@
+import { Badge } from '@/components/ui/badge';
 import type { DashboardRow } from '../domain/queries';
 import { recentActivityText } from '../domain/recent-activity';
+import { Avatar } from './Avatar';
 import { RowMenu } from './RowMenu';
 
 /**
@@ -64,30 +66,26 @@ function avatarColor(id: string): string {
 function StatusPill({ row, now }: { row: DashboardRow; now: Date }) {
   if (row.isAlert)
     return (
-      <span className="pill pill--warn">
-        <span className="pill__d" />
+      <Badge variant="warn" dot>
         要確認
-      </span>
+      </Badge>
     );
   if (row.travelUntil && row.travelUntil > now)
     return (
-      <span className="pill pill--travel">
-        <span className="pill__d" />
+      <Badge variant="travel" dot>
         旅行
-      </span>
+      </Badge>
     );
   if (row.currentPresence === 'sleeping')
     return (
-      <span className="pill pill--night">
-        <span className="pill__d" />
+      <Badge variant="night" dot>
         就寝中
-      </span>
+      </Badge>
     );
   return (
-    <span className="pill pill--good">
-      <span className="pill__d" />
+    <Badge variant="good" dot>
       元気そう
-    </span>
+    </Badge>
   );
 }
 
@@ -106,12 +104,11 @@ function SubjectCard({
       : recentActivityText(row.latestKind, row.latestAt, now);
   return (
     <div className="card">
-      <span
-        className="card__avatar"
-        style={{ background: avatarColor(row.subjectUserId) }}
-      >
-        {row.name.slice(0, 1)}
-      </span>
+      <Avatar
+        name={row.name}
+        color={avatarColor(row.subjectUserId)}
+        size={34}
+      />
       <div className="card__who">
         <div className="card__name">{row.name}</div>
         <div className="card__status">{statusText}</div>
