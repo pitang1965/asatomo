@@ -1,0 +1,84 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Shadcn/ui のトークン層。構成は nafuda と揃えつつ、値は asatomo の「夜明けパレット」
+ * （watch.css と同一の色）を Shadcn のセマンティック変数名にマッピングしてブランドを保持する。
+ * ダークは asatomo 既存の挙動に合わせ prefers-color-scheme で自動切替（nafuda の .dark クラス
+ * 方式とは意図的に異なる。asatomo にはテーマトグルが無いため）。
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-jp);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* ライト（夜明け・昼） */
+:root {
+  --radius: 0.625rem;
+  --background: #f4f7fb; /* --bg */
+  --foreground: #1f2733; /* --ink */
+  --card: #ffffff; /* --surface */
+  --card-foreground: #1f2733;
+  --popover: #ffffff;
+  --popover-foreground: #1f2733;
+  --primary: #e0912f; /* --accent（ブランドのアンバー） */
+  --primary-foreground: #2a1c00; /* アンバー上で可読な濃色 */
+  --secondary: #eef2f8; /* --surface-2 */
+  --secondary-foreground: #1f2733;
+  --muted: #eef2f8;
+  --muted-foreground: #55606f; /* --ink-2 */
+  /* Shadcn の --accent は「ホバー時のハイライト地」であり、ブランドの強調色ではない。
+     控えめな地色（surface-2）に割り当て、ブランド色は --primary に置く。 */
+  --accent: #eef2f8;
+  --accent-foreground: #1f2733;
+  --destructive: #c0392b;
+  --border: #e1e7f0; /* --line */
+  --input: #e1e7f0;
+  --ring: #e0912f; /* フォーカスリングはブランド色 */
+}
+
+/* ダーク（夜明け・夜） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #14171f;
+    --foreground: #eaeef5;
+    --card: #1c202b;
+    --card-foreground: #eaeef5;
+    --popover: #1c202b;
+    --popover-foreground: #eaeef5;
+    --primary: #e8a44c;
+    --primary-foreground: #14171f;
+    --secondary: #232838;
+    --secondary-foreground: #eaeef5;
+    --muted: #232838;
+    --muted-foreground: #a7b0bf;
+    --accent: #232838;
+    --accent-foreground: #eaeef5;
+    --destructive: #e06c5a;
+    --border: #2c3242;
+    --input: #2c3242;
+    --ring: #e8a44c;
+  }
+}

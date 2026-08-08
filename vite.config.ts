@@ -1,3 +1,5 @@
+import path from 'node:path';
+import tailwindcss from '@tailwindcss/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react from '@vitejs/plugin-react';
 import { config as loadDotenv } from 'dotenv';
@@ -16,7 +18,10 @@ loadDotenv({ path: '.env.local' });
  * テストは vitest.config.ts（プラグインなし）で分離しており、この設定を読まない。
  */
 export default defineConfig({
-  plugins: [tanstackStart(), react()],
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+  plugins: [tailwindcss(), tanstackStart(), react()],
   // 認証は BETTER_AUTH_URL（5173）とオリジン一致が必須。ポートが 5174 等へ
   // 逃げると Invalid origin でログインが黙って失敗するため、固定して即失敗させる。
   // host は IPv4 で待ち受ける（既定だと ::1 のみになり、adb reverse（IPv4）が届かない。
