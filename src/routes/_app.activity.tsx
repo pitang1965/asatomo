@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import type { SignalKind } from '../domain/monitoring';
 import {
@@ -104,9 +105,9 @@ function History({
                 <span className="text-sm font-semibold text-foreground">
                   {signalTrueLabel(e.kind)}
                   {i === 0 && isSubject ? (
-                    <span className="ml-2 text-[10px] font-semibold text-(--good)">
+                    <Badge variant="good" className="ml-2 text-[10px]">
                       見守り者に表示中
-                    </span>
+                    </Badge>
                   ) : null}
                 </span>
                 <span className="whitespace-nowrap text-xs text-muted-foreground">

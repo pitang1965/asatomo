@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -591,7 +592,9 @@ function CreateForm({
               />
               {c.displayName}
               {c.isWatcher ? (
-                <span className="text-[11px] text-(--ink-3)">（見守り者）</span>
+                <Badge variant="muted" className="text-[11px]">
+                  見守り者
+                </Badge>
               ) : null}
             </label>
             {c.id in recips ? (
