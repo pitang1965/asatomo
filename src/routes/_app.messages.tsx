@@ -1,5 +1,8 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { fetchMessagesPage } from '../server/functions';
 import { track } from '../web/analytics';
 import {
@@ -23,49 +26,21 @@ export const Route = createFileRoute('/_app/messages')({
   component: MessagesPage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-};
+// カード共通。box-sizing:border-box のため外枠は旧 content-box の実測（maxWidth560 +
+// padding20×2 = 600px）… ではなく、この画面はカードを wrap(560) の内側に置くため 560 幅で
+// フィットする（旧コメント参照）。standalone の Center も同じ 560 外枠にしたいので max-w-140。
+const card =
+  'mx-auto my-4 max-w-140 rounded-2xl bg-card p-5 shadow-[0_4px_20px_rgb(0_0_0/0.06)]';
 
-const card: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 16,
-  padding: 20,
-  maxWidth: 560,
-  margin: '16px auto',
-  boxShadow: '0 4px 20px rgb(0 0 0 / 0.06)',
-};
+// ラベル（旧 labelStyle）。
+const labelCls = 'mt-3.5 block text-xs font-semibold text-muted-foreground';
 
-// 全内容を包む枠。他タブ（/me）と同じく 560 幅＋左右 16px の余白にし、カードの実効幅を揃える
-// （カード自身は maxWidth 560 だが、この枠の内側 528 に収まるので他タブと同じ見た目になる）。
-const wrap: CSSProperties = {
-  maxWidth: 560,
-  margin: '0 auto',
-  padding: '0 16px',
-};
-
-const input: CSSProperties = {
-  font: 'inherit',
-  fontSize: 14,
-  width: '100%',
-  boxSizing: 'border-box',
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid var(--line)',
-  background: 'var(--surface-2)',
-  color: 'var(--ink)',
-  marginTop: 6,
-};
-
-const labelStyle: CSSProperties = {
-  display: 'block',
-  fontSize: 12,
-  fontWeight: 600,
-  color: 'var(--ink-2)',
-  marginTop: 14,
-};
+// 旧 .btn（全幅・角丸13・padding13/16・14.5px・太字）を踏襲したボタン。
+const btnBase = 'h-auto rounded-[13px] py-3 text-[14.5px] font-semibold';
+// btn--calm＝落ち着いた緑（--good）+白文字（警告色は使わない）。variant を className で上書き。
+const calmBtn = `${btnBase} bg-(--good) text-white hover:bg-(--good)/90`;
+// btn--ghost＝surface-2 + ボーダー（secondary variant がそのまま該当）。
+const ghostBtn = `${btnBase} border border-border`;
 
 function MessagesPage() {
   const data = Route.useLoaderData();
@@ -85,37 +60,26 @@ function MessagesPage() {
     );
 
   return (
-    <div style={page}>
+    <div className="min-h-screen bg-background">
       {/* 見出し・説明・カードすべてを 560 の枠に収め、他タブとカードの実効幅を揃える。 */}
-      <div style={wrap}>
-        <h1
-          style={{
-            textAlign: 'center',
-            fontSize: 20,
-            color: 'var(--ink)',
-            margin: '8px 0 0',
-            paddingTop: 12,
-          }}
-        >
+      <div className="mx-auto max-w-148 px-4">
+        <h1 className="mt-2 pt-3 text-center text-xl text-foreground">
           最後の伝言
         </h1>
-        <p
-          style={{
-            textAlign: 'center',
-            fontSize: 12,
-            color: 'var(--ink-3)',
-            margin: '6px 0 0',
-          }}
-        >
+        <p className="mt-1.5 text-center text-xs text-(--ink-3)">
           本文はこの端末の中で暗号化されます。運営者にも読めません。
           合言葉を忘れると誰にも復元できないため、大切に保管してください。
         </p>
 
-        <div style={card}>
-          <label style={{ ...labelStyle, marginTop: 0 }}>
+        <div className={card}>
+          <label
+            htmlFor="msg-master-pass"
+            className="block text-xs font-semibold text-muted-foreground"
+          >
             編集用パスワード（全伝言共通・あなただけの秘密）
-            <input
-              style={input}
+            <Input
+              id="msg-master-pass"
+              className="mt-1.5"
               type={hidePass ? 'password' : 'text'}
               autoComplete="off"
               placeholder="例: 自分しか知らない思い出の言葉（4文字以上）"
@@ -123,16 +87,7 @@ function MessagesPage() {
               onChange={(e) => setMasterPass(e.target.value)}
             />
           </label>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12,
-              color: 'var(--ink-2)',
-              marginTop: 8,
-            }}
-          >
+          <label className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <input
               type="checkbox"
               checked={hidePass}
@@ -140,7 +95,7 @@ function MessagesPage() {
             />
             パスワードや合言葉を伏せ字にする（人に画面を見られたくないとき）
           </label>
-          <p style={{ fontSize: 11, color: 'var(--ink-3)', margin: '8px 0 0' }}>
+          <p className="mt-2 text-[11px] text-(--ink-3)">
             読み返し・編集・保存に使います。保存すると、あなた自身もこのパスワードなしでは読み返せなくなります（運営者にも読めない仕組みのため）。
             宛先の合言葉（相手と共有するもの）とは別物です。誰にも教えない一生ものを1つ決めてください。
           </p>
@@ -163,18 +118,14 @@ function MessagesPage() {
 
 function Center({ title, body }: { title: string; body: string }) {
   return (
-    <div
-      style={{ ...page, display: 'grid', placeItems: 'center', padding: 24 }}
-    >
-      <div style={{ ...card, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)', marginBottom: 12 }}>
-          {title}
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <div className={`${card} text-center`}>
+        <h1 className="mb-3 text-lg text-foreground">{title}</h1>
+        <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
         </p>
-        <p style={{ marginTop: 16, fontSize: 13 }}>
-          <Link to="/" style={{ color: 'var(--accent)' }}>
+        <p className="mt-4 text-[13px]">
+          <Link to="/" className="text-primary hover:underline">
             ← トップへ
           </Link>
         </p>
@@ -204,8 +155,8 @@ function MessageList({
 
   if (messages.length === 0)
     return (
-      <div style={{ ...card, textAlign: 'center' }}>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+      <div className={`${card} text-center`}>
+        <p className="text-[13px] text-muted-foreground">
           まだ伝言はありません。下のフォームから作成できます。
         </p>
       </div>
@@ -285,26 +236,18 @@ function MessageCard({
   }
 
   return (
-    <div style={card}>
-      <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+    <div className={card}>
+      <div className="text-xs text-(--ink-3)">
         {new Date(msg.createdAt).toLocaleString('ja-JP')} 作成 ・ 宛先:{' '}
         {recipientNames.length > 0 ? recipientNames.join('、') : '（未指定）'}
       </div>
 
       {opened ? (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontWeight: 700, color: 'var(--ink)' }}>
+        <div className="mt-3">
+          <div className="font-bold text-foreground">
             {opened.label || '（見出しなし）'}
           </div>
-          <p
-            style={{
-              whiteSpace: 'pre-wrap',
-              fontSize: 14,
-              color: 'var(--ink)',
-              lineHeight: 1.9,
-              marginTop: 8,
-            }}
-          >
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-[1.9] text-foreground">
             {opened.body}
           </p>
           <RecipientEditor
@@ -313,47 +256,45 @@ function MessageCard({
             connections={connections}
             onSaved={onChanged}
           />
-          <button
+          <Button
             type="button"
-            className="btn btn--ghost"
-            style={{ marginTop: 12 }}
+            variant="secondary"
+            className={`${ghostBtn} mt-3 w-full`}
             onClick={() => setOpened(null)}
           >
             閉じる
-          </button>
+          </Button>
         </div>
       ) : (
-        <div style={{ marginTop: 10 }}>
+        <div className="mt-2.5">
           {masterPass.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: 0 }}>
+            <p className="m-0 text-xs text-(--ink-3)">
               開くには、ページ上部の「編集用パスワード」を入力してください。
             </p>
           ) : null}
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
+          <div className="mt-2 flex gap-2">
+            <Button
               type="button"
-              className="btn btn--calm"
+              variant="secondary"
+              className={`${calmBtn} flex-1`}
               disabled={busy || masterPass.length === 0}
               onClick={open}
             >
               開く
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn--ghost"
+              variant="secondary"
+              className={`${ghostBtn} flex-1`}
               disabled={busy}
               onClick={remove}
             >
               削除
-            </button>
+            </Button>
           </div>
         </div>
       )}
-      {error ? (
-        <p style={{ fontSize: 12, color: 'var(--bad, #b14)', marginTop: 8 }}>
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -429,37 +370,22 @@ function RecipientEditor({
 
   if (!editing)
     return (
-      <button
+      <Button
         type="button"
-        className="btn btn--ghost"
-        style={{ marginTop: 12 }}
+        variant="secondary"
+        className={`${ghostBtn} mt-3 w-full`}
         onClick={() => setEditing(true)}
       >
         宛先を編集
-      </button>
+      </Button>
     );
 
   return (
-    <div
-      style={{
-        marginTop: 12,
-        padding: 12,
-        borderRadius: 12,
-        border: '1px solid var(--line)',
-      }}
-    >
-      <div style={labelStyle}>宛先（チェックを外すと届かなくなります）</div>
+    <div className="mt-3 rounded-xl border border-border p-3">
+      <div className={labelCls}>宛先（チェックを外すと届かなくなります）</div>
       {connections.map((c) => (
-        <div key={c.id} style={{ marginTop: 8 }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 14,
-              color: 'var(--ink)',
-            }}
-          >
+        <div key={c.id} className="mt-2">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={c.id in sel}
@@ -467,14 +393,14 @@ function RecipientEditor({
             />
             {c.displayName}
             {existing.has(c.id) && c.id in sel ? (
-              <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+              <span className="text-[11px] text-(--ink-3)">
                 （設定済みの合言葉のまま）
               </span>
             ) : null}
           </label>
           {c.id in sel && sel[c.id] !== null ? (
-            <input
-              style={{ ...input, marginLeft: 26, width: 'calc(100% - 26px)' }}
+            <Input
+              className="mt-1.5 ml-6.5 w-[calc(100%-26px)]"
               type="text"
               autoComplete="off"
               placeholder="合言葉＝答え（例: インコのピーコ・4文字以上）"
@@ -486,26 +412,26 @@ function RecipientEditor({
           ) : null}
         </div>
       ))}
-      {error ? (
-        <p style={{ fontSize: 12, color: 'var(--bad, #b14)' }}>{error}</p>
-      ) : null}
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      <div className="mt-3 flex gap-2">
+        <Button
           type="button"
-          className="btn btn--calm"
+          variant="secondary"
+          className={`${calmBtn} flex-1`}
           disabled={!canSave}
           onClick={save}
         >
           宛先を保存
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn--ghost"
+          variant="secondary"
+          className={`${ghostBtn} flex-1`}
           disabled={busy}
           onClick={() => setEditing(false)}
         >
           やめる
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -621,52 +547,44 @@ function CreateForm({
   }
 
   return (
-    <div style={card}>
-      <h2 style={{ fontSize: 16, color: 'var(--ink)', margin: 0 }}>
-        新しい伝言
-      </h2>
+    <div className={card}>
+      <h2 className="m-0 text-base text-foreground">新しい伝言</h2>
 
-      <label style={labelStyle}>
+      <label htmlFor="msg-label" className={labelCls}>
         見出し（任意・これも暗号化されます）
-        <input
-          style={input}
+        <Input
+          id="msg-label"
+          className="mt-1.5"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="例: みなみへ"
         />
       </label>
 
-      <label style={labelStyle}>
+      <label htmlFor="msg-body" className={labelCls}>
         本文
-        <textarea
-          style={{ ...input, minHeight: 120, resize: 'vertical' }}
+        <Textarea
+          id="msg-body"
+          className="mt-1.5 min-h-30 resize-y"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="伝えたいことを、そのまま。"
         />
       </label>
 
-      <div style={labelStyle}>宛先（受取人）と、それぞれの合言葉</div>
-      <p style={{ fontSize: 11, color: 'var(--ink-3)', margin: '4px 0 0' }}>
+      <div className={labelCls}>宛先（受取人）と、それぞれの合言葉</div>
+      <p className="mt-1 text-[11px] text-(--ink-3)">
         合言葉は、その人が伝言を開けるための鍵です。生前に直接伝えておいてください。
         人ごとに内容を変えたいときは、宛先を分けて複数の伝言を作れます。
       </p>
       {connections.length === 0 ? (
-        <p style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+        <p className="text-xs text-(--ink-3)">
           つながりがまだありません。宛先なしでも保存できます（あとから指定できます）。
         </p>
       ) : (
         connections.map((c) => (
-          <div key={c.id} style={{ marginTop: 8 }}>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 14,
-                color: 'var(--ink)',
-              }}
-            >
+          <div key={c.id} className="mt-2">
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={c.id in recips}
@@ -674,15 +592,13 @@ function CreateForm({
               />
               {c.displayName}
               {c.isWatcher ? (
-                <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>
-                  （見守り者）
-                </span>
+                <span className="text-[11px] text-(--ink-3)">（見守り者）</span>
               ) : null}
             </label>
             {c.id in recips ? (
-              <div style={{ marginLeft: 26 }}>
-                <input
-                  style={input}
+              <div className="ml-6.5">
+                <Input
+                  className="mt-1.5"
                   type={hidePass ? 'password' : 'text'}
                   autoComplete="off"
                   placeholder="合言葉＝答え（例: インコのピーコ・4文字以上）"
@@ -691,8 +607,8 @@ function CreateForm({
                     setRecips((r) => ({ ...r, [c.id]: e.target.value }))
                   }
                 />
-                <input
-                  style={input}
+                <Input
+                  className="mt-1.5"
                   type="text"
                   placeholder="ヒント＝質問と形式例（例: 最初に飼った鳥の種類と名前は？ 例：カラスのガーちゃん）"
                   value={hints[c.id] ?? ''}
@@ -706,38 +622,27 @@ function CreateForm({
         ))
       )}
 
-      <p style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 12 }}>
+      <p className="mt-3 text-[11px] text-(--ink-3)">
         合言葉（答え）は保存されません。口頭で伝えるか、自宅の秘密の場所に紙で残すことをおすすめします。
         ヒント（質問）は平文で保存され、開示のとき受取人に添えられます。
         合言葉は1文字でも違うと開けないため、ヒントに答えの形式をダミー例で添えると
         （例：カラスのガーちゃん）、受取人が表記に迷いません。
       </p>
 
-      {error ? (
-        <p style={{ fontSize: 12, color: 'var(--bad, #b14)' }}>{error}</p>
-      ) : null}
-      {notice ? (
-        <p style={{ fontSize: 12, color: 'var(--good)' }}>{notice}</p>
-      ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {notice ? <p className="text-xs text-(--good)">{notice}</p> : null}
 
-      <button
+      <Button
         type="button"
-        className="btn btn--calm"
-        style={{ width: '100%', marginTop: 12 }}
+        variant="secondary"
+        className={`${calmBtn} mt-3 w-full`}
         disabled={!canSubmit}
         onClick={submit}
       >
         暗号化して保存
-      </button>
+      </Button>
       {!canSubmit && !busy && unmet.length > 0 ? (
-        <ul
-          style={{
-            fontSize: 11,
-            color: 'var(--ink-3)',
-            margin: '8px 0 0',
-            paddingLeft: 18,
-          }}
-        >
+        <ul className="mt-2 list-disc pl-4.5 text-[11px] text-(--ink-3)">
           {unmet.map((u) => (
             <li key={u}>{u}</li>
           ))}
