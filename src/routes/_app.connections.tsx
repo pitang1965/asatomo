@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
 import type { SubjectWatcher } from '../domain/queries';
 import { fetchConnectionsPage } from '../server/functions';
 import { RowMenu } from '../web/RowMenu';
@@ -22,21 +22,10 @@ export const Route = createFileRoute('/_app/connections')({
   component: ConnectionsPage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-};
-
-// コンテンツ幅は全タブ共通の 560（下タブ切り替えで幅がジャンプしないよう統一）。
-const card: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 16,
-  padding: 20,
-  maxWidth: 560,
-  margin: '16px auto',
-  boxShadow: 'var(--shadow-sm)',
-};
+// コンテンツ幅は全タブ共通。box-sizing:border-box のため外枠は旧 content-box の実測
+// （maxWidth560 + padding20×2 = 600px）に合わせて max-w-150。
+const card =
+  'mx-auto my-4 max-w-150 rounded-2xl bg-card p-5 shadow-(--shadow-sm)';
 
 function ConnectionsPage() {
   const data = Route.useLoaderData();
@@ -85,86 +74,39 @@ function Roster({ initial }: { initial: SubjectWatcher[] }) {
   }
 
   return (
-    <div style={page}>
-      <div style={card}>
-        <h1 style={{ fontSize: 17, color: 'var(--ink)', margin: 0 }}>
+    <div className="min-h-screen bg-background">
+      <div className={card}>
+        <h1 className="m-0 text-[17px] text-foreground">
           あなたを見守ってくれている人
         </h1>
-        <p
-          style={{
-            fontSize: 12,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-            margin: '8px 0 0',
-          }}
-        >
+        <p className="mt-2 mb-0 text-xs leading-[1.8] text-muted-foreground">
           いま、あなたの「元気」を受け取ってくれている人です。お願いをやめると、
           その人にはあなたの様子が届かなくなります。
         </p>
 
         {notice ? (
-          <p
-            style={{
-              margin: '14px 0 0',
-              fontSize: 13,
-              color: 'var(--ink)',
-              background: 'var(--good-soft)',
-              borderRadius: 10,
-              padding: '10px 12px',
-            }}
-          >
+          <p className="mt-3.5 mb-0 rounded-[10px] bg-(--good-soft) px-3 py-2.5 text-[13px] text-foreground">
             {notice}
           </p>
         ) : null}
 
         {watchers.length === 0 ? (
-          <p
-            style={{
-              margin: '16px 0 0',
-              fontSize: 13,
-              color: 'var(--ink-2)',
-              lineHeight: 1.8,
-            }}
-          >
+          <p className="mt-4 mb-0 text-[13px] leading-[1.8] text-muted-foreground">
             まだ、あなたを見守ってくれている人はいません。
             <br />
             トップの「見守り合いに誘う」から声をかけてみましょう。
           </p>
         ) : (
-          <ul
-            style={{
-              listStyle: 'none',
-              margin: '14px 0 0',
-              padding: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
+          <ul className="mt-3.5 mb-0 flex list-none flex-col gap-2.5 p-0">
             {watchers.map((w) => {
               // その1人が「生存」で、生存がちょうど2人なら、外すと開示ラインを割る。
               const willLock = w.isLiving && livingCount === 2;
               return (
                 <li
                   key={w.connectionId}
-                  style={{
-                    border: '1px solid var(--line)',
-                    borderRadius: 12,
-                    padding: '8px 8px 8px 12px',
-                    background: 'var(--surface-2)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 10,
-                  }}
+                  className="flex items-center justify-between gap-2.5 rounded-xl border border-border bg-secondary py-2 pr-2 pl-3"
                 >
-                  <span
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: 'var(--ink)',
-                    }}
-                  >
+                  <span className="text-sm font-semibold text-foreground">
                     {w.displayName}
                   </span>
                   {/* 稀な操作なので⋮に畳む（grill フィードバック）。開示ラインを割る時だけ警告（決定B）。 */}
@@ -175,15 +117,7 @@ function Roster({ initial }: { initial: SubjectWatcher[] }) {
                     onConfirm={() => stopWatching(w)}
                     confirmBody={
                       willLock ? (
-                        <span
-                          style={{
-                            display: 'block',
-                            color: 'var(--ink)',
-                            background: 'var(--warn-soft)',
-                            borderRadius: 10,
-                            padding: '10px 12px',
-                          }}
-                        >
+                        <span className="block rounded-[10px] bg-(--warn-soft) px-3 py-2.5 text-foreground">
                           {w.displayName}さんへの見守りのお願いをやめると、
                           見守ってくれる人が少なくなり、そのままだと、あなたに
                           もしものことがあっても
@@ -207,23 +141,14 @@ function Roster({ initial }: { initial: SubjectWatcher[] }) {
 
 function Center({ title, body }: { title: string; body: string }) {
   return (
-    <div
-      style={{
-        ...page,
-        display: 'grid',
-        placeItems: 'center',
-        padding: 24,
-      }}
-    >
-      <div style={{ ...card, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)', marginBottom: 12 }}>
-          {title}
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <div className={`${card} text-center`}>
+        <h1 className="mb-3 text-lg text-foreground">{title}</h1>
+        <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
         </p>
-        <p style={{ marginTop: 20, fontSize: 13 }}>
-          <Link to="/" style={{ color: 'var(--accent)' }}>
+        <p className="mt-5 text-[13px]">
+          <Link to="/" className="text-primary hover:underline">
             ← トップへ
           </Link>
         </p>

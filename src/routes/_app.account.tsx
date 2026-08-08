@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { fetchAccount } from '../server/functions';
 import { Avatar } from '../web/Avatar';
 import { authClient } from '../web/auth-client';
@@ -17,20 +18,9 @@ export const Route = createFileRoute('/_app/account')({
   component: AccountPage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-};
-
-const card: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 16,
-  padding: 20,
-  maxWidth: 480,
-  margin: '16px auto',
-  boxShadow: 'var(--shadow-sm)',
-};
+// カード共通。旧 card（角丸16・padding20・淡い影）と同一。box-sizing:border-box のため
+// 外枠は旧 content-box の実測（maxWidth480 + padding20×2 = 520px）に合わせて max-w-130。
+const card = 'mx-auto max-w-130 rounded-2xl bg-card p-5 shadow-(--shadow-sm)';
 
 function AccountPage() {
   const data = Route.useLoaderData();
@@ -80,92 +70,42 @@ function Account({
   }
 
   return (
-    <div style={page}>
-      <div style={card}>
+    <div className="min-h-screen bg-background">
+      <div className={`${card} my-4`}>
         {/* プロフィール要約 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="flex items-center gap-3.5">
           <Avatar name={userName} image={userImage} size={56} />
-          <div style={{ minWidth: 0 }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 16,
-                fontWeight: 700,
-                color: 'var(--ink)',
-              }}
-            >
+          <div className="min-w-0">
+            <p className="m-0 text-base font-bold text-foreground">
               {userName}
             </p>
-            <p
-              style={{
-                margin: '2px 0 0',
-                fontSize: 12,
-                color: 'var(--ink-2)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
+            <p className="mt-0.5 mb-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
               {userEmail}
             </p>
           </div>
         </div>
 
-        <hr
-          style={{
-            border: 0,
-            borderTop: '1px solid var(--line)',
-            margin: '20px 0',
-          }}
-        />
+        <hr className="my-5 border-0 border-t border-border" />
 
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={logout}
           disabled={busy}
-          style={{
-            appearance: 'none',
-            border: '1px solid var(--line)',
-            cursor: 'pointer',
-            width: '100%',
-            padding: '12px 16px',
-            borderRadius: 12,
-            fontWeight: 600,
-            fontSize: 14,
-            background: 'var(--surface-2)',
-            color: 'var(--ink)',
-          }}
+          className="h-auto w-full rounded-xl border border-border py-3 text-sm font-semibold"
         >
           {busy ? 'ログアウト中…' : 'ログアウト'}
-        </button>
+        </Button>
       </div>
 
       {/* 削除は明確に区切って最下部へ。文言は率直に（ADR-0007。婉曲にしない）。 */}
-      <div style={{ ...card, marginTop: 8 }}>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 12,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-          }}
-        >
+      <div className={`${card} mt-2 mb-4`}>
+        <p className="m-0 text-xs leading-[1.8] text-muted-foreground">
           アサトモの利用をやめ、アカウントと保存したデータを完全に削除します。
         </p>
         <Link
           to="/account/delete"
-          style={{
-            display: 'block',
-            marginTop: 12,
-            textAlign: 'center',
-            padding: '12px 16px',
-            borderRadius: 12,
-            fontWeight: 600,
-            fontSize: 14,
-            border: '1px solid var(--danger)',
-            color: 'var(--danger)',
-            textDecoration: 'none',
-          }}
+          className="mt-3 block rounded-xl border border-(--danger) px-4 py-3 text-center text-sm font-semibold text-(--danger)"
         >
           アカウントを削除する
         </Link>
@@ -176,18 +116,14 @@ function Account({
 
 function Center({ title, body }: { title: string; body: string }) {
   return (
-    <div
-      style={{ ...page, display: 'grid', placeItems: 'center', padding: 24 }}
-    >
-      <div style={{ ...card, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)', marginBottom: 12 }}>
-          {title}
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <div className={`${card} text-center`}>
+        <h1 className="mb-3 text-lg text-foreground">{title}</h1>
+        <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
         </p>
-        <p style={{ marginTop: 20, fontSize: 13 }}>
-          <Link to="/" style={{ color: 'var(--accent)' }}>
+        <p className="mt-5 text-[13px]">
+          <Link to="/" className="text-primary hover:underline">
             ← トップへ
           </Link>
         </p>

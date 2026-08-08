@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import type { CSSProperties } from 'react';
 import type { SignalKind } from '../domain/monitoring';
 import {
   absoluteJa,
@@ -24,21 +23,10 @@ export const Route = createFileRoute('/_app/activity')({
   component: ActivityPage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-};
-
-// コンテンツ幅は全タブ共通の 560（下タブ切り替えで幅がジャンプしないよう統一）。
-const card: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 16,
-  padding: 20,
-  maxWidth: 560,
-  margin: '16px auto',
-  boxShadow: 'var(--shadow-sm)',
-};
+// コンテンツ幅は全タブ共通。box-sizing:border-box のため外枠は旧 content-box の実測
+// （maxWidth560 + padding20×2 = 600px）に合わせて max-w-150。
+const card =
+  'mx-auto my-4 max-w-150 rounded-2xl bg-card p-5 shadow-(--shadow-sm)';
 
 function ActivityPage() {
   const data = Route.useLoaderData();
@@ -76,19 +64,10 @@ function History({
   const latest = entries[0] ?? null;
 
   return (
-    <div style={page}>
-      <div style={card}>
-        <h1 style={{ fontSize: 17, color: 'var(--ink)', margin: 0 }}>
-          あなたの記録
-        </h1>
-        <p
-          style={{
-            fontSize: 12,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-            margin: '8px 0 0',
-          }}
-        >
+    <div className="min-h-screen bg-background">
+      <div className={card}>
+        <h1 className="m-0 text-[17px] text-foreground">あなたの記録</h1>
+        <p className="mt-2 mb-0 text-xs leading-[1.8] text-muted-foreground">
           {isSubject
             ? 'アサトモが記録している、あなたの「元気」の一覧です。見守ってくれている人に見えるのは、いちばん上の最新の1件だけです。'
             : 'アサトモが記録している、あなたの「元気」の一覧です。いまは見守ってくれる人がいないので、この記録はまだ誰にも届いていません。'}
@@ -96,109 +75,41 @@ function History({
 
         {/* 見守り者にどう見えるかの対比は、最新1件にだけ添える（相手に見えるのは最新1件のみ）。 */}
         {isSubject && latest ? (
-          <div
-            style={{
-              margin: '14px 0 0',
-              background: 'var(--good-soft)',
-              borderRadius: 10,
-              padding: '10px 12px',
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                fontSize: 12,
-                color: 'var(--ink-2)',
-                lineHeight: 1.7,
-              }}
-            >
+          <div className="mt-3.5 rounded-[10px] bg-(--good-soft) px-3 py-2.5">
+            <p className="m-0 text-xs leading-[1.7] text-muted-foreground">
               いま見守り者に見えているのは、この最新の1件だけです：
             </p>
-            <p
-              style={{
-                margin: '4px 0 0',
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--ink)',
-              }}
-            >
+            <p className="mt-1 mb-0 text-sm font-semibold text-foreground">
               「{recentActivityText(latest.kind, latest.occurredAt, now)}」
             </p>
-            <p
-              style={{
-                margin: '6px 0 0',
-                fontSize: 11,
-                color: 'var(--ink-2)',
-                lineHeight: 1.7,
-              }}
-            >
+            <p className="mt-1.5 mb-0 text-[11px] leading-[1.7] text-muted-foreground">
               時刻はぼかされ、相対的に表示されます（「いってきます」は「元気にしていました」とだけ伝わります）。
             </p>
           </div>
         ) : null}
 
         {entries.length === 0 ? (
-          <p
-            style={{
-              margin: '16px 0 0',
-              fontSize: 13,
-              color: 'var(--ink-2)',
-              lineHeight: 1.8,
-            }}
-          >
+          <p className="mt-4 mb-0 text-[13px] leading-[1.8] text-muted-foreground">
             まだ記録がありません。
             <br />
             アプリや見守りWebを使うと、ここに「元気」が残っていきます。
           </p>
         ) : (
-          <ul
-            style={{
-              listStyle: 'none',
-              margin: '14px 0 0',
-              padding: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
+          <ul className="mt-3.5 mb-0 flex list-none flex-col gap-2 p-0">
             {entries.map((e, i) => (
               <li
                 key={e.id}
-                style={{
-                  border: '1px solid var(--line)',
-                  borderRadius: 12,
-                  padding: '10px 12px',
-                  background: 'var(--surface-2)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 10,
-                }}
+                className="flex items-center justify-between gap-2.5 rounded-xl border border-border bg-secondary px-3 py-2.5"
               >
-                <span
-                  style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}
-                >
+                <span className="text-sm font-semibold text-foreground">
                   {signalTrueLabel(e.kind)}
                   {i === 0 && isSubject ? (
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: 'var(--good)',
-                      }}
-                    >
+                    <span className="ml-2 text-[10px] font-semibold text-(--good)">
                       見守り者に表示中
                     </span>
                   ) : null}
                 </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--ink-2)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <span className="whitespace-nowrap text-xs text-muted-foreground">
                   {absoluteJa(e.occurredAt)}
                 </span>
               </li>
@@ -212,18 +123,14 @@ function History({
 
 function Center({ title, body }: { title: string; body: string }) {
   return (
-    <div
-      style={{ ...page, display: 'grid', placeItems: 'center', padding: 24 }}
-    >
-      <div style={{ ...card, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)', marginBottom: 12 }}>
-          {title}
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <div className={`${card} text-center`}>
+        <h1 className="mb-3 text-lg text-foreground">{title}</h1>
+        <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
         </p>
-        <p style={{ marginTop: 20, fontSize: 13 }}>
-          <Link to="/" style={{ color: 'var(--accent)' }}>
+        <p className="mt-5 text-[13px]">
+          <Link to="/" className="text-primary hover:underline">
             ← トップへ
           </Link>
         </p>
