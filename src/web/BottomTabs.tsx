@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import type { CSSProperties, ReactElement, SVGProps } from 'react';
+import type { ReactElement, SVGProps } from 'react';
+import { cn } from '@/lib/utils';
 import type { TabId } from './nav';
 
 /**
@@ -74,23 +75,12 @@ const ITEMS: {
   { tab: 'messages', to: '/messages', label: '伝言', Icon: MessagesIcon },
 ];
 
-const bar: CSSProperties = {
-  position: 'fixed',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  zIndex: 30,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-  background: 'var(--surface)',
-  borderTop: '1px solid var(--line)',
-  paddingBottom: 'env(safe-area-inset-bottom)',
-  boxShadow: '0 -4px 16px rgb(0 0 0 / 0.05)',
-};
-
 export function BottomTabs({ active }: { active: TabId }) {
   return (
-    <nav style={bar} aria-label="主要ナビゲーション">
+    <nav
+      aria-label="主要ナビゲーション"
+      className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgb(0_0_0/0.05)]"
+    >
       {ITEMS.map(({ tab, to, label, Icon }) => {
         const on = tab === active;
         return (
@@ -98,20 +88,13 @@ export function BottomTabs({ active }: { active: TabId }) {
             key={tab}
             to={to}
             aria-current={on ? 'page' : undefined}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              padding: '9px 4px',
-              textDecoration: 'none',
-              color: on ? 'var(--accent)' : 'var(--ink-3)',
-              fontWeight: on ? 700 : 600,
-            }}
+            className={cn(
+              'flex flex-col items-center justify-center gap-0.75 px-1 py-2.25 no-underline',
+              on ? 'font-bold text-primary' : 'font-semibold text-(--ink-3)',
+            )}
           >
             <Icon />
-            <span style={{ fontSize: 11 }}>{label}</span>
+            <span className="text-[11px]">{label}</span>
           </Link>
         );
       })}

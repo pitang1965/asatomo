@@ -43,10 +43,10 @@ function AppLayout() {
     if (user?.id) identify(user.id);
   }, [user?.id]);
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div className="min-h-screen bg-background">
       <BrandHeader />
       <PwaInstallBanner />
-      <main style={{ paddingBottom: tab ? 76 : 0 }}>
+      <main className={tab ? 'pb-19' : ''}>
         <Outlet />
       </main>
       {tab ? <BottomTabs active={tab} /> : null}

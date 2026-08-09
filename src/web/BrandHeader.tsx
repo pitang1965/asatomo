@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
 
 /**
  * ログイン後の共通ブランドヘッダー（ADR-0008 §実装決定・決定5/6）。
@@ -11,41 +11,17 @@ import { type CSSProperties, useState } from 'react';
  *     「アカウント」＋（区切り線の下に）利用規約・プライバシーポリシー。
  *     ログアウトはメニューに直接置かず、アカウント画面に集約する。
  */
-const itemStyle: CSSProperties = {
-  display: 'block',
-  padding: '10px 12px',
-  borderRadius: 8,
-  fontSize: 14,
-  color: 'var(--ink)',
-  textDecoration: 'none',
-};
-
-const barStyle: CSSProperties = {
-  position: 'sticky',
-  top: 0,
-  zIndex: 25,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '10px 16px',
-  background: 'var(--bg)',
-  borderBottom: '1px solid var(--line)',
-};
+const itemCls =
+  'block rounded-lg px-3 py-2.5 text-sm text-foreground no-underline';
 
 export function BrandHeader() {
   const [open, setOpen] = useState(false);
   return (
-    <header style={barStyle}>
+    <header className="sticky top-0 z-25 flex items-center justify-between border-b border-border bg-background px-4 py-2.5">
       <Link
         to="/me"
         aria-label="アサトモWeb ホームへ"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          textDecoration: 'none',
-          color: 'var(--ink)',
-        }}
+        className="inline-flex items-center gap-2 text-foreground no-underline"
       >
         <img
           src="/apple-touch-icon.png"
@@ -53,32 +29,20 @@ export function BrandHeader() {
           aria-hidden
           width={22}
           height={22}
-          style={{ display: 'block', borderRadius: 6 }}
+          className="block rounded-md"
         />
-        <span
-          style={{ fontSize: 17, fontWeight: 700, letterSpacing: '0.02em' }}
-        >
+        <span className="text-[17px] font-bold tracking-[0.02em]">
           アサトモWeb
         </span>
       </Link>
 
-      <div style={{ position: 'relative' }}>
+      <div className="relative">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label="メニュー"
           aria-expanded={open}
-          style={{
-            appearance: 'none',
-            background: 'none',
-            border: 0,
-            cursor: 'pointer',
-            fontSize: 22,
-            lineHeight: 1,
-            color: 'var(--ink-2)',
-            padding: '4px 6px',
-            borderRadius: 8,
-          }}
+          className="cursor-pointer rounded-lg px-1.5 py-1 text-[22px] leading-none text-muted-foreground"
         >
           ☰
         </button>
@@ -88,34 +52,27 @@ export function BrandHeader() {
               type="button"
               aria-hidden
               onClick={() => setOpen(false)}
-              className="rowmenu__backdrop"
+              className="fixed inset-0 z-20 cursor-default border-0 bg-transparent"
             />
-            <div
-              className="rowmenu__pop"
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 'calc(100% + 6px)',
-              }}
-            >
+            <div className="absolute right-0 top-[calc(100%+6px)] z-21 min-w-47.5 rounded-xl border border-border bg-card p-1.5 shadow-(--shadow-sm)">
               <Link
                 to="/account"
                 onClick={() => setOpen(false)}
-                style={itemStyle}
+                className={itemCls}
               >
                 アカウント
               </Link>
               <Link
                 to="/terms"
                 onClick={() => setOpen(false)}
-                style={{ ...itemStyle, borderTop: '1px solid var(--line)' }}
+                className={`${itemCls} border-t border-border`}
               >
                 利用規約
               </Link>
               <Link
                 to="/privacy"
                 onClick={() => setOpen(false)}
-                style={itemStyle}
+                className={itemCls}
               >
                 プライバシーポリシー
               </Link>
