@@ -1,4 +1,5 @@
-import { type CSSProperties, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   dismissPwaBanner,
   isPwaBannerDismissed,
@@ -10,44 +11,11 @@ import {
  *   - Android: beforeinstallprompt 取得済みなら「追加する」ボタン。
  *   - iOS: 手動追加ガイド（Safari は共有→ホーム画面に追加）。
  *   - 却下は 7 日クールダウン。既にインストール済み・未対応環境では何も出さない。
- * asatomo は Tailwind 非使用のため watch.css の CSS 変数＋インラインで描く。
  */
-const wrap: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 10,
-  margin: '10px 16px 0',
-  padding: '10px 12px',
-  background: 'var(--accent-soft)',
-  border: '1px solid var(--line)',
-  borderRadius: 12,
-  fontSize: 13,
-  color: 'var(--ink)',
-  lineHeight: 1.4,
-};
-const closeBtn: CSSProperties = {
-  appearance: 'none',
-  background: 'none',
-  border: 0,
-  cursor: 'pointer',
-  fontSize: 18,
-  lineHeight: 1,
-  color: 'var(--ink-3)',
-  padding: '2px 4px',
-};
-const addBtn: CSSProperties = {
-  appearance: 'none',
-  border: 0,
-  cursor: 'pointer',
-  background: 'var(--accent)',
-  color: '#fff',
-  fontSize: 13,
-  fontWeight: 700,
-  padding: '7px 14px',
-  borderRadius: 9,
-  whiteSpace: 'nowrap',
-};
+const wrapCls =
+  'mx-4 mt-2.5 flex items-center justify-between gap-2.5 rounded-xl border border-border bg-(--accent-soft) px-3 py-2.5 text-[13px] leading-[1.4] text-foreground';
+const closeBtnCls =
+  'cursor-pointer border-0 bg-transparent px-1 py-0.5 text-lg leading-none text-(--ink-3)';
 
 export function PwaInstallBanner() {
   const { canInstall, isIos, isIosSafari, isInstalled, promptInstall } =
@@ -69,7 +37,7 @@ export function PwaInstallBanner() {
 
   if (isIos) {
     return (
-      <div style={wrap}>
+      <div className={wrapCls}>
         <span>
           {isIosSafari
             ? '共有（□↑）→「ホーム画面に追加」で、いつでもすぐ開けます'
@@ -78,7 +46,7 @@ export function PwaInstallBanner() {
         <button
           type="button"
           onClick={dismiss}
-          style={closeBtn}
+          className={closeBtnCls}
           aria-label="閉じる"
         >
           ✕
@@ -89,16 +57,20 @@ export function PwaInstallBanner() {
 
   if (canInstall) {
     return (
-      <div style={wrap}>
+      <div className={wrapCls}>
         <span>ホーム画面に追加すると、いつでもすぐ開けます</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button type="button" onClick={promptInstall} style={addBtn}>
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            onClick={promptInstall}
+            className="h-auto rounded-[9px] px-3.5 py-1.75 text-[13px] font-bold whitespace-nowrap"
+          >
             追加する
-          </button>
+          </Button>
           <button
             type="button"
             onClick={dismiss}
-            style={closeBtn}
+            className={closeBtnCls}
             aria-label="閉じる"
           >
             ✕
