@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 // ポップアップ共通（narrow/wide で padding が異なるため padding は各所で付ける）。
 const popBase =
   'absolute right-0 top-[calc(100%+4px)] z-21 rounded-xl border border-border bg-card shadow-(--shadow-sm)';
-// 確認段のボタン（旧 .rowmenu__acts .btn = 幅auto・角丸13・13px・太字）。
+// 確認段のボタン（幅auto・角丸13・13px・太字）。
 const actBtn =
   'h-auto rounded-[13px] px-3.75 py-2.25 text-[13px] font-semibold';
 

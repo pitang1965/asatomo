@@ -1,13 +1,11 @@
 import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-// Tailwind v4 + Shadcn のトークン層。watch.css より前に読み込み、Preflight を
-// watch.css / 既存画面が上書きできる順序にする（既存20画面の崩れを防ぐ）。
+// Tailwind v4 + Shadcn のトークン層＋夜明けパレット＋最小リセット。
 import tailwindCss from '../index.css?url';
 import { Analytics } from '../web/analytics';
 import { NotFoundCard } from '../web/NotFoundCard';
-import appCss from '../web/watch.css?url';
 
-/** ルートドキュメント。watch.css（夜明けパレット）を全ページに適用する。 */
+/** ルートドキュメント。index.css（Tailwind＋夜明けトークン）を全ページに適用する。 */
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -54,7 +52,6 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: 'stylesheet', href: tailwindCss },
-      { rel: 'stylesheet', href: appCss },
       // PWA マニフェスト（ADR-0010: インストール可能・オフライン非対応）
       { rel: 'manifest', href: '/manifest.webmanifest' },
       // ファビコン（public/。元画像は android/art/icon-source-sun-heart.jpeg）

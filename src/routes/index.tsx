@@ -83,7 +83,7 @@ function SetupNotice({ message }: { message: string }) {
  *   - ブランド銘板は素名「アサトモ」（家族名・ハブそのものを出す場。CONTEXT.md）。
  *   - 「最後の伝言」表記（旧「最後のメッセージ」から統一。ADR-0008）。
  *   - CTA はログイン（/login。Google ログイン稼働中）＋画面プレビュー（/preview）。
- * スタイルは watch.css の夜明けトークンを使い、LP 固有分だけ .landing 配下にスコープする。
+ * スタイルは index.css の夜明けトークンを使い、LP 固有分だけ .landing 配下にスコープする。
  */
 const lpCss = `
 .landing{background:var(--bg);color:var(--ink);font-family:var(--font-jp);line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh;padding:0 20px 72px}

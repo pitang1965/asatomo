@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
  * 重い操作を、重く・慎重に扱う。警告赤ではなく抑えた薔薇色。
  * クォーラム進捗・猶予期間・本人取消の可逆性を明示する（ADR-0001 の四重防御を言葉で伝える）。
  */
-// 旧 .watch コンテナ（560幅・中央寄せ）。
+// 見守りコンテナ（560幅・中央寄せ）。
 const watchCls =
   'mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 leading-[1.7]';
-// 旧 .btn（全幅・角丸13・14.5px・太字）。calm=緑/ghost=surface-2+枠/grave=--crit アウトライン。
+// 全幅ボタン（角丸13・14.5px・太字）。calm=緑/ghost=surface-2+枠/grave=--crit アウトライン。
 const btnBase =
   'h-auto w-full rounded-[13px] py-3.25 text-[14.5px] font-semibold';
 const calmBtn = `${btnBase} bg-(--good) text-white hover:bg-(--good)/90`;

@@ -8,7 +8,7 @@ import { openMessage } from './crypto';
  * 復号する（ADR-0002）。運営者は暗号文しか持たず平文を読めない。
  */
 
-// 旧 .watch コンテナ（560幅・中央寄せ）。
+// 見守りコンテナ（560幅・中央寄せ）。
 const watchCls =
   'mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 leading-[1.7]';
 

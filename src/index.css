@@ -2,10 +2,9 @@
 @import "tw-animate-css";
 
 /*
- * Shadcn/ui のトークン層。構成は nafuda と揃えつつ、値は asatomo の「夜明けパレット」
- * （watch.css と同一の色）を Shadcn のセマンティック変数名にマッピングしてブランドを保持する。
- * ダークは asatomo 既存の挙動に合わせ prefers-color-scheme で自動切替（nafuda の .dark クラス
- * 方式とは意図的に異なる。asatomo にはテーマトグルが無いため）。
+ * Shadcn/ui のトークン層＋アサトモの「夜明けパレット」原色トークン＋最小リセット。
+ * デザイントークンとリセットをこの1ファイルに集約している（アプリ・ランディング共通）。
+ * ダークは asatomo 既存の挙動に合わせ prefers-color-scheme で自動切替（テーマトグルは無い）。
  */
 
 @theme inline {
@@ -43,20 +42,43 @@
   --card-foreground: #1f2733;
   --popover: #ffffff;
   --popover-foreground: #1f2733;
-  --primary: #e0912f; /* --accent（ブランドのアンバー） */
+  --primary: #e0912f; /* ブランドのアンバー */
   --primary-foreground: #2a1c00; /* アンバー上で可読な濃色 */
   --secondary: #eef2f8; /* --surface-2 */
   --secondary-foreground: #1f2733;
   --muted: #eef2f8;
   --muted-foreground: #55606f; /* --ink-2 */
-  /* Shadcn の --accent は「ホバー時のハイライト地」であり、ブランドの強調色ではない。
-     控えめな地色（surface-2）に割り当て、ブランド色は --primary に置く。 */
-  --accent: #eef2f8;
+  /* --accent はブランドのアンバー。Shadcn のホバー地（ghost/outline の hover:bg-accent）
+     にも使われ、ランディングの var(--accent) もこれを参照する。 */
+  --accent: #e0912f;
   --accent-foreground: #1f2733;
   --destructive: #c0392b;
   --border: #e1e7f0; /* --line */
   --input: #e1e7f0;
   --ring: #e0912f; /* フォーカスリングはブランド色 */
+
+  /* 夜明けパレットの原色トークン。Tailwind の text-(--ink-3) / bg-(--good-soft) 等・
+     ランディング lpCss・下の base 規則が参照する。 */
+  --bg: #f4f7fb;
+  --surface: #fff;
+  --surface-2: #eef2f8;
+  --ink: #1f2733;
+  --ink-2: #55606f;
+  --ink-3: #8b94a2;
+  --line: #e1e7f0;
+  --accent-soft: #fbe6cf;
+  --good: #4f9e7f;
+  --good-soft: #dcefe6;
+  --warn: #d0842f;
+  --warn-soft: #f9e7cf;
+  --danger: #c0392b;
+  --danger-soft: #fbe3e0;
+  --night: #5a659a;
+  --crit: #b16478; /* 重い操作用の抑えた薔薇色（警告赤は使わない） */
+  --shadow-sm: 0 8px 22px -14px rgba(31, 39, 51, 0.4);
+  --font-jp:
+    "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI",
+    "Noto Sans JP", system-ui, sans-serif;
 }
 
 /* ダーク（夜明け・夜） */
@@ -74,11 +96,71 @@
     --secondary-foreground: #eaeef5;
     --muted: #232838;
     --muted-foreground: #a7b0bf;
-    --accent: #232838;
-    --accent-foreground: #eaeef5;
+    --accent: #e8a44c;
+    --accent-foreground: #1f2733;
     --destructive: #e06c5a;
     --border: #2c3242;
     --input: #2c3242;
     --ring: #e8a44c;
+
+    --bg: #14171f;
+    --surface: #1c202b;
+    --surface-2: #232838;
+    --ink: #eaeef5;
+    --ink-2: #a7b0bf;
+    --ink-3: #6e7787;
+    --line: #2c3242;
+    --accent-soft: #3a2f1d;
+    --good: #6fbe9c;
+    --good-soft: #22352e;
+    --warn: #e0a052;
+    --warn-soft: #37301f;
+    --danger: #e57368;
+    --danger-soft: #3a211f;
+    --night: #8b95c8;
+    --crit: #ca8598;
+    --shadow-sm: 0 10px 26px -16px rgba(0, 0, 0, 0.6);
   }
+}
+
+/* ── 最小リセット。あえて @layer 外に置き、Preflight より後に効かせる。 ── */
+/* body マージンを消し、html/body 背景を夜明け地色に（オーバースクロールで白を出さない）。 */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+}
+/* スクロールバー幅を常に確保（タブ切替で固定下タブの中央寄せがずれるのを防ぐ）。 */
+html {
+  scrollbar-gutter: stable;
+}
+/* プレースホルダーをテーマの淡色で明示（ダーク背景で沈まないよう）。 */
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+/* ランディング（/）の CTA が className="btn primary" でこの .btn を参照するため残置。
+   app 内の .btn 系は Shadcn Button へ移行済み。見た目の大半は index.tsx の lpCss
+   （.landing .btn）が上書きするが、focus-visible などはここが効く。 */
+.btn {
+  appearance: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 14.5px;
+  font-weight: 600;
+  border-radius: 13px;
+  padding: 13px 16px;
+  width: 100%;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: default;
 }

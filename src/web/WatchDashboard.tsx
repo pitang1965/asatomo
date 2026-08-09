@@ -11,7 +11,7 @@ import { RowMenu } from './RowMenu';
  * 近況は過去形＋経過時間のみ（監視感を出さない）。アラート中の本人を上に。
  */
 
-// 旧 watch.css の .btn（全幅・角丸13・padding13/16・14.5px・太字）を踏襲。
+// 全幅ボタン（角丸13・padding13/16・14.5px・太字）。
 const alertBtnBase =
   'h-auto w-full rounded-[13px] py-3.25 text-[14.5px] font-semibold';
 // btn--calm＝落ち着いた緑（--good）+白文字。btn--ghost＝surface-2 + ボーダー。

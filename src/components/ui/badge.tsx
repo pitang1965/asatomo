@@ -4,7 +4,7 @@ import type * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * asatomo 版 Badge。watch.css の .pill（角丸フル・12px太字・色分きの前景＋淡い地）を
+ * asatomo 版 Badge。角丸フル・12px太字・色分きの前景＋淡い地のステータスチップを
  * バリアントとして畳んだもの。dot を付けると先頭に 7px のドットが出る（色は bg-current で
  * 前景色を継承＝各バリアントのドット色と一致する）。
  * good/night/travel/warn はダッシュボードのステータス、muted は中立の注記ラベル用。

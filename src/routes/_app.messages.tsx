@@ -35,7 +35,7 @@ const cardW = 'mx-auto my-4 max-w-140';
 // ラベル（旧 labelStyle）。
 const labelCls = 'mt-3.5 block text-xs font-semibold text-muted-foreground';
 
-// 旧 .btn（全幅・角丸13・padding13/16・14.5px・太字）を踏襲したボタン。
+// 全幅の主要ボタン（角丸13・padding13/16・14.5px・太字）。
 const btnBase = 'h-auto rounded-[13px] py-3 text-[14.5px] font-semibold';
 // btn--calm＝落ち着いた緑（--good）+白文字（警告色は使わない）。variant を className で上書き。
 const calmBtn = `${btnBase} bg-(--good) text-white hover:bg-(--good)/90`;
