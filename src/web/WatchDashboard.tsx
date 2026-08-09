@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { DashboardRow } from '../domain/queries';
 import { recentActivityText } from '../domain/recent-activity';
 import { Avatar } from './Avatar';
@@ -9,6 +10,13 @@ import { RowMenu } from './RowMenu';
  * TanStack Start のルート/サーバー関数から注入する（このコンポーネントは純粋）。
  * 近況は過去形＋経過時間のみ（監視感を出さない）。アラート中の本人を上に。
  */
+
+// 旧 watch.css の .btn（全幅・角丸13・padding13/16・14.5px・太字）を踏襲。
+const alertBtnBase =
+  'h-auto w-full rounded-[13px] py-3.25 text-[14.5px] font-semibold';
+// btn--calm＝落ち着いた緑（--good）+白文字。btn--ghost＝surface-2 + ボーダー。
+const calmBtn = `${alertBtnBase} bg-(--good) text-white hover:bg-(--good)/90`;
+const ghostBtn = `${alertBtnBase} border border-border`;
 
 export interface WatchAction {
   /** 「連絡がついた・無事です」= 代理確認。 */
@@ -103,17 +111,17 @@ function SubjectCard({
       ? `旅行中 · ${row.travelUntil.getMonth() + 1}/${row.travelUntil.getDate()} まで`
       : recentActivityText(row.latestKind, row.latestAt, now);
   return (
-    <div className="card">
+    <div className="mb-2.75 flex items-center gap-3.25 rounded-[15px] border border-border bg-card p-3.75 shadow-(--shadow-sm)">
       <Avatar
         name={row.name}
         color={avatarColor(row.subjectUserId)}
         size={34}
       />
-      <div className="card__who">
-        <div className="card__name">{row.name}</div>
-        <div className="card__status">{statusText}</div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[15px] font-semibold">{row.name}</div>
+        <div className="text-[13px] text-muted-foreground">{statusText}</div>
         {row.appLoggedOutAt ? (
-          <div className="card__note">
+          <div className="mt-0.5 text-xs text-(--warn)">
             スマホアプリからログアウト中です（Webからは今も「元気」が届きます）
           </div>
         ) : null}
@@ -138,38 +146,40 @@ function AlertCard({
     : null;
   const pending = actions.pendingSubjectId === row.subjectUserId;
   return (
-    <div className="alert">
-      <div className="alert__stripe" />
-      <div className="alert__in">
-        <div className="alert__head">
-          <p className="alert__title">
+    <div className="mb-3.5 rounded-2xl border border-[color-mix(in_oklab,var(--warn)_40%,var(--line))] bg-card shadow-(--shadow-sm)">
+      <div className="h-1 rounded-t-[15px] bg-(--warn)" />
+      <div className="p-4.25">
+        <div className="flex items-start justify-between gap-2">
+          <p className="mb-1.5 text-[15.5px] font-bold">
             {row.name}さんから
             {hours != null ? `、${hours}時間` : ''} 応答がありません
           </p>
           <LeaveMenu row={row} actions={actions} />
         </div>
-        <p className="alert__body">
+        <p className="mb-3.75 text-[13.5px] text-muted-foreground">
           {row.appLoggedOutAt
             ? 'スマホアプリからログアウト中です。まずは一声かけてみてください。'
             : '急かすものではありません。まずは一声かけてみてください。'}
         </p>
-        <div className="alert__acts">
-          <button
+        <div className="grid gap-2.25">
+          <Button
             type="button"
-            className="btn btn--calm"
+            variant="secondary"
+            className={calmBtn}
             disabled={pending}
             onClick={() => actions.onConfirmAlive(row.subjectUserId)}
           >
             連絡がついた・無事です
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn--ghost"
+            variant="secondary"
+            className={ghostBtn}
             disabled={pending}
             onClick={() => actions.onCannotReach(row.subjectUserId)}
           >
             連絡がつきません…
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -194,36 +204,34 @@ export function WatchDashboard({
   const alerts = rows.filter((r) => r.isAlert);
   const calm = rows.filter((r) => !r.isAlert);
   return (
-    <div className="watch">
+    <div className="mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 leading-[1.7]">
       {showHeader ? (
-        <header className="watch__head">
-          <div className="watch__brand">
+        <header className="mb-4.5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-lg font-bold tracking-[0.02em]">
             <img
               src="/apple-touch-icon.png"
               alt=""
               aria-hidden
               width={24}
               height={24}
-              className="watch__brandicon"
+              className="block size-6 rounded-[7px] shadow-(--shadow-sm)"
             />
             アサトモWeb
           </div>
           {alerts.length > 0 ? (
-            <span className="pill pill--warn">
-              <span className="pill__d" />
+            <Badge variant="warn" dot>
               要確認 {alerts.length}件
-            </span>
+            </Badge>
           ) : (
-            <span className="pill pill--good">
-              <span className="pill__d" />
+            <Badge variant="good" dot>
               みんな元気そう
-            </span>
+            </Badge>
           )}
         </header>
       ) : null}
 
       {rows.length === 0 ? (
-        <p className="watch__empty">
+        <p className="px-5 py-15 text-center text-(--ink-3)">
           まだ見守っている人がいません。招待リンクから始めましょう。
         </p>
       ) : null}

@@ -4,7 +4,9 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import type { DashboardRow } from '../domain/queries';
 import { fetchWatch } from '../server/functions';
 import { WatchDashboard } from '../web/WatchDashboard';
@@ -34,34 +36,9 @@ function reviveRows(rows: DashboardRow[]): DashboardRow[] {
   }));
 }
 
-const emptyCard: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 14,
-  padding: 20,
-  maxWidth: 480,
-  margin: '16px auto',
-  boxShadow: 'var(--shadow-sm)',
-  textAlign: 'center',
-};
-
-// ダッシュボード(.watch: max-width 560・左右 padding 18)と幅・余白を揃えて上部に置く。
-const intro: CSSProperties = {
-  maxWidth: 560,
-  margin: '0 auto',
-  padding: '22px 18px 0',
-};
-const introTitle: CSSProperties = {
-  margin: 0,
-  fontSize: 17,
-  fontWeight: 700,
-  color: 'var(--ink)',
-};
-const introBody: CSSProperties = {
-  margin: '8px 0 0',
-  fontSize: 12.5,
-  lineHeight: 1.8,
-  color: 'var(--ink-2)',
-};
+// 空・エラーカードのレイアウト（見た目は Card 部品）。旧 emptyCard は角丸14。
+// maxWidth480 + padding20×2 = 520px ＝ max-w-130。
+const cardCls = 'mx-auto my-4 max-w-130 rounded-[14px] text-center';
 
 function WatchPage() {
   const data = Route.useLoaderData();
@@ -73,34 +50,24 @@ function WatchPage() {
   // 取得失敗（DB/接続の一時障害）は接続確認を促し、再読み込みの導線を出す（モバイルと同じ扱い）。
   if (data.status === 'error')
     return (
-      <div style={emptyCard}>
-        <p style={{ margin: 0, fontSize: 14, color: 'var(--ink)' }}>
+      <Card className={cardCls}>
+        <p className="m-0 text-sm text-foreground">
           様子を取得できませんでした。接続を確認してください。
         </p>
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => router.invalidate()}
-          style={{
-            appearance: 'none',
-            marginTop: 14,
-            border: '1px solid var(--line)',
-            cursor: 'pointer',
-            padding: '8px 16px',
-            borderRadius: 999,
-            fontWeight: 600,
-            fontSize: 13,
-            background: 'var(--surface-2)',
-            color: 'var(--ink)',
-          }}
+          className="mt-3.5 h-auto rounded-full border border-border px-4 py-2 text-[13px] font-semibold"
         >
           再読み込み
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
 
   if (data.status !== 'ok')
     return (
-      <p style={{ textAlign: 'center', padding: 40, color: 'var(--ink-2)' }}>
+      <p className="p-10 text-center text-muted-foreground">
         読み込めませんでした。
       </p>
     );
@@ -148,54 +115,33 @@ function WatchPage() {
 
   if (rows.length === 0)
     return (
-      <div style={emptyCard}>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 14,
-            fontWeight: 600,
-            color: 'var(--ink)',
-          }}
-        >
+      <Card className={cardCls}>
+        <p className="m-0 text-sm font-semibold text-foreground">
           あなたが見守っている人は、まだいません。
         </p>
-        <p
-          style={{
-            margin: '10px 0 0',
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            lineHeight: 1.8,
-          }}
-        >
-          <Link to="/me" style={{ color: 'var(--accent)' }}>
+        <p className="mt-2.5 text-[13px] leading-[1.8] text-muted-foreground">
+          <Link to="/me" className="text-primary hover:underline">
             見守り合いに誘った
           </Link>
           相手が「見守り合い」を選ぶと、ここに現れます。
         </p>
-      </div>
+      </Card>
     );
 
   return (
     <div>
       {/* 画面内の総称は「見守っている人」を保つ（下タブ「仲間」を総称に流用しない・決定4）。
           逆向きの /connections「あなたを見守ってくれている人」と主語で明確に区別する。 */}
-      <div style={intro}>
-        <h1 style={introTitle}>あなたが見守っている人</h1>
-        <p style={introBody}>
+      <div className="mx-auto max-w-149 px-4.5 pt-5.5">
+        <h1 className="m-0 text-[17px] font-bold text-foreground">
+          あなたが見守っている人
+        </h1>
+        <p className="mt-2 text-[12.5px] leading-[1.8] text-muted-foreground">
           あなたが「元気かな」と気にかけている人です。近況をそっと確認できます。
         </p>
       </div>
       {notice ? (
-        <p
-          style={{
-            textAlign: 'center',
-            color: 'var(--good)',
-            fontSize: 13,
-            margin: '10px 0 0',
-          }}
-        >
-          {notice}
-        </p>
+        <p className="mt-2.5 text-center text-[13px] text-(--good)">{notice}</p>
       ) : null}
       <WatchDashboard
         rows={rows}

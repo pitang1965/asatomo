@@ -1,10 +1,16 @@
 import { type FormEvent, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { openMessage } from './crypto';
 
 /**
  * 最後の伝言の開示（受取人向け・見守りWeb）。合言葉を入力すると、この端末の中だけで
  * 復号する（ADR-0002）。運営者は暗号文しか持たず平文を読めない。
  */
+
+// 旧 .watch コンテナ（560幅・中央寄せ）。
+const watchCls =
+  'mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 leading-[1.7]';
 
 export function OpenedLetter({
   fromName,
@@ -14,10 +20,14 @@ export function OpenedLetter({
   text: string;
 }) {
   return (
-    <div className="letter">
-      <div className="letter__from">{fromName}さんより</div>
-      <div className="letter__body">{text}</div>
-      <div className="letter__note">
+    <div className="mx-auto my-6.5 max-w-105 rounded-2xl border border-border bg-card px-6.5 py-7 shadow-(--shadow-sm)">
+      <div className="mb-4 text-[13px] tracking-[0.04em] text-(--ink-3)">
+        {fromName}さんより
+      </div>
+      <div className="text-base leading-loose whitespace-pre-wrap text-foreground">
+        {text}
+      </div>
+      <div className="mt-5.5 border-t border-dashed border-border pt-4 text-[11.5px] text-(--ink-3)">
         これは想いを伝える伝言です。財産分与などの法的効力はありません。
       </div>
     </div>
@@ -68,7 +78,7 @@ export function MessageDisclosure({
 
   if (status === 'open')
     return (
-      <div className="watch">
+      <div className={watchCls}>
         {letters.map((l) => (
           <OpenedLetter key={l.id} fromName={fromName} text={l.text} />
         ))}
@@ -76,17 +86,17 @@ export function MessageDisclosure({
     );
 
   return (
-    <div className="watch">
-      <div className="unlock">
-        <div className="unlock__ico">🕊️</div>
-        <h2 className="unlock__title">{fromName}さんからの伝言</h2>
-        <p className="unlock__sub">
+    <div className={watchCls}>
+      <div className="mx-auto my-5 max-w-95 text-center">
+        <div className="text-[44px]">🕊️</div>
+        <h2 className="mt-2.5 mb-2 text-xl">{fromName}さんからの伝言</h2>
+        <p className="mb-5 text-sm text-muted-foreground">
           {fromName}
           さんが、あなたへ言葉を遺されました。合言葉を入力して開いてください。
         </p>
         <form onSubmit={onSubmit}>
-          <input
-            className="unlock__input"
+          <Input
+            className="mb-2.5 h-auto rounded-[13px] px-3.75 py-3.25 text-base md:text-base"
             type="text"
             autoComplete="off"
             value={passphrase}
@@ -94,21 +104,24 @@ export function MessageDisclosure({
             placeholder="合言葉"
             aria-label="合言葉"
           />
-          {hint ? <p className="unlock__hint">ヒント: {hint}</p> : null}
+          {hint ? (
+            <p className="mb-3 text-[12.5px] text-(--ink-3)">ヒント: {hint}</p>
+          ) : null}
           {status === 'error' ? (
-            <p className="unlock__err">
+            <p className="mb-3 text-[13px] text-(--crit)">
               合言葉が違うようです。もう一度お試しください。
             </p>
           ) : null}
-          <button
+          <Button
             type="submit"
-            className="btn btn--calm"
+            variant="secondary"
+            className="h-auto w-full rounded-[13px] bg-(--good) py-3.25 text-[14.5px] font-semibold text-white hover:bg-(--good)/90"
             disabled={status === 'opening' || passphrase.length === 0}
           >
             {status === 'opening' ? '開いています…' : '開く'}
-          </button>
+          </Button>
         </form>
-        <p className="unlock__fine">
+        <p className="mt-4 text-[11.5px] text-(--ink-3)">
           この内容は運営者も読めません。復号はこの端末の中だけで行われます。
         </p>
       </div>
