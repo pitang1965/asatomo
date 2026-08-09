@@ -26,17 +26,7 @@ function NativeLineStart() {
   }, []);
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        fontFamily: 'system-ui, sans-serif',
-        color: '#555',
-        padding: 24,
-        textAlign: 'center',
-      }}
-    >
+    <main className="grid min-h-screen place-items-center p-6 text-center font-[system-ui,sans-serif] text-[#555]">
       <p>LINE に移動しています…</p>
     </main>
   );

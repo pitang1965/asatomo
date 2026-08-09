@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { WatchedSubjectImpact } from '../domain/account';
 import { fetchAccountDeletePreview } from '../server/functions';
 import { authClient } from '../web/auth-client';
@@ -20,20 +23,8 @@ export const Route = createFileRoute('/_app/account_/delete')({
   component: DeletePage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-};
-
-const card: CSSProperties = {
-  background: 'var(--surface)',
-  borderRadius: 16,
-  padding: 20,
-  maxWidth: 480,
-  margin: '16px auto',
-  boxShadow: 'var(--shadow-sm)',
-};
+// カードのレイアウト（見た目は Card 部品が持つ）。maxWidth480 + padding20×2 = 520px ＝ max-w-130。
+const cardW = 'mx-auto my-4 max-w-130';
 
 function DeletePage() {
   const data = Route.useLoaderData();
@@ -114,68 +105,37 @@ function Confirm({
   const { watchedSubjects, watchersOnYou } = preview;
 
   return (
-    <div style={page}>
-      <div style={{ padding: '10px 16px', fontSize: 13 }}>
-        <Link to="/account" style={{ color: 'var(--accent)' }}>
+    <div className="min-h-screen bg-background">
+      <div className="px-4 py-2.5 text-[13px]">
+        <Link to="/account" className="text-primary hover:underline">
           ← もどる
         </Link>
       </div>
 
-      <div style={card}>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)', margin: 0 }}>
+      <Card className={cardW}>
+        <h1 className="m-0 text-lg text-foreground">
           アカウントを削除しますか？
         </h1>
-        <p
-          style={{
-            fontSize: 13,
-            color: 'var(--ink-2)',
-            lineHeight: 1.9,
-            margin: '10px 0 0',
-          }}
-        >
+        <p className="mt-2.5 text-[13px] leading-[1.9] text-muted-foreground">
           削除は<strong>すぐに反映され、元に戻せません</strong>。
           あなたが用意した最後の伝言と宛先も削除されます。
         </p>
 
         {watchedSubjects.length > 0 ? (
-          <div
-            style={{
-              marginTop: 16,
-              background: 'var(--danger-soft)',
-              borderRadius: 12,
-              padding: '12px 14px',
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                fontSize: 12,
-                fontWeight: 700,
-                color: 'var(--ink)',
-              }}
-            >
+          <div className="mt-4 rounded-xl bg-(--danger-soft) px-3.5 py-3">
+            <p className="m-0 text-xs font-bold text-foreground">
               あなたが見守っている人への影響
             </p>
-            <ul
-              style={{
-                margin: '8px 0 0',
-                paddingLeft: 18,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-              }}
-            >
+            <ul className="mt-2 flex list-none flex-col gap-1.5 pl-4.5">
               {watchedSubjects.map((s) => {
                 const { text, strong } = impactLine(s);
                 return (
                   <li
                     key={s.subjectUserId}
-                    style={{
-                      fontSize: 13,
-                      lineHeight: 1.7,
-                      color: 'var(--ink)',
-                      fontWeight: strong ? 700 : 400,
-                    }}
+                    className={cn(
+                      'text-[13px] leading-[1.7] text-foreground',
+                      strong ? 'font-bold' : 'font-normal',
+                    )}
                   >
                     {text}
                   </li>
@@ -186,36 +146,18 @@ function Confirm({
         ) : null}
 
         {watchersOnYou > 0 ? (
-          <p
-            style={{
-              margin: '14px 0 0',
-              fontSize: 13,
-              color: 'var(--ink-2)',
-              lineHeight: 1.8,
-            }}
-          >
+          <p className="mt-3.5 text-[13px] leading-[1.8] text-muted-foreground">
             あなたを見守ってくれている{watchersOnYou}
             人には、「利用をやめた」ことをお知らせします。
           </p>
         ) : null}
 
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 10,
-            marginTop: 18,
-            fontSize: 13,
-            color: 'var(--ink)',
-            lineHeight: 1.7,
-            cursor: 'pointer',
-          }}
-        >
+        <label className="mt-4.5 flex cursor-pointer items-start gap-2.5 text-[13px] leading-[1.7] text-foreground">
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }}
+            className="mt-0.75 size-4.5 shrink-0"
           />
           <span>
             上記を理解し、アカウントとデータを完全に削除することに同意します。
@@ -223,75 +165,47 @@ function Confirm({
         </label>
 
         {error ? (
-          <p
-            style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--danger)' }}
-          >
-            {error}
-          </p>
+          <p className="mt-3 text-[13px] text-(--danger)">{error}</p>
         ) : null}
 
         {/* 「やめておく」を先・実ボタンで（取り消せない操作では安全な出口を目立たせる）。
             削除は下・赤だがチェックボックスで守られているので目立ってよい。 */}
-        <Link
-          to="/account"
-          style={{
-            display: 'block',
-            width: '100%',
-            marginTop: 16,
-            padding: '13px 16px',
-            borderRadius: 12,
-            fontWeight: 700,
-            fontSize: 15,
-            textAlign: 'center',
-            textDecoration: 'none',
-            border: '1px solid var(--line)',
-            background: 'var(--surface-2)',
-            color: 'var(--ink)',
-            boxSizing: 'border-box',
-          }}
+        <Button
+          asChild
+          variant="secondary"
+          className="mt-4 h-auto w-full rounded-xl border border-border py-3.25 text-[15px] font-bold"
         >
-          やめておく
-        </Link>
+          <Link to="/account">やめておく</Link>
+        </Button>
 
         <button
           type="button"
           onClick={execute}
           disabled={!agreed || busy}
-          style={{
-            appearance: 'none',
-            border: 0,
-            cursor: agreed && !busy ? 'pointer' : 'not-allowed',
-            width: '100%',
-            marginTop: 10,
-            padding: '13px 16px',
-            borderRadius: 12,
-            fontWeight: 700,
-            fontSize: 15,
-            background: agreed ? 'var(--danger)' : 'var(--surface-2)',
-            color: agreed ? '#fff' : 'var(--ink-3)',
-            opacity: busy ? 0.7 : 1,
-          }}
+          className={cn(
+            'mt-2.5 w-full rounded-xl border-0 py-3.25 text-[15px] font-bold',
+            agreed
+              ? 'cursor-pointer bg-(--danger) text-white'
+              : 'cursor-not-allowed bg-secondary text-(--ink-3)',
+            busy && 'opacity-70',
+          )}
         >
           {busy ? '削除しています…' : 'アカウントを削除する'}
         </button>
-      </div>
+      </Card>
     </div>
   );
 }
 
 function Center({ title, body }: { title: string; body: string }) {
   return (
-    <div
-      style={{ ...page, display: 'grid', placeItems: 'center', padding: 24 }}
-    >
-      <div style={{ ...card, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 18, color: 'var(--ink)', marginBottom: 12 }}>
-          {title}
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <Card className={`${cardW} text-center`}>
+        <h1 className="mb-3 text-lg text-foreground">{title}</h1>
+        <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
         </p>
-      </div>
+      </Card>
     </div>
   );
 }

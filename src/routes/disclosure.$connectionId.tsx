@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router';
-import type { CSSProperties } from 'react';
 import { fetchDisclosure } from '../server/functions';
 import { MessageDisclosure } from '../web/MessageDisclosure';
 import { NotFoundCard } from '../web/NotFoundCard';
@@ -17,18 +16,12 @@ export const Route = createFileRoute('/disclosure/$connectionId')({
   component: DisclosurePage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-};
-
 function DisclosurePage() {
   const data = Route.useLoaderData();
 
   if (data.status === 'ok')
     return (
-      <div style={page}>
+      <div className="min-h-screen bg-background">
         <MessageDisclosure
           fromName={data.fromName}
           hint={data.hint}

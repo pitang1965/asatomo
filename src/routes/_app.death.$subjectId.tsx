@@ -4,7 +4,7 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
 import { fetchDeathConfirm } from '../server/functions';
 import { DeathConfirm } from '../web/DeathConfirm';
 
@@ -21,35 +21,16 @@ export const Route = createFileRoute('/_app/death/$subjectId')({
   component: DeathPage,
 });
 
-const page: CSSProperties = {
-  background: 'var(--bg)',
-  minHeight: '100vh',
-  fontFamily: 'var(--font-jp)',
-};
-
 function Notice({ title, body }: { title: string; body: string }) {
   return (
-    <div
-      style={{ ...page, display: 'grid', placeItems: 'center', padding: 24 }}
-    >
-      <div
-        style={{
-          background: 'var(--surface)',
-          borderRadius: 20,
-          padding: '32px 28px',
-          maxWidth: 420,
-          boxShadow: '0 8px 32px rgb(0 0 0 / 0.08)',
-          textAlign: 'center',
-        }}
-      >
-        <h1 style={{ fontSize: 18, color: 'var(--ink)', marginBottom: 12 }}>
-          {title}
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.8 }}>
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <div className="max-w-119 rounded-[20px] bg-card px-7 py-8 text-center shadow-[0_8px_32px_rgb(0_0_0/0.08)]">
+        <h1 className="mb-3 text-lg text-foreground">{title}</h1>
+        <p className="text-[13px] leading-[1.8] text-muted-foreground">
           {body}
         </p>
-        <p style={{ marginTop: 20, fontSize: 13 }}>
-          <Link to="/watch" style={{ color: 'var(--accent)' }}>
+        <p className="mt-5 text-[13px]">
+          <Link to="/watch" className="text-primary hover:underline">
             ← 仲間へ戻る
           </Link>
         </p>
@@ -128,22 +109,14 @@ function DeathPage() {
 
   // unresponsive / watchers_alerted / voting → 確認（投票）画面
   return (
-    <div style={page}>
-      <div style={{ padding: '10px 16px', fontSize: 13 }}>
-        <Link to="/watch" style={{ color: 'var(--accent)' }}>
+    <div className="min-h-screen bg-background">
+      <div className="px-4 py-2.5 text-[13px]">
+        <Link to="/watch" className="text-primary hover:underline">
           ← 仲間へ戻る
         </Link>
       </div>
       {error ? (
-        <p
-          style={{
-            textAlign: 'center',
-            color: 'var(--bad, #b14)',
-            fontSize: 13,
-          }}
-        >
-          {error}
-        </p>
+        <p className="text-center text-[13px] text-destructive">{error}</p>
       ) : null}
       <DeathConfirm
         subjectName={info.subjectName}
