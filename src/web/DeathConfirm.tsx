@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
  */
 // 見守りコンテナ（560幅・中央寄せ）。
 const watchCls =
-  'mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 leading-[1.7]';
+  'mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 text-foreground leading-[1.7]';
 // 全幅ボタン（角丸13・14.5px・太字）。calm=緑/ghost=surface-2+枠/grave=--crit アウトライン。
 const btnBase =
   'h-auto w-full rounded-[13px] py-3.25 text-[14.5px] font-semibold';

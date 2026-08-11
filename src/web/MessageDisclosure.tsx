@@ -10,7 +10,7 @@ import { openMessage } from './crypto';
 
 // 見守りコンテナ（560幅・中央寄せ）。
 const watchCls =
-  'mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 leading-[1.7]';
+  'mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 text-foreground leading-[1.7]';
 
 export function OpenedLetter({
   fromName,

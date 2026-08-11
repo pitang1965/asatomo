@@ -218,7 +218,7 @@ export function WatchDashboard({
   const alerts = rows.filter((r) => r.isAlert);
   const calm = rows.filter((r) => !r.isAlert);
   return (
-    <div className="mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 leading-[1.7]">
+    <div className="mx-auto min-h-screen max-w-149 bg-background px-4.5 pt-5.5 pb-15 text-foreground leading-[1.7]">
       {showHeader ? (
         <header className="mb-4.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-lg font-bold tracking-[0.02em]">
