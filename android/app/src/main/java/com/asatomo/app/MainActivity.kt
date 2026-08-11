@@ -114,6 +114,8 @@ private fun MainScreen() {
     var status by remember { mutableStateOf("") }
     var trackedWork by remember { mutableStateOf<UUID?>(null) }
     var trackedLabel by remember { mutableStateOf("") }
+    // 送信中のシグナル種別（ボタン上に即時フィードバックを出すため。null = 送信していない）。
+    var sendingKind by remember { mutableStateOf<ApiClient.SignalKind?>(null) }
 
     // 見守りの一瞥（サーバー整形済み。null = 読み込み中）。attest 後は reload++ で再取得。
     var watchRows by remember { mutableStateOf<List<ApiClient.WatchSubject>?>(null) }
@@ -191,10 +193,22 @@ private fun MainScreen() {
                     WorkInfo.State.FAILED -> "✗ $trackedLabel を受け付けられませんでした"
                     else -> status
                 }
+            // 決着（成功/失敗/圏外待ち）が付いたらボタンの送信中表示を解除。
+            // ENQUEUED は圏外でそのまま待つことがあるので、待ち受け表示に戻して連打を許す。
+            when (info?.state) {
+                WorkInfo.State.SUCCEEDED,
+                WorkInfo.State.FAILED,
+                WorkInfo.State.ENQUEUED -> sendingKind = null
+                else -> {}
+            }
         }
     }
 
     fun send(kind: ApiClient.SignalKind, label: String) {
+        if (sendingKind != null) return // 二重送信を防ぐ（連打対策）
+        // 押した瞬間に反応を返す（WorkManager の状態が届く前の空白をなくす）。
+        sendingKind = kind
+        status = "$label: 送信中…"
         trackedLabel = label
         trackedWork = SignalQueue.enqueue(context, kind)
     }
@@ -330,24 +344,52 @@ private fun MainScreen() {
                 // ほかのボタンより目立つ塗り Button・全幅で最上段に置く。
                 Button(
                     onClick = { send(ApiClient.SignalKind.WAKE, "おはよう") },
+                    enabled = sendingKind == null,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("☀️ おはよう")
+                    SignalButtonContent(
+                        "☀️ おはよう",
+                        sendingKind == ApiClient.SignalKind.WAKE,
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { send(ApiClient.SignalKind.MEAL, "ごはん") }) {
-                        Text("🍚 ごはん")
+                    OutlinedButton(
+                        onClick = { send(ApiClient.SignalKind.MEAL, "ごはん") },
+                        enabled = sendingKind == null,
+                    ) {
+                        SignalButtonContent(
+                            "🍚 ごはん",
+                            sendingKind == ApiClient.SignalKind.MEAL,
+                        )
                     }
-                    OutlinedButton(onClick = { send(ApiClient.SignalKind.SLEEP, "おやすみ") }) {
-                        Text("🌙 おやすみ")
+                    OutlinedButton(
+                        onClick = { send(ApiClient.SignalKind.SLEEP, "おやすみ") },
+                        enabled = sendingKind == null,
+                    ) {
+                        SignalButtonContent(
+                            "🌙 おやすみ",
+                            sendingKind == ApiClient.SignalKind.SLEEP,
+                        )
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { send(ApiClient.SignalKind.OUTING, "いってきます") }) {
-                        Text("👋 いってきます")
+                    OutlinedButton(
+                        onClick = { send(ApiClient.SignalKind.OUTING, "いってきます") },
+                        enabled = sendingKind == null,
+                    ) {
+                        SignalButtonContent(
+                            "👋 いってきます",
+                            sendingKind == ApiClient.SignalKind.OUTING,
+                        )
                     }
-                    OutlinedButton(onClick = { send(ApiClient.SignalKind.HOMECOMING, "ただいま") }) {
-                        Text("🏠 ただいま")
+                    OutlinedButton(
+                        onClick = { send(ApiClient.SignalKind.HOMECOMING, "ただいま") },
+                        enabled = sendingKind == null,
+                    ) {
+                        SignalButtonContent(
+                            "🏠 ただいま",
+                            sendingKind == ApiClient.SignalKind.HOMECOMING,
+                        )
                     }
                 }
                 // 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。
@@ -443,13 +485,21 @@ private fun WatchRow(
                 color = MaterialTheme.colorScheme.error,
             )
             OutlinedButton(onClick = onAttest, enabled = !attestBusy) {
-                Text("連絡がついた・無事です")
+                LoadingButtonContent("連絡がついた・無事です", attestBusy)
             }
         }
     }
 }
 
-/** セクション1枚ぶんのカード（見出し + 内容）。 */
+/**
+ * 「いまの様子を伝える」ボタンの中身。送信中はラベルをスピナー＋「送信中…」に差し替える。
+ * 実体は共通の [LoadingButtonContent]（Web の <Spinner/> と対）。
+ */
+@Composable
+private fun SignalButtonContent(label: String, sending: Boolean) {
+    LoadingButtonContent(label = label, loading = sending)
+}
+
 @Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {

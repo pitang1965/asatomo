@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { fetchInvitePreview } from '../server/functions';
 import { authClient } from '../web/auth-client';
 
@@ -48,7 +49,10 @@ const INVALID_COPY: Record<string, { title: string; body: string }> = {
 function JoinPage() {
   const data = Route.useLoaderData();
   const { token } = Route.useParams();
-  const [pending, setPending] = useState(false);
+  // 承諾中はどちらのボタンを押したかを保持し、そのボタンにスピナーを出す（null = 未承諾）。
+  const [accepting, setAccepting] = useState<'mutual' | 'watch' | null>(null);
+  // ログインは押下→プロバイダ遷移まで無反応の間があるので、その間スピナーを出す。
+  const [signingIn, setSigningIn] = useState<'google' | 'line' | null>(null);
   const [done, setDone] = useState<null | { mutual: boolean }>(null);
   const [error, setError] = useState('');
 
@@ -145,28 +149,24 @@ function JoinPage() {
             variant="secondary"
             size="lg"
             className="w-full border border-border font-semibold"
-            onClick={() =>
-              authClient.signIn.social({
-                provider: 'google',
-                callbackURL: `/join/${token}`,
-              })
-            }
+            disabled={signingIn !== null}
+            aria-busy={signingIn === 'google'}
+            onClick={() => signInWith('google')}
           >
-            Google でログイン
+            {signingIn === 'google' && <Spinner />}
+            {signingIn === 'google' ? 'ログイン中…' : 'Google でログイン'}
           </Button>
           <Button
             type="button"
             variant="secondary"
             size="lg"
             className="w-full border border-border font-semibold"
-            onClick={() =>
-              authClient.signIn.oauth2({
-                providerId: 'line',
-                callbackURL: `/join/${token}`,
-              })
-            }
+            disabled={signingIn !== null}
+            aria-busy={signingIn === 'line'}
+            onClick={() => signInWith('line')}
           >
-            LINE でログイン
+            {signingIn === 'line' && <Spinner />}
+            {signingIn === 'line' ? 'ログイン中…' : 'LINE でログイン'}
           </Button>
           {/* Facebook は未実装（backlog 項目17）のため一時的に非表示。
               /login と同じ方針で揃える。実装時に下記を復活させる:
@@ -186,8 +186,25 @@ function JoinPage() {
       </Shell>
     );
 
+  async function signInWith(provider: 'google' | 'line') {
+    if (signingIn) return; // 二重押下・別プロバイダの同時押しを防ぐ
+    setSigningIn(provider);
+    const callbackURL = `/join/${token}`;
+    try {
+      if (provider === 'google') {
+        await authClient.signIn.social({ provider: 'google', callbackURL });
+      } else {
+        await authClient.signIn.oauth2({ providerId: 'line', callbackURL });
+      }
+    } catch {
+      // リダイレクトに至らなかった場合だけ操作可能に戻す。
+      setSigningIn(null);
+    }
+  }
+
   async function accept(mutual: boolean) {
-    setPending(true);
+    if (accepting) return; // 二重送信・両ボタン同時押しを防ぐ
+    setAccepting(mutual ? 'mutual' : 'watch');
     setError('');
     try {
       const res = await fetch('/api/invitations/accept', {
@@ -200,7 +217,7 @@ function JoinPage() {
     } catch {
       setError('うまくいきませんでした。時間をおいてもう一度お試しください。');
     } finally {
-      setPending(false);
+      setAccepting(null);
     }
   }
 
@@ -227,20 +244,24 @@ function JoinPage() {
           type="button"
           size="lg"
           className="h-auto w-full py-3 font-semibold"
-          disabled={pending}
+          disabled={accepting !== null}
+          aria-busy={accepting === 'mutual'}
           onClick={() => accept(true)}
         >
-          見守り合う
+          {accepting === 'mutual' && <Spinner />}
+          {accepting === 'mutual' ? '送信中…' : '見守り合う'}
         </Button>
         <Button
           type="button"
           variant="secondary"
           size="lg"
           className="w-full border border-border font-semibold"
-          disabled={pending}
+          disabled={accepting !== null}
+          aria-busy={accepting === 'watch'}
           onClick={() => accept(false)}
         >
-          今は見守るだけにする
+          {accepting === 'watch' && <Spinner />}
+          {accepting === 'watch' ? '送信中…' : '今は見守るだけにする'}
         </Button>
       </div>
       <p className="mt-3.5 text-xs leading-[1.7] text-muted-foreground">

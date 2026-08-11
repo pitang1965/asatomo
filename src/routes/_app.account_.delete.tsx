@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { WatchedSubjectImpact } from '../domain/account';
 import { fetchAccountDeletePreview } from '../server/functions';
@@ -182,14 +183,16 @@ function Confirm({
           type="button"
           onClick={execute}
           disabled={!agreed || busy}
+          aria-busy={busy}
           className={cn(
-            'mt-2.5 w-full rounded-xl border-0 py-3.25 text-[15px] font-bold',
+            'mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl border-0 py-3.25 text-[15px] font-bold',
             agreed
               ? 'cursor-pointer bg-(--danger) text-white'
               : 'cursor-not-allowed bg-secondary text-(--ink-3)',
             busy && 'opacity-70',
           )}
         >
+          {busy && <Spinner />}
           {busy ? '削除しています…' : 'アカウントを削除する'}
         </button>
       </Card>

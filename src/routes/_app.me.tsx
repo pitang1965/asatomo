@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { fetchMe } from '../server/functions';
 import { track } from '../web/analytics';
 
@@ -61,6 +62,7 @@ function Me({
 }) {
   const isSubject = watchersTotal > 0;
   const [signalNotice, setSignalNotice] = useState('');
+  const [sendingKind, setSendingKind] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
 
   // このページを開いたこと自体が生存シグナル（自動 web_checkin）。アプリの app_open と同じ
@@ -79,7 +81,9 @@ function Me({
   }, [isSubject]);
 
   async function sendSignal(kind: string, label: string) {
+    if (sendingKind) return; // 二重送信を防ぐ（連打対策）
     setSignalNotice('');
+    setSendingKind(kind);
     try {
       const res = await fetch('/api/signals', {
         method: 'POST',
@@ -92,6 +96,8 @@ function Me({
       setSignalNotice(`✓ 「${label}」が届きました`);
     } catch {
       setSignalNotice('送信できませんでした。時間をおいてお試しください。');
+    } finally {
+      setSendingKind(null);
     }
   }
 
@@ -123,20 +129,27 @@ function Me({
                   ['outing', 'いってきます', '👋'],
                   ['homecoming', 'ただいま', '🏠'],
                 ] as const
-              ).map(([kind, label, icon]) => (
-                <Button
-                  key={kind}
-                  type="button"
-                  variant="secondary"
-                  className={pill}
-                  onClick={() => sendSignal(kind, label)}
-                >
-                  <span aria-hidden="true" className="mr-1.5">
-                    {icon}
-                  </span>
-                  {label}
-                </Button>
-              ))}
+              ).map(([kind, label, icon]) => {
+                const isSending = sendingKind === kind;
+                return (
+                  <Button
+                    key={kind}
+                    type="button"
+                    variant="secondary"
+                    className={pill}
+                    onClick={() => sendSignal(kind, label)}
+                    disabled={sendingKind !== null}
+                    aria-busy={isSending}
+                  >
+                    {isSending ? (
+                      <Spinner />
+                    ) : (
+                      <span aria-hidden="true">{icon}</span>
+                    )}
+                    {isSending ? '送信中…' : label}
+                  </Button>
+                );
+              })}
             </div>
             {/* 透明性の原則: 自動記録を隠さない（CONTEXT.md 生存シグナル）。 */}
             <p className="mt-2.5 mb-0 text-[11px] leading-[1.6] text-muted-foreground">
@@ -289,8 +302,10 @@ function TravelMode({ initialUntil }: { initialUntil: string | null }) {
             className={`${pill} mt-2.5`}
             onClick={exit}
             disabled={busy}
+            aria-busy={busy}
           >
-            旅行モードを解除する
+            {busy && <Spinner />}
+            {busy ? '解除しています…' : '旅行モードを解除する'}
           </Button>
         </>
       ) : (
@@ -320,8 +335,10 @@ function TravelMode({ initialUntil }: { initialUntil: string | null }) {
               className={pill}
               onClick={enter}
               disabled={busy || !date}
+              aria-busy={busy}
             >
-              旅行モードにする
+              {busy && <Spinner />}
+              {busy ? '設定しています…' : '旅行モードにする'}
             </Button>
           </div>
         </>
@@ -503,9 +520,11 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
       variant="secondary"
       onClick={createInvite}
       disabled={busy}
+      aria-busy={busy}
       className="h-auto w-full rounded-xl border border-border py-2.5 text-sm font-semibold"
     >
-      🤝 見守り合いに誘う
+      {busy ? <Spinner /> : <span aria-hidden="true">🤝</span>}
+      {busy ? '準備しています…' : '見守り合いに誘う'}
     </Button>
   );
 }

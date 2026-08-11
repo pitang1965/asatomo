@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * 行の縦3点（⋮）メニュー。稀・管理的な操作（見守り解除など）を畳んで目立たせない
@@ -74,8 +75,10 @@ export function RowMenu({
               variant="secondary"
               className={`${actBtn} border border-[color-mix(in_oklab,var(--crit)_45%,var(--line))] bg-transparent text-(--crit) hover:bg-(--crit)/10`}
               disabled={pending}
+              aria-busy={pending}
               onClick={onConfirm}
             >
+              {pending && <Spinner />}
               {pending ? '処理中…' : (confirmLabel ?? actionLabel)}
             </Button>
             <Button

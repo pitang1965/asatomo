@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { fetchShell } from '../server/functions';
 import { track } from '../web/analytics';
 import { authClient } from '../web/auth-client';
@@ -48,9 +49,34 @@ function LoginPage() {
   // SSR と一致させ、マウント後に true へ切り替える（ハイドレーション不整合を避ける）。
   const [inApp, setInApp] = useState(false);
   const [copied, setCopied] = useState(false);
+  // 押下からプロバイダへ遷移するまで無反応の間があるので、その間ボタンにスピナーを出す。
+  // 遷移が成功すればページごと離れるので解除は不要。失敗時のみ catch で元に戻す。
+  const [pending, setPending] = useState<'google' | 'line' | null>(null);
   useEffect(() => {
     setInApp(isInAppBrowser(navigator.userAgent));
   }, []);
+
+  async function signInWith(provider: 'google' | 'line') {
+    if (pending) return; // 二重押下・別プロバイダの同時押しを防ぐ
+    setPending(provider);
+    track('login_started', { provider });
+    try {
+      if (provider === 'google') {
+        await authClient.signIn.social({
+          provider: 'google',
+          callbackURL: back,
+        });
+      } else {
+        await authClient.signIn.oauth2({
+          providerId: 'line',
+          callbackURL: back,
+        });
+      }
+    } catch {
+      // リダイレクトに至らなかった場合だけ操作可能に戻す。
+      setPending(null);
+    }
+  }
 
   const copyUrl = () => {
     const url = window.location.href;
@@ -113,30 +139,24 @@ function LoginPage() {
             variant="secondary"
             size="lg"
             className="w-full border border-border font-semibold"
-            onClick={() => {
-              track('login_started', { provider: 'google' });
-              authClient.signIn.social({
-                provider: 'google',
-                callbackURL: back,
-              });
-            }}
+            disabled={pending !== null}
+            aria-busy={pending === 'google'}
+            onClick={() => signInWith('google')}
           >
-            Google でログイン
+            {pending === 'google' && <Spinner />}
+            {pending === 'google' ? 'ログイン中…' : 'Google でログイン'}
           </Button>
           <Button
             type="button"
             variant="secondary"
             size="lg"
             className="w-full border border-border font-semibold"
-            onClick={() => {
-              track('login_started', { provider: 'line' });
-              authClient.signIn.oauth2({
-                providerId: 'line',
-                callbackURL: back,
-              });
-            }}
+            disabled={pending !== null}
+            aria-busy={pending === 'line'}
+            onClick={() => signInWith('line')}
           >
-            LINE でログイン
+            {pending === 'line' && <Spinner />}
+            {pending === 'line' ? 'ログイン中…' : 'LINE でログイン'}
           </Button>
           {/* Facebook は未実装（backlog 項目17）のため一時的に非表示。
               実装時に、下記のボタンを復活させる:

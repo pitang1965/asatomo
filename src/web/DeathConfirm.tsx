@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * 死亡確認（見守りWeb）。「連絡を試みた結果の報告」として3択で聞く:
@@ -49,25 +51,41 @@ export function DeathConfirm({
       ? Math.min(100, Math.round((votesFor / livingWatchers) * 100))
       : 0;
 
+  // 押したボタンにだけスピナーを出す（pending は単一のため、どれを押したかを局所的に覚える）。
+  // 処理が終わって pending が下りたら解除する。
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pending) setBusyKey(null);
+  }, [pending]);
+
   const choice = (
+    key: string,
     label: string,
     caption: string,
     btnCls: string,
     onClick: () => void,
-  ) => (
-    <div className="mt-3">
-      <Button
-        type="button"
-        variant="secondary"
-        className={btnCls}
-        disabled={pending}
-        onClick={onClick}
-      >
-        {label}
-      </Button>
-      <p className="mt-1.5 text-center text-xs text-(--ink-3)">{caption}</p>
-    </div>
-  );
+  ) => {
+    const spinning = pending && busyKey === key;
+    return (
+      <div className="mt-3">
+        <Button
+          type="button"
+          variant="secondary"
+          className={btnCls}
+          disabled={pending}
+          aria-busy={spinning}
+          onClick={() => {
+            setBusyKey(key);
+            onClick();
+          }}
+        >
+          {spinning && <Spinner />}
+          {spinning ? '送信中…' : label}
+        </Button>
+        <p className="mt-1.5 text-center text-xs text-(--ink-3)">{caption}</p>
+      </div>
+    );
+  };
 
   return (
     <div className={watchCls}>
@@ -110,6 +128,7 @@ export function DeathConfirm({
               あなたは「亡くなられました」と報告済みです。状況が変わったときは、いつでも変更できます。
             </p>
             {choice(
+              'alive',
               '亡くなられていません',
               '取り下げて、無事を全員に知らせます',
               calmBtn,
@@ -117,6 +136,7 @@ export function DeathConfirm({
             )}
             {onWithdraw
               ? choice(
+                  'withdraw',
                   '未確認に戻す',
                   '報告だけを取り下げます',
                   ghostBtn,
@@ -127,13 +147,21 @@ export function DeathConfirm({
         ) : (
           <>
             {choice(
+              'alive',
               '亡くなられていません',
               '見守りの全員に知らせます',
               calmBtn,
               onAlive,
             )}
-            {choice('未確認です', 'あとで報告できます', ghostBtn, onUnknown)}
             {choice(
+              'unknown',
+              '未確認です',
+              'あとで報告できます',
+              ghostBtn,
+              onUnknown,
+            )}
+            {choice(
+              'confirm',
               '亡くなられました',
               '合意と猶予期間を経てはじめて成立します',
               graveBtn,

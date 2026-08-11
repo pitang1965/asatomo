@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchMessagesPage } from '../server/functions';
 import { track } from '../web/analytics';
@@ -197,10 +198,12 @@ function MessageCard({
     dek: CryptoKey;
   } | null>(null);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  // どの操作を処理中か（開く/削除で別ボタンにスピナーを出す。null = 待機）。
+  const [busyKind, setBusyKind] = useState<'open' | 'remove' | null>(null);
+  const busy = busyKind !== null;
 
   async function open() {
-    setBusy(true);
+    setBusyKind('open');
     setError('');
     try {
       const dek = await unwrapDek(msg.authorWrappedDek, masterPass);
@@ -214,13 +217,13 @@ function MessageCard({
         '編集用パスワードが違うようです。ページ上部の欄をご確認ください。',
       );
     } finally {
-      setBusy(false);
+      setBusyKind(null);
     }
   }
 
   async function remove() {
     if (!window.confirm('この伝言を削除しますか？元に戻せません。')) return;
-    setBusy(true);
+    setBusyKind('remove');
     try {
       const res = await fetch('/api/messages', {
         method: 'DELETE',
@@ -231,7 +234,7 @@ function MessageCard({
       onChanged();
     } catch {
       setError('削除に失敗しました。');
-      setBusy(false);
+      setBusyKind(null);
     }
   }
 
@@ -278,18 +281,22 @@ function MessageCard({
               variant="secondary"
               className={`${calmBtn} flex-1`}
               disabled={busy || masterPass.length === 0}
+              aria-busy={busyKind === 'open'}
               onClick={open}
             >
-              開く
+              {busyKind === 'open' && <Spinner />}
+              {busyKind === 'open' ? '開いています…' : '開く'}
             </Button>
             <Button
               type="button"
               variant="secondary"
               className={`${ghostBtn} flex-1`}
               disabled={busy}
+              aria-busy={busyKind === 'remove'}
               onClick={remove}
             >
-              削除
+              {busyKind === 'remove' && <Spinner />}
+              {busyKind === 'remove' ? '削除しています…' : '削除'}
             </Button>
           </div>
         </div>
@@ -419,9 +426,11 @@ function RecipientEditor({
           variant="secondary"
           className={`${calmBtn} flex-1`}
           disabled={!canSave}
+          aria-busy={busy}
           onClick={save}
         >
-          宛先を保存
+          {busy && <Spinner />}
+          {busy ? '保存しています…' : '宛先を保存'}
         </Button>
         <Button
           type="button"
@@ -639,9 +648,11 @@ function CreateForm({
         variant="secondary"
         className={`${calmBtn} mt-3 w-full`}
         disabled={!canSubmit}
+        aria-busy={busy}
         onClick={submit}
       >
-        暗号化して保存
+        {busy && <Spinner />}
+        {busy ? '保存しています…' : '暗号化して保存'}
       </Button>
       {!canSubmit && !busy && unmet.length > 0 ? (
         <ul className="mt-2 list-disc pl-4.5 text-[11px] text-(--ink-3)">

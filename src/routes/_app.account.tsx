@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { fetchAccount } from '../server/functions';
 import { Avatar } from '../web/Avatar';
 import { authClient } from '../web/auth-client';
@@ -93,8 +94,10 @@ function Account({
           variant="secondary"
           onClick={logout}
           disabled={busy}
+          aria-busy={busy}
           className="h-auto w-full rounded-xl border border-border py-3 text-sm font-semibold"
         >
+          {busy && <Spinner />}
           {busy ? 'ログアウト中…' : 'ログアウト'}
         </Button>
       </Card>

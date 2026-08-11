@@ -122,7 +122,7 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
             ) {
-                Text(if (busy) "ログアウト中…" else "ログアウト")
+                LoadingButtonContent("ログアウト", busy, "ログアウト中…")
             }
 
             // アカウント削除は「まれで重いフロー」なので見守りWeb が唯一の実装（ADR-0006/0007）。

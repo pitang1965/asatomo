@@ -144,7 +144,7 @@ private fun LoginStep(
                 }
             },
         ) {
-            Text(if (busy) "ログイン中…" else "Google でログイン")
+            LoadingButtonContent("Google でログイン", busy, "ログイン中…")
         }
         Spacer(Modifier.size(12.dp))
         // LINE は Google のような端末内 id_token 交換ができない（genericOAuth）ため、Custom Tab で

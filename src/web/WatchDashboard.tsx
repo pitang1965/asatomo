@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import type { DashboardRow } from '../domain/queries';
 import { recentActivityText } from '../domain/recent-activity';
 import { Avatar } from './Avatar';
@@ -145,6 +147,13 @@ function AlertCard({
     ? Math.floor((now.getTime() - row.lastSignalAt.getTime()) / 3_600_000)
     : null;
   const pending = actions.pendingSubjectId === row.subjectUserId;
+  // pending は行単位（代理確認と解除で共有）なので、代理確認ボタンを押したときだけ
+  // そのボタンにスピナーを出す。処理が終わって pending が下りたら解除。
+  const [clickedAlive, setClickedAlive] = useState(false);
+  useEffect(() => {
+    if (!pending) setClickedAlive(false);
+  }, [pending]);
+  const aliveSpinning = pending && clickedAlive;
   return (
     <div className="mb-3.5 rounded-2xl border border-[color-mix(in_oklab,var(--warn)_40%,var(--line))] bg-card shadow-(--shadow-sm)">
       <div className="h-1 rounded-t-[15px] bg-(--warn)" />
@@ -167,9 +176,14 @@ function AlertCard({
             variant="secondary"
             className={calmBtn}
             disabled={pending}
-            onClick={() => actions.onConfirmAlive(row.subjectUserId)}
+            aria-busy={aliveSpinning}
+            onClick={() => {
+              setClickedAlive(true);
+              actions.onConfirmAlive(row.subjectUserId);
+            }}
           >
-            連絡がついた・無事です
+            {aliveSpinning && <Spinner />}
+            {aliveSpinning ? '送信中…' : '連絡がついた・無事です'}
           </Button>
           <Button
             type="button"
