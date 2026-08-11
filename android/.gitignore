@@ -17,3 +17,5 @@ local.properties
 keystore.properties
 *.jks
 *.keystore
+# 署名鍵フォルダごと除外（公開証明書の .pem 等も含め誤コミットを防ぐ）
+keystore/
