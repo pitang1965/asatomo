@@ -261,7 +261,7 @@ function PrivacyPage() {
 
         <Section title="9. 未成年の利用">
           <p>
-            本サービスは13歳以上の方を対象としています（
+            本サービスは18歳以上の方を対象としています（
             <Link to="/terms" className="text-primary hover:underline">
               利用規約
             </Link>
