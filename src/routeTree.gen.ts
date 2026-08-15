@@ -13,6 +13,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as BetaRouteImport } from './routes/beta'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NativeLineRouteImport } from './routes/native.line'
@@ -48,6 +49,11 @@ const PreviewRoute = PreviewRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BetaRoute = BetaRouteImport.update({
+  id: '/beta',
+  path: '/beta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -132,6 +138,7 @@ const AppAccountDeleteRoute = AppAccountDeleteRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/beta': typeof BetaRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
   '/privacy': typeof PrivacyRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/beta': typeof BetaRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
   '/privacy': typeof PrivacyRoute
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/beta': typeof BetaRoute
   '/login': typeof LoginRoute
   '/preview': typeof PreviewRoute
   '/privacy': typeof PrivacyRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/beta'
     | '/login'
     | '/preview'
     | '/privacy'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/beta'
     | '/login'
     | '/preview'
     | '/privacy'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/beta'
     | '/login'
     | '/preview'
     | '/privacy'
@@ -265,6 +277,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  BetaRoute: typeof BetaRoute
   LoginRoute: typeof LoginRoute
   PreviewRoute: typeof PreviewRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/beta': {
+      id: '/beta'
+      path: '/beta'
+      fullPath: '/beta'
+      preLoaderRoute: typeof BetaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -449,6 +469,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  BetaRoute: BetaRoute,
   LoginRoute: LoginRoute,
   PreviewRoute: PreviewRoute,
   PrivacyRoute: PrivacyRoute,
