@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { QRCodeSVG } from 'qrcode.react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -398,6 +398,15 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedRich, setCopiedRich] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // 発行するとカードが縦に大きく展開し、最下部の「閉じる」が画面外に出て畳めることに
+  // 気づきにくい。展開時にカード先頭（「送るなら」）を画面上部へ寄せ、上から順に
+  // 全体（QR〜閉じる）が見えるようにする。scroll-mt でスティッキーヘッダーの下に収める。
+  useEffect(() => {
+    if (link)
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [link]);
 
   async function createInvite() {
     setBusy(true);
@@ -446,9 +455,28 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
     }
   }
 
+  // 表示を畳んで元の状態へ戻す（リンク自体はサーバー側で7日後に失効。ここは表示のクローズのみ）。
+  function closePanel() {
+    setLink(null);
+    setCopied(false);
+    setCopiedRich(false);
+  }
+
   if (link)
     return (
-      <Card className={card}>
+      <Card ref={cardRef} className={`${card} scroll-mt-16`}>
+        {/* 長い展開パネルなので、下までスクロールしなくても畳めるよう右上にも閉じるを常時置く。 */}
+        <div className="mb-1.5 flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={closePanel}
+            aria-label="閉じる"
+            className="h-auto px-2 py-1 text-[13px] font-normal text-muted-foreground"
+          >
+            ✕ 閉じる
+          </Button>
+        </div>
         {/* 遠くの人へ：リンクをコピーして送る（既存の経路）。 */}
         <p className="m-0 text-xs leading-[1.7] text-muted-foreground">
           <strong className="text-foreground">送るなら</strong>
@@ -501,16 +529,11 @@ function Invite({ onNotice }: { onNotice: (m: string) => void }) {
           </div>
         </div>
 
-        {/* 発行後にこの表示を畳んで元の状態へ戻す手段（無いと行き止まりになる）。
-            リンク自体はサーバー側で7日後に失効するので、ここは表示のクローズのみ。 */}
+        {/* 末尾にも残す（QR まで読んでからそのまま畳みたい人向け。右上と同一の手段）。 */}
         <Button
           type="button"
           variant="ghost"
-          onClick={() => {
-            setLink(null);
-            setCopied(false);
-            setCopiedRich(false);
-          }}
+          onClick={closePanel}
           className="mt-3.5 h-auto px-1 py-1.5 text-[13px] font-normal text-muted-foreground"
         >
           閉じる
