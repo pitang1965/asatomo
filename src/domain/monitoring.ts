@@ -147,6 +147,11 @@ export async function recordSignal(
     return { cancelledEpisode: false, resumedFromDisclosed: false, stale };
   }
 
+  // ログイン/利用の在席証拠（ADR-0001 §31）。新鮮なシグナル＝この人がいまアプリを
+  // 使っている証拠なので、この人が見守っている側の休眠時計も前進させる。stale（遅延
+  // 到着した古いシグナル）は現在の在席証拠ではないので前進させない（上の早期returnで除外済）。
+  await touchWatcherPresence(db, input.subjectUserId, occurredAt);
+
   // 不変条件A: 進行中エピソードがあれば即キャンセル。
   const cancelled = await db
     .update(deathCertifications)
@@ -628,6 +633,35 @@ async function touchWatcher(
         eq(connections.subjectUserId, subjectUserId),
         eq(connections.otherUserId, userId),
         eq(connections.isWatcher, true),
+      ),
+    );
+}
+
+/**
+ * その人が見守り者として「在席（ログイン/利用）」した証拠を、その人が見守っている
+ * 全つながりの watcher_last_seen_at に反映する（前進のみ）。ADR-0001 §31 の休眠判定は
+ * 「一定期間ログイン/応答の無い見守り者」を除外する規定で、touchWatcher が担う「応答」
+ * （代理確認・投票）に加えて、この「ログイン/利用」側の経路が要る。これが無いと、
+ * 実際にはアプリを使っている見守り者でも応答イベントが14日無いだけで休眠に落ち、
+ * 定足数の分母から不当に外れて開示が誤ロックする（本人シグナル受信・見守り
+ * ダッシュボード閲覧から呼ぶ）。承諾済みのみ対象（分母の定義に一致）。
+ */
+export async function touchWatcherPresence(
+  db: Db,
+  watcherUserId: string,
+  seenAt: Date,
+): Promise<void> {
+  await db
+    .update(connections)
+    .set({
+      watcherLastSeenAt: sql`greatest(${connections.watcherLastSeenAt}, ${seenAt.toISOString()}::timestamptz)`,
+      updatedAt: seenAt,
+    })
+    .where(
+      and(
+        eq(connections.otherUserId, watcherUserId),
+        eq(connections.isWatcher, true),
+        eq(connections.watcherStatus, 'accepted'),
       ),
     );
 }

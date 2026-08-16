@@ -13,7 +13,10 @@ import {
   listMessages,
   resolveDisclosureForRecipient,
 } from '../domain/messages';
-import { DEFAULT_DOMAIN_CONFIG } from '../domain/monitoring';
+import {
+  DEFAULT_DOMAIN_CONFIG,
+  touchWatcherPresence,
+} from '../domain/monitoring';
 import {
   type ActivityEntry,
   type DashboardRow,
@@ -154,10 +157,16 @@ export const fetchWatch = createServerFn({ method: 'GET' }).handler(
     // 一覧取得だけを try で包む（未設定・未ログインは上で確定済み）。ここで投げると
     // ルート全体がエラー境界に落ちるため、判別可能な error として返し画面側で穏当に扱う。
     try {
-      return {
-        status: 'ok',
-        rows: await getWatcherDashboard(app.db, session.user.id),
-      };
+      const rows = await getWatcherDashboard(app.db, session.user.id);
+      // 見守りダッシュボードを開いた＝見守り者として在席（ADR-0001 §31 のログイン側）。
+      // 休眠時計を前進させる。純粋な見守り者（誰にも見守られていない人）はシグナルを
+      // 出さないため、この経路が唯一の非休眠証拠になる。表示は妨げない（best-effort）。
+      try {
+        await touchWatcherPresence(app.db, session.user.id, new Date());
+      } catch {
+        // 在席反映の失敗は一覧表示に影響させない。
+      }
+      return { status: 'ok', rows };
     } catch {
       return { status: 'error' };
     }

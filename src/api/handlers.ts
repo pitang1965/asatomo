@@ -36,6 +36,7 @@ import {
   recordSignal,
   type SignalKind,
   setTravelMode,
+  touchWatcherPresence,
   withdrawVote,
 } from '../domain/monitoring';
 import {
@@ -164,6 +165,9 @@ export function createHandlers(ctx: ApiContext) {
     async watchOverview(
       actor: string,
     ): Promise<ApiResult<{ subjects: OverviewRow[]; youAreWatched: boolean }>> {
+      // 見守りダッシュボードを開いた＝見守り者として在席（ADR-0001 §31 のログイン側）。
+      // 休眠時計を前進させる。best-effort（失敗しても一覧は返す）。
+      await safe(() => touchWatcherPresence(db, actor, new Date()));
       // youAreWatched はアプリの本人コピー分岐用（見守り対象一覧とは別軸）。
       return {
         ok: true,

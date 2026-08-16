@@ -10,7 +10,11 @@ import {
   revokeWatcher,
   setPassphraseHint,
 } from '../src/domain/connections';
-import { DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
+import {
+  DEFAULT_DOMAIN_CONFIG,
+  recordSignal,
+  touchWatcherPresence,
+} from '../src/domain/monitoring';
 import { getSubjectWatchers } from '../src/domain/queries';
 import {
   hoursAgo,
@@ -299,6 +303,84 @@ describe('本人の見守り者一覧（整理ページ）', () => {
     const watchers = await getSubjectWatchers(db, s, cfg);
     expect(watchers).toHaveLength(3);
     expect(watchers.filter((w) => w.isLiving)).toHaveLength(1);
+  });
+});
+
+describe('見守り者の在席（ログイン/利用）で休眠時計が前進（ADR-0001 §31）', () => {
+  // subjectUserId を watcherUserId が見守る accepted/pending 行を直接作る
+  // （seedWatcher は見守り者 id を自動採番するため、既存ユーザーを見守り者に据える用）。
+  async function connectAsWatcher(
+    subjectUserId: string,
+    watcherUserId: string,
+    lastSeenAt: Date | null,
+    accepted = true,
+  ): Promise<void> {
+    await db.insert(schema.connections).values({
+      subjectUserId,
+      otherUserId: watcherUserId,
+      displayName: watcherUserId,
+      isWatcher: true,
+      watcherStatus: accepted ? 'accepted' : 'pending',
+      watcherLastSeenAt: lastSeenAt,
+    });
+  }
+
+  it('本人の新鮮なシグナルで、その人が見守っている側の休眠時計も前進する', async () => {
+    const bob = await seedSubject(db);
+    const alice = await seedSubject(db); // alice 自身も本人（シグナルを出せる）。
+    // alice の見守り者としての最終応答は15日前＝そのままなら休眠。
+    await connectAsWatcher(bob, alice, hoursAgo(15 * 24, NOW));
+    expect((await getSubjectWatchers(db, bob, cfg))[0].isLiving).toBe(false);
+
+    // alice が新鮮なシグナル＝いまアプリを使っている証拠（ADR-0001 §31 のログイン側）。
+    await recordSignal(
+      db,
+      { subjectUserId: alice, kind: 'meal', occurredAt: hoursAgo(2, NOW) },
+      cfg,
+    );
+    expect((await getSubjectWatchers(db, bob, cfg))[0].isLiving).toBe(true);
+  });
+
+  it('stale（遅延到着の古いシグナル）では前進しない', async () => {
+    const bob = await seedSubject(db);
+    const alice = await seedSubject(db);
+    await connectAsWatcher(bob, alice, hoursAgo(15 * 24, NOW));
+
+    // 検知窓（30h）より古い occurredAt = stale。現在の在席証拠ではない。
+    await recordSignal(
+      db,
+      { subjectUserId: alice, kind: 'meal', occurredAt: hoursAgo(40, NOW) },
+      cfg,
+    );
+    expect((await getSubjectWatchers(db, bob, cfg))[0].isLiving).toBe(false);
+  });
+
+  it('touchWatcherPresence は前進のみ（新しい値を巻き戻さない）', async () => {
+    const bob = await seedSubject(db);
+    const alice = await seedUser(db, 'alice');
+    await connectAsWatcher(bob, alice, hoursAgo(1, NOW)); // 直近で在席済み。
+
+    await touchWatcherPresence(db, alice, hoursAgo(20 * 24, NOW)); // 古い時刻で触る。
+    expect((await getSubjectWatchers(db, bob, cfg))[0].isLiving).toBe(true);
+  });
+
+  it('未承諾（pending）の見守り行は在席で触れない', async () => {
+    const bob = await seedSubject(db);
+    const alice = await seedUser(db, 'alice');
+    await connectAsWatcher(bob, alice, null, false);
+
+    await touchWatcherPresence(db, alice, NOW);
+
+    const [row] = await db
+      .select({ seen: schema.connections.watcherLastSeenAt })
+      .from(schema.connections)
+      .where(
+        and(
+          eq(schema.connections.subjectUserId, bob),
+          eq(schema.connections.otherUserId, alice),
+        ),
+      );
+    expect(row.seen).toBeNull();
   });
 });
 
