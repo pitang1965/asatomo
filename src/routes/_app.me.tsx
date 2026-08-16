@@ -177,8 +177,12 @@ function Me({
             {watchersLiving < 2 ? (
               <p className="mt-2 mb-0 rounded-[10px] bg-(--warn-soft) px-3 py-2.5 text-[12.5px] leading-[1.8] text-foreground">
                 このままだと、もしものときに
-                <strong>最後の伝言を届けられません</strong>
-                。見守ってくれる人が2人になると届けられるようになります。
+                <strong>最後の伝言を届けられません</strong>。
+                {/* 人がいないのか（総数<2）、人はいるが休眠で届け先が足りないのか
+                    （総数≥2・生存<2）で原因が違うので、文面を分ける（開示ライン＝生存2人）。 */}
+                {watchersTotal < 2
+                  ? '見守ってくれる人が2人になると届けられるようになります。'
+                  : 'しばらく利用がない見守り手がいて、届け先が足りていません。下の一覧でご確認ください。'}
               </p>
             ) : null}
             <p className="mt-2.5 mb-0 text-xs">

@@ -106,9 +106,19 @@ function Roster({ initial }: { initial: SubjectWatcher[] }) {
                   key={w.connectionId}
                   className="flex items-center justify-between gap-2.5 rounded-xl border border-border bg-secondary py-2 pr-2 pl-3"
                 >
-                  <span className="text-sm font-semibold text-foreground">
-                    {w.displayName}
-                  </span>
+                  {/* 休眠中（14日以上利用なし＝isLiving=false）は開示ラインの分母から外れる。
+                      「わたし」の警告（生存＜2人）の理由が本人に分かるよう、その旨を名前に添える。 */}
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-sm font-semibold text-foreground">
+                      {w.displayName}
+                    </span>
+                    {w.isLiving ? null : (
+                      <span className="text-[11px] leading-[1.6] text-(--warn)">
+                        しばらく利用がないようです。もしものとき気づいてもらえない
+                        かもしれません。
+                      </span>
+                    )}
+                  </div>
                   {/* 稀な操作なので⋮に畳む（grill フィードバック）。開示ラインを割る時だけ警告（決定B）。 */}
                   <RowMenu
                     actionLabel="見守りをお願いするのをやめる"
