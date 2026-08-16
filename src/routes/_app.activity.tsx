@@ -66,7 +66,17 @@ function History({
 
   return (
     <div className="min-h-screen bg-background">
-      <Card className={cardW}>
+      {/* 「わたし」配下のドリルダウン。下タブの「わたし」は既にアクティブ表示で
+          「押せば戻れる」と気づきにくいので、紹介帯（?intro）と同じ明示的な戻り導線を置く。 */}
+      <div className="mx-auto max-w-150 px-5 pt-4">
+        <Link
+          to="/me"
+          className="text-[13px] text-muted-foreground no-underline hover:underline"
+        >
+          ← 自分の画面に戻る
+        </Link>
+      </div>
+      <Card className="mx-auto mt-2 mb-4 max-w-150">
         <h1 className="m-0 text-[17px] text-foreground">あなたの記録</h1>
         <p className="mt-2 mb-0 text-xs leading-[1.8] text-muted-foreground">
           {isSubject
