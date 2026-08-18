@@ -60,6 +60,9 @@ describe('宛先解決＋通知（Notifications）', () => {
     expect(pushCalls).toHaveLength(1);
     expect(pushCalls[0]?.tokens).toEqual(['tok-1']);
     expect(emailCalls).toHaveLength(0);
+    // プッシュが届く相手はアプリ所持者。短文＋URLなし（タップで開くのでノイズになる）。
+    expect(pushCalls[0]?.msg.body).toBe('アプリを開くだけで大丈夫です。');
+    expect(pushCalls[0]?.msg.body).not.toContain(notifyCfg.webBaseUrl);
   });
 
   it('未応答: トークンが無ければ本人メールにフォールバック', async () => {
@@ -70,6 +73,14 @@ describe('宛先解決＋通知（Notifications）', () => {
     );
     expect(pushCalls).toHaveLength(0);
     expect(emailCalls).toHaveLength(1);
+    // メールが飛ぶ相手はアプリ非所持（iPhone の本人等）。開く先は「アサトモWeb」と名指しし
+    // （ユーザーが実際に目にする名。「見守りWeb」は設計語）、理由と帰結、URL を添える。
+    const text = emailCalls[0]?.msg.text ?? '';
+    expect(text).toContain('アサトモWeb');
+    expect(text).not.toContain('見守りWeb');
+    expect(text).toContain('しばらく応答が確認できていません');
+    expect(text).toContain('見守ってくださっている方へご連絡します');
+    expect(text).toContain(notifyCfg.webBaseUrl);
   });
 
   it('見守り者アラート: 承諾済みだけにメール', async () => {

@@ -103,7 +103,7 @@ function History({
           <p className="mt-4 mb-0 text-[13px] leading-[1.8] text-muted-foreground">
             まだ記録がありません。
             <br />
-            アプリや見守りWebを使うと、ここに「元気」が残っていきます。
+            アプリやアサトモWebを使うと、ここに「元気」が残っていきます。
           </p>
         ) : (
           <ul className="mt-3.5 mb-0 flex list-none flex-col gap-2 p-0">

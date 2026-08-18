@@ -147,7 +147,7 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
                 )
             }
             Text(
-                "削除は見守りWebで行います",
+                "削除はアサトモWebで行います",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.CenterHorizontally),

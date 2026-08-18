@@ -70,24 +70,32 @@ export function createNotifications(
   const tag = (s: string) => `[${config.appName}] ${s}`;
 
   // プッシュ優先・トークンが無ければメールにフォールバックして本人へ届ける。
-  // linkForEmail はメール本文にのみ付ける（プッシュはタップで開くのでURL不要・ノイズになる）。
   // title はプッシュのタイトル兼メール件名（tag で [アサトモ] を前置）。appName を渡さない
   // （件名が「[アサトモ] アサトモ」になるため、意味のある一言を渡す）。
+  //
+  // body はプッシュ本文（短く。通知シェードで切られる）。email で文面を上書きできる:
+  //   - text: メール用の本文。プッシュと違い「なぜ届いたか」「放置するとどうなるか」まで
+  //     書ける（メールは受信箱で埋もれるので、文脈を思い出せないと動けない）。
+  //   - link: メール本文にのみ付けるURL（プッシュはタップで開くのでURL不要・ノイズになる）。
+  // 経路の呼び分けもここで効く: プッシュが届く相手はアプリ所持者、メールが飛ぶ相手は
+  // トークンが無い＝アプリ非所持（iPhone の本人等）。チャネルごとに実在する経路だけ案内する
+  // のは CONTEXT.md「経路非依存」（iPhone の本人に「アプリを開いて」と言わない）の趣旨に沿う。
   async function notifySubject(
     subjectUserId: string,
     title: string,
     body: string,
-    linkForEmail?: string,
+    email?: { text?: string; link?: string },
   ): Promise<void> {
     const tokens = await getSubjectPushTokens(db, subjectUserId);
     if (tokens.length > 0) {
       await senders.push.sendToTokens(tokens, { title, body });
       return;
     }
-    const email = await getUserEmail(db, subjectUserId);
-    if (email) {
-      const text = linkForEmail ? `${body}\n${linkForEmail}` : body;
-      await senders.email.send(email, { subject: tag(title), text });
+    const to = await getUserEmail(db, subjectUserId);
+    if (to) {
+      const base = email?.text ?? body;
+      const text = email?.link ? `${base}\n\n${email.link}` : base;
+      await senders.email.send(to, { subject: tag(title), text });
     }
   }
 
@@ -105,14 +113,25 @@ export function createNotifications(
   return {
     // ── cron Notifier ──
     async notifySubjectUnresponsive(subjectUserId) {
-      // 件名＝「元気ですか？」／本文にスマホアプリと見守りWeb（経路非依存。CONTEXT.md
-      // プラットフォームの呼び分け）。メールには見守りWebのURLを付ける（ドメインは env
-      // WEB_BASE_URL 由来。iPhone等アプリ非所持の本人はここから開く）。
+      // 件名＝「元気ですか？」。本文はチャネルで分ける（CONTEXT.md プラットフォームの呼び分け）:
+      //   - プッシュ（アプリ所持者）: タップすれば開くので一言だけ。
+      //   - メール（アプリ非所持の本人）: 開く先を「アサトモWeb」と名指しする。ユーザーが実際に
+      //     目にする名はヘッダー／ログインの「アサトモWeb」であり、加えて受信者は見守られる側の
+      //     本人なので「見守りWeb」では役割とも噛み合わない。理由（しばらく応答が無い）と帰結
+      //     （見守り者へ連絡が行く）も添える。無視した先のコストが相手に及ぶことが、この段階で
+      //     最も効く行動喚起。URL は env WEB_BASE_URL 由来（`/` はログイン済みなら /me へ）。
       await notifySubject(
         subjectUserId,
         '元気ですか？',
-        'スマホアプリか見守りWebを開くだけで大丈夫です。',
-        config.webBaseUrl,
+        'アプリを開くだけで大丈夫です。',
+        {
+          text: [
+            'しばらく応答が確認できていません。',
+            'アサトモWebを開くだけで大丈夫です。それだけで「元気」が届きます。',
+            'このまま応答がないと、見守ってくださっている方へご連絡します。',
+          ].join('\n'),
+          link: config.webBaseUrl,
+        },
       );
     },
 
