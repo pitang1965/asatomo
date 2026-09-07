@@ -187,7 +187,7 @@ export function createNotifications(
       const name = (await getUserName(db, subjectUserId)) ?? '見守り相手';
       const body =
         event === 'attestation'
-          ? `${name}さんについて、別の見守り者が生存を確認しました。`
+          ? `${name}さんについて、生存確認の報告がありました。`
           : event === 'concern'
             ? `${name}さんについて「連絡が取れない」という報告がありました。確認してみてください。`
             : `${name}さんの死亡確認の投票が始まりました。ご確認ください。`;
