@@ -124,6 +124,18 @@ if ($devices.Count -eq 0) {
   Warn "端末に接続できませんでした。端末のワイヤレスデバッグを確認して再実行してください。"
   exit 1
 }
+# 同じ端末が「ip:port」と mDNS 名（adb-<serial>-xxx._adb-tls-connect._tcp）の2行で
+# 並ぶことがある。ハードウェアのシリアル（ro.serialno）で束ね、1台に数える（ip:port 側を優先）。
+if ($devices.Count -gt 1) {
+  $bySerial = [ordered]@{}
+  foreach ($d in ($devices | Sort-Object { $_ -match '_adb-tls-connect' })) {
+    $s = ($d -split '\s+')[0]
+    $hw = (& $adb -s $s shell getprop ro.serialno 2>$null | Out-String).Trim()
+    if (-not $hw) { $hw = $s }
+    if (-not $bySerial.Contains($hw)) { $bySerial[$hw] = $d }
+  }
+  $devices = @($bySerial.Values)
+}
 if ($devices.Count -gt 1) {
   Warn "複数の端末が接続されています。1台だけにして再実行してください:"
   $devices | ForEach-Object { Warn "  $_" }
@@ -149,6 +161,14 @@ if ($Reinstall) {
 $result = Install-Apk
 if ($result -notmatch 'Success') {
   if ($result -match 'INSTALL_FAILED_UPDATE_INCOMPATIBLE|signatures do not match|INSTALL_FAILED_VERSION_DOWNGRADE') {
+    # Play 由来（アプリ署名鍵で再署名済み）の場合は自動で消さない。アンインストールで
+    # アラーム設定・ログイン等のアプリ内データが消え、日常機の目覚ましが止まりうるため。
+    $installer = (& $adb -s $serial shell pm list packages -i $appId 2>$null | Out-String)
+    if ($installer -match 'installer=com\.android\.vending' -and -not $Reinstall) {
+      Warn "端末のアプリは Google Play 版のため、署名が異なり上書きできません。"
+      Warn "データが消えるので自動アンインストールはしません。入れ替えるなら -Reinstall を付けるか、手動でアンインストールしてから再実行してください。"
+      exit 1
+    }
     Warn "既存アプリと署名/バージョンが不一致のため、アンインストールしてから入れ直します。"
     & $adb -s $serial uninstall $appId 2>&1 | ForEach-Object { Write-Host "  $_" }
     $result = Install-Apk
