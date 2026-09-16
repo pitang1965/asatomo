@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -69,6 +71,9 @@ import kotlinx.coroutines.launch
  *   - 右上 ⚙ → 設定画面（ログアウト等）
  *   - アプリ起動の自動シグナル（透明性の原則: 画面に明示する。CONTEXT.md 生存シグナル）
  */
+/** 姉妹アプリ「なおったメモ」（連携なし・リンクのみ。CONTEXT.md 姉妹アプリ）。 */
+private const val NAOTTA_URL = "https://naotta.over40web.club/"
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,6 +121,8 @@ private fun MainScreen() {
     var trackedLabel by remember { mutableStateOf("") }
     // 送信中のシグナル種別（ボタン上に即時フィードバックを出すため。null = 送信していない）。
     var sendingKind by remember { mutableStateOf<ApiClient.SignalKind?>(null) }
+    // 届いた直後だけ姉妹アプリ（なおったメモ）への「ついで」の声かけを出す（CONTEXT.md 姉妹アプリ）。
+    var signalDelivered by remember { mutableStateOf(false) }
 
     // 見守りの一瞥（サーバー整形済み。null = 読み込み中）。attest 後は reload++ で再取得。
     var watchRows by remember { mutableStateOf<List<ApiClient.WatchSubject>?>(null) }
@@ -193,6 +200,7 @@ private fun MainScreen() {
                     WorkInfo.State.FAILED -> "✗ $trackedLabel を受け付けられませんでした"
                     else -> status
                 }
+            signalDelivered = info?.state == WorkInfo.State.SUCCEEDED
             // 決着（成功/失敗/圏外待ち）が付いたらボタンの送信中表示を解除。
             // ENQUEUED は圏外でそのまま待つことがあるので、待ち受け表示に戻して連打を許す。
             when (info?.state) {
@@ -208,6 +216,7 @@ private fun MainScreen() {
         if (sendingKind != null) return // 二重送信を防ぐ（連打対策）
         // 押した瞬間に反応を返す（WorkManager の状態が届く前の空白をなくす）。
         sendingKind = kind
+        signalDelivered = false
         status = "$label: 送信中…"
         trackedLabel = label
         trackedWork = SignalQueue.enqueue(context, kind)
@@ -403,6 +412,19 @@ private fun MainScreen() {
                 )
                 if (status.isNotEmpty()) {
                     Text(status, style = MaterialTheme.typography.bodyMedium)
+                }
+                // 姉妹アプリは生存シグナル源ではない。文言に「伝わる」「届く」を使わない（CONTEXT.md 姉妹アプリ）。
+                if (signalDelivered) {
+                    TextButton(
+                        onClick = {
+                            CustomTabsIntent.Builder()
+                                .build()
+                                .launchUrl(context, Uri.parse(NAOTTA_URL))
+                        },
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Text("調子はどう？ なおったメモに記録 →")
+                    }
                 }
             }
 

@@ -30,6 +30,9 @@ const wrap = 'mx-auto max-w-148 px-4 pt-3';
 // 見た目の地色・影は Card 部品が持ち、ここでは密度の上書きだけを渡す（cn で後勝ち）。
 const card = 'mb-2.5 rounded-[14px] p-3.5';
 
+// 姉妹アプリ「なおったメモ」（連携なし・リンクのみ。CONTEXT.md 姉妹アプリ）。
+const NAOTTA_URL = 'https://naotta.over40web.club/';
+
 // ピル型ボタン（様子ボタン・旅行モードボタン）。旧 pill/travelBtn と同一の見た目。
 const pill =
   'h-auto rounded-full border border-border px-3.5 py-2 text-[13px] font-semibold';
@@ -62,6 +65,8 @@ function Me({
 }) {
   const isSubject = watchersTotal > 0;
   const [signalNotice, setSignalNotice] = useState('');
+  // 届いた直後だけ姉妹アプリ（なおったメモ）への「ついで」の声かけを出す（CONTEXT.md 姉妹アプリ）。
+  const [signalDelivered, setSignalDelivered] = useState(false);
   const [sendingKind, setSendingKind] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
 
@@ -83,6 +88,7 @@ function Me({
   async function sendSignal(kind: string, label: string) {
     if (sendingKind) return; // 二重送信を防ぐ（連打対策）
     setSignalNotice('');
+    setSignalDelivered(false);
     setSendingKind(kind);
     try {
       const res = await fetch('/api/signals', {
@@ -94,6 +100,7 @@ function Me({
       // 種別のみ送る（申告そのものに機微情報はない）。
       track('signal_sent', { kind });
       setSignalNotice(`✓ 「${label}」が届きました`);
+      setSignalDelivered(true);
     } catch {
       setSignalNotice('送信できませんでした。時間をおいてお試しください。');
     } finally {
@@ -162,6 +169,20 @@ function Me({
             </p>
             {signalNotice ? (
               <p className="mt-2 mb-0 text-xs text-(--good)">{signalNotice}</p>
+            ) : null}
+            {/* 姉妹アプリは生存シグナル源ではない。文言に「伝わる」「届く」を使わない（CONTEXT.md 姉妹アプリ）。 */}
+            {signalDelivered ? (
+              <p className="mt-1 mb-0 text-xs">
+                <a
+                  href={NAOTTA_URL}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-primary hover:underline"
+                  onClick={() => track('sister_app_opened', { app: 'naotta' })}
+                >
+                  調子はどう？ なおったメモに記録 →
+                </a>
+              </p>
             ) : null}
           </Card>
 
