@@ -1,25 +1,36 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "asatomo",
-  // カスタムエントリ: TanStack Start の fetch に加え、監視tick（scheduled）を持つ。
-  "main": "src/server/worker.ts",
-  "compatibility_date": "2026-07-01",
-  // nodejs_compat: vars/secrets が process.env に写る前提（src/server/env.ts）。
-  "compatibility_flags": ["nodejs_compat"],
-  // 監視tick（時間駆動の状態遷移 T1/T2/T5）。約15分間隔（ADR-0001）。
-  "triggers": {
-    "crons": ["*/15 * * * *"]
-  },
-  // 非シークレット。シークレット（DATABASE_URL / BETTER_AUTH_SECRET /
-  // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / EMAIL_API_KEY / OPERATOR_EMAIL）は
-  // wrangler secret put で登録する。
-  // ⚠ DEV_BEARER_SECRET は本番に絶対に設定しない（開発専用バイパス）。
-  "vars": {
-    "BETTER_AUTH_URL": "https://asatomo.nafuda.me",
-    // メール差出人（Resend 検証済みドメイン over40web.club 上のアドレス）。非機密。
-    "EMAIL_FROM": "no-reply@over40web.club"
-  },
-  "observability": {
-    "enabled": true
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "asatomo",
+	// カスタムエントリ: TanStack Start の fetch に加え、監視tick（scheduled）を持つ。
+	"main": "src/server/worker.ts",
+	"compatibility_date": "2026-07-01",
+	// nodejs_compat: vars/secrets が process.env に写る前提（src/server/env.ts）。
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// 監視tick（時間駆動の状態遷移 T1/T2/T5）。約15分間隔（ADR-0001）。
+	"triggers": {
+		"crons": [
+			"*/15 * * * *"
+		]
+	},
+	// 非シークレット。シークレット（DATABASE_URL / BETTER_AUTH_SECRET /
+	// GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / EMAIL_API_KEY / OPERATOR_EMAIL）は
+	// wrangler secret put で登録する。
+	// ⚠ DEV_BEARER_SECRET は本番に絶対に設定しない（開発専用バイパス）。
+	"vars": {
+		"BETTER_AUTH_URL": "https://asatomo.nafuda.me",
+		// メール差出人（Resend 検証済みドメイン over40web.club 上のアドレス）。非機密。
+		"EMAIL_FROM": "no-reply@over40web.club"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "nafuda_db_dev",
+			"database_name": "nafuda-db-dev",
+			"database_id": "eaffc14a-eaad-4b14-bc7b-dfb43aad38c4"
+		}
+	]
 }
