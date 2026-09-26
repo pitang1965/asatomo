@@ -1,6 +1,5 @@
-import { createDb } from '../src/db';
 import { connections, signals, subjectSettings, user } from '../src/db/schema';
-import { loadEnv } from './dev-db';
+import { getLocalD1Db, loadEnv } from './dev-db';
 
 /**
  * ストアスクショ専用シード（開発DBのみ）。実ユーザーのデータには一切触れず、
@@ -13,9 +12,7 @@ import { loadEnv } from './dev-db';
  * 冪等（何度実行しても同じ）。本番へは touch しない（file-per-env）。
  */
 loadEnv();
-if (!process.env.DATABASE_URL)
-  throw new Error('DATABASE_URL がありません（.env.local を確認してください）');
-const db = createDb(process.env.DATABASE_URL);
+const db = getLocalD1Db();
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
 
 const OWNER = {
@@ -145,8 +142,12 @@ async function main() {
     .onConflictDoNothing();
 
   console.log(`owner userId: ${OWNER.id}`);
-  console.log(`本人 ${SUBJECTS.length} 人（実名なし）を ${OWNER.name} が見守る状態にしました。`);
-  console.log(`さらに ${OWNER.name} を ${WATCHER.name} が見守る状態（youAreWatched=true）にしました。`);
+  console.log(
+    `本人 ${SUBJECTS.length} 人（実名なし）を ${OWNER.name} が見守る状態にしました。`,
+  );
+  console.log(
+    `さらに ${OWNER.name} を ${WATCHER.name} が見守る状態（youAreWatched=true）にしました。`,
+  );
 }
 
 await main();

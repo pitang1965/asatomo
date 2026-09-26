@@ -7,8 +7,8 @@ import { defineConfig } from 'vite';
 
 /**
  * Cloudflare Workers 配備用のビルド設定（npm run build:cf → wrangler deploy）。
- * 開発は vite.config.ts（プラグインなし・Node 実行）のまま — adb reverse や .env の
- * 読み込みなど既存の開発フローを壊さないため、デプロイ時だけこの設定を使う。
+ * 開発時も vite.config.ts で同じ cloudflare プラグインを使うが、configPath で
+ * wrangler-dev.jsonc（開発用D1）とここ（wrangler.jsonc、本番用D1）を切り替えている。
  */
 export default defineConfig({
   resolve: {
@@ -20,4 +20,7 @@ export default defineConfig({
     tanstackStart(),
     react(),
   ],
+  // src/db/index.ts が読む cloudflare:workers（ambient env）は、@cloudflare/vite-plugin が
+  // Workers組み込みモジュールとしてネイティブに解決する。resolve.external を明示すると
+  // プラグイン自身のバリデーションに弾かれるため、何も指定しない。
 });

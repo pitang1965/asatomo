@@ -28,5 +28,12 @@
     "activityBarTop.activeBorder": "#e7e7e7"
   },
   "peacock.color": "#215732",
-  "cSpell.words": ["asatomo", "gradlew", "neondatabase", "pglite", "posthog"]
+  "cSpell.words": [
+    "asatomo",
+    "gradlew",
+    "neondatabase",
+    "pglite",
+    "posthog",
+    "prevlink"
+  ]
 }

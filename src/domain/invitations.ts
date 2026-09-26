@@ -17,7 +17,7 @@ import { type DomainConfig, recomputeDisclosureEnabled } from './monitoring';
 const DAY_MS = 86_400_000;
 const DEFAULT_INVITE_TTL_DAYS = 7;
 
-/** URLセーフ乱数トークン（16バイト→base64url, ~22文字）。Workers/Node/pglite 共通の globalThis.crypto。 */
+/** URLセーフ乱数トークン（16バイト→base64url, ~22文字）。Workers/Node 共通の globalThis.crypto。 */
 function generateToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   let bin = '';

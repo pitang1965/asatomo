@@ -1,16 +1,16 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import type { Db } from '../src/db';
 import * as schema from '../src/db/schema';
 
 /**
- * インメモリ Postgres（pglite）に実マイグレーション（drizzle/*.sql をファイル名順）を適用し、
- * ドメイン/Cron を実際に走らせて状態機械を検証するためのテスト用 DB。
- * ドライバは異なる（pglite vs neon-http）がクエリビルダ API は同一なので Db にキャストする。
+ * インメモリ SQLite（better-sqlite3）に実マイグレーション（drizzle/*.sql をファイル名順）を
+ * 適用し、ドメイン/Cron を実際に走らせて状態機械を検証するためのテスト用 DB。
+ * ドライバは異なる（better-sqlite3 vs D1）がクエリビルダ API は同一なので Db にキャストする。
  */
 export async function makeTestDb(): Promise<Db> {
-  const client = new PGlite();
+  const client = new Database(':memory:');
   const files = readdirSync('drizzle')
     .filter((f) => f.endsWith('.sql'))
     .sort();
@@ -19,7 +19,7 @@ export async function makeTestDb(): Promise<Db> {
       '--> statement-breakpoint',
       '',
     );
-    await client.exec(sql);
+    client.exec(sql);
   }
   return drizzle(client, { schema }) as unknown as Db;
 }

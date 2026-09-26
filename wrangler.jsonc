@@ -26,11 +26,15 @@
 	"observability": {
 		"enabled": true
 	},
+	// asatomo自身の本番D1（Neonからの移行、docs/adr/0012）。database_idは
+	// `npx wrangler d1 create asatomo-db-prod` の出力を貼る（Phase 3で確定）。
+	// migrations_dir: drizzle-kitの出力先(./drizzle)をwrangler d1 migrationsに見せる（既定は./migrations）。
 	"d1_databases": [
 		{
-			"binding": "nafuda_db_dev",
-			"database_name": "nafuda-db-dev",
-			"database_id": "eaffc14a-eaad-4b14-bc7b-dfb43aad38c4"
+			"binding": "DB",
+			"database_name": "asatomo-db-prod",
+			"database_id": "f813b2c4-cc66-4830-ade5-0457f81266eb",
+			"migrations_dir": "drizzle"
 		}
 	]
 }

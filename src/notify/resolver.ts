@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db';
 import { connections, pushTokens, user } from '../db/schema';
 
-/** 通知の「宛先解決」— 誰に・どのチャネルで届けるかを DB から引く（pglite でテスト可能）。 */
+/** 通知の「宛先解決」— 誰に・どのチャネルで届けるかを DB から引く（better-sqlite3 でテスト可能）。 */
 
 export async function getSubjectPushTokens(
   db: Db,

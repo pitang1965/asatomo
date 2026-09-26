@@ -1,5 +1,5 @@
 /**
- * アサトモ Postgres スキーマ（Drizzle ORM / Neon Postgres）
+ * アサトモ SQLite スキーマ（Drizzle ORM / Cloudflare D1）
  *
  * このファイルは CONTEXT.md の用語集と docs/adr/ の決定を、そのままテーブルへ写像したもの。
  * 用語 → テーブルの対応:
@@ -22,28 +22,28 @@
  *   - 判定窓/猶予の安全の床（本人でも外せない下限）         … ADR-0001
  *   - 旅行モードの上限日数・可視化・自動復帰                 … 旅行モード決定
  *   - 合言葉・DEK の暗号化/復号は端末側（サーバは平文を持たない）… ADR-0002
+ *
+ * SQLiteには列挙型が無いため、Postgres時代のpgEnumは `text(..., { enum: [...] })` に、
+ * uuid は `text` + `crypto.randomUUID()`、timestamp(withTimezone) は `integer(mode:'timestamp')`
+ * （unix秒）、boolean は `integer(mode:'boolean')` に対応させている（docs/adr/0012 参照）。
  */
 
 import { relations, sql } from 'drizzle-orm';
 import {
-  boolean,
   check,
   index,
   integer,
-  pgEnum,
-  pgTable,
+  sqliteTable,
   text,
-  timestamp,
   uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core';
+} from 'drizzle-orm/sqlite-core';
 
 // ────────────────────────────────────────────────────────────────────────────
-// Enums
+// Enums（SQLiteには無いので text(..., { enum: [...] }) の値集合として定義）
 // ────────────────────────────────────────────────────────────────────────────
 
 /** 生存シグナルの種別（本人が自分で発する直接証拠）。判定は時刻でなく経過時間ベース。 */
-export const signalKind = pgEnum('signal_kind', [
+const signalKindValues = [
   'alarm_dismiss', // アラーム停止
   'meal', // 「ごはん」ボタン
   'sleep', // 「寝る」ボタン
@@ -53,67 +53,69 @@ export const signalKind = pgEnum('signal_kind', [
   'outing', // 「いってきます」ボタン（外出。近況ではぼかして見せる — CONTEXT.md 近況）
   'homecoming', // 「ただいま」ボタン（帰宅）
   'wake', // 「おはよう」ボタン（起床）
-]);
+] as const;
 
 /** 見守り者の招待状態（見守りは責務なので承諾が要る。純粋な受取人には不要）。 */
-export const watcherStatus = pgEnum('watcher_status', [
+const watcherStatusValues = [
   'pending', // 招待済み・未承諾
   'accepted', // 承諾（見守り者として有効）
   'declined', // 辞退
   'revoked', // 本人が取消 / 見守り者が離脱
-]);
+] as const;
 
 /** 死亡認定の状態機械（正常 → … → 開示）。ADR-0001。 */
-export const monitoringState = pgEnum('monitoring_state', [
+const monitoringStateValues = [
   'normal', // 正常
   'unresponsive', // 未応答（本人へ再通知済み）
   'watchers_alerted', // 見守り者へ「連絡してみて」通知済み
   'voting', // 投票中
   'certified_grace', // 認定成立・猶予期間中（最後の可逆点）
   'disclosed', // 開示済み（不可逆の終点。不変条件C）
-]);
+] as const;
 
 /** 内部判定用の一時的プレゼンス。見守り者にはリアルタイム露出しない（近況のみ）。 */
-export const presenceState = pgEnum('presence_state', [
-  'none',
-  'eating',
-  'sleeping',
-]);
+const presenceStateValues = ['none', 'eating', 'sleeping'] as const;
 
 /** 死亡認定エピソードの結末。 */
-export const certificationOutcome = pgEnum('certification_outcome', [
+const certificationOutcomeValues = [
   'in_progress', // 進行中（1本のみ active）
   'cancelled_by_signal', // 本人の生存シグナルで中断（不変条件A）
   'cancelled_by_subject', // 猶予中に本人がワンタップ取消（A'）
   'cancelled_by_withdrawal', // 投票取り下げ等で定足数割れ
   'resolved_by_attestation', // 見守り者の代理確認で解決（誰が確認したかは attestations に記録）
   'disclosed', // 開示に到達
-]);
+] as const;
 
 // ────────────────────────────────────────────────────────────────────────────
 // 認証（Better Auth 管理）— ⚠ 手編集禁止
 //   `@better-auth/cli generate`（scripts/auth-cli-config.ts）の出力を反映した正式版。
-//   プロジェクト方針として timestamp は withTimezone（生成時の差はこの点のみ意図的）。
+//   生成結果どおり timestamp_ms（unixミリ秒、DB側デフォルト）を使う（他テーブルは
+//   integer(mode:'timestamp')=unix秒。ここだけ生成ツールに合わせて意図的に異なる）。
 //   auth 設定を変えたら再生成して差分をここに写すこと。
 //   アサトモは DB 分離（ADR-0003）のため、自前の auth テーブルを持つ。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const user = pgTable('user', {
+// created_at/updated_at のDB側デフォルト（`npx @better-auth/cli generate`の出力どおり）。
+const authNowDefault = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
+
+export const user = sqliteTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  emailVerified: boolean('email_verified').notNull().default(false),
+  emailVerified: integer('email_verified', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   image: text('image'),
-  createdAt: timestamp('created_at', { withTimezone: true })
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .default(authNowDefault),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
     .notNull()
-    .defaultNow()
+    .default(authNowDefault)
     .$onUpdate(() => new Date()),
 });
 
-export const session = pgTable(
+export const session = sqliteTable(
   'session',
   {
     id: text('id').primaryKey(),
@@ -121,21 +123,20 @@ export const session = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     token: text('token').notNull().unique(),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .default(authNowDefault),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
       .notNull()
-      .defaultNow()
       .$onUpdate(() => new Date()),
   },
   (t) => [index('session_userId_idx').on(t.userId)],
 );
 
-export const account = pgTable(
+export const account = sqliteTable(
   'account',
   {
     id: text('id').primaryKey(),
@@ -147,38 +148,37 @@ export const account = pgTable(
     accessToken: text('access_token'),
     refreshToken: text('refresh_token'),
     idToken: text('id_token'),
-    accessTokenExpiresAt: timestamp('access_token_expires_at', {
-      withTimezone: true,
+    accessTokenExpiresAt: integer('access_token_expires_at', {
+      mode: 'timestamp_ms',
     }),
-    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', {
-      withTimezone: true,
+    refreshTokenExpiresAt: integer('refresh_token_expires_at', {
+      mode: 'timestamp_ms',
     }),
     scope: text('scope'),
     password: text('password'),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .default(authNowDefault),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
       .notNull()
-      .defaultNow()
       .$onUpdate(() => new Date()),
   },
   (t) => [index('account_userId_idx').on(t.userId)],
 );
 
-export const verification = pgTable(
+export const verification = sqliteTable(
   'verification',
   {
     id: text('id').primaryKey(),
     identifier: text('identifier').notNull(),
     value: text('value').notNull(),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .default(authNowDefault),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
       .notNull()
-      .defaultNow()
+      .default(authNowDefault)
       .$onUpdate(() => new Date()),
   },
   (t) => [index('verification_identifier_idx').on(t.identifier)],
@@ -189,7 +189,7 @@ export const verification = pgTable(
 //   「本人（見守られる側）」になった user につき 1 行。cron の未シグナルscan の起点。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const subjectSettings = pgTable(
+export const subjectSettings = sqliteTable(
   'subject_settings',
   {
     userId: text('user_id')
@@ -203,38 +203,42 @@ export const subjectSettings = pgTable(
     gracePeriodHours: integer('grace_period_hours').notNull().default(48), // 既定48h（24〜72h）
 
     // cron 高速scan用に非正規化（signals から更新）。
-    lastSignalAt: timestamp('last_signal_at', { withTimezone: true }),
+    lastSignalAt: integer('last_signal_at', { mode: 'timestamp' }),
 
     // 状態機械の現在地（ADR-0001）。
-    state: monitoringState('state').notNull().default('normal'),
-    stateChangedAt: timestamp('state_changed_at', { withTimezone: true })
+    state: text('state', { enum: monitoringStateValues })
       .notNull()
-      .defaultNow(),
+      .default('normal'),
+    stateChangedAt: integer('state_changed_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
 
     // 内部判定用プレゼンス（見守り者には露出しない）。
-    currentPresence: presenceState('current_presence')
+    currentPresence: text('current_presence', { enum: presenceStateValues })
       .notNull()
       .default('none'),
-    presenceSince: timestamp('presence_since', { withTimezone: true }),
+    presenceSince: integer('presence_since', { mode: 'timestamp' }),
 
     // 旅行モード: 期限付き・自動復帰。null = 通常監視。可視化はアプリ層。上限日数もアプリ層で強制。
-    travelUntil: timestamp('travel_until', { withTimezone: true }),
-    travelStartedAt: timestamp('travel_started_at', { withTimezone: true }),
+    travelUntil: integer('travel_until', { mode: 'timestamp' }),
+    travelStartedAt: integer('travel_started_at', { mode: 'timestamp' }),
 
     // 本人アプリからのログアウト。null = ログイン中（または未使用）。
     // 沈黙を情報に変えるための可視化であり、監視・エスカレーションは抑制しない（ADR-0006 の文脈）。
     // アプリ発のシグナル受信でクリア（ログインし直して使い始めた証拠）。
-    appLoggedOutAt: timestamp('app_logged_out_at', { withTimezone: true }),
+    appLoggedOutAt: integer('app_logged_out_at', { mode: 'timestamp' }),
 
     // 開示可否のキャッシュ（= 承諾済み見守り者が2人以上か。ADR-0001）。権威はアプリ層の再計算。
-    disclosureEnabled: boolean('disclosure_enabled').notNull().default(false),
+    disclosureEnabled: integer('disclosure_enabled', { mode: 'boolean' })
+      .notNull()
+      .default(false),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     // 「未シグナルscan」用: state が normal で、lastSignalAt が古い本人を効率よく拾う。
@@ -248,10 +252,12 @@ export const subjectSettings = pgTable(
 //   相互見守りは (A→B) と (B→A) の 2 レコードで表現する。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const connections = pgTable(
+export const connections = sqliteTable(
   'connections',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
 
     subjectUserId: text('subject_user_id')
       .notNull()
@@ -270,23 +276,25 @@ export const connections = pgTable(
 
     // 見守る役割（見守り者）を持つか。持つと死亡認定の投票権を得る（ADR-0001）。
     // 純粋な受取人は false（懸念フラグは上げられるが投票不可）。
-    isWatcher: boolean('is_watcher').notNull().default(false),
-    watcherStatus: watcherStatus('watcher_status'), // isWatcher の時のみ意味を持つ
-    watcherLastSeenAt: timestamp('watcher_last_seen_at', {
-      withTimezone: true,
+    isWatcher: integer('is_watcher', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    watcherStatus: text('watcher_status', { enum: watcherStatusValues }), // isWatcher の時のみ意味を持つ
+    watcherLastSeenAt: integer('watcher_last_seen_at', {
+      mode: 'timestamp',
     }), // 休眠判定用（分母から自動除外）
 
     // 合言葉（ADR-0002）: 合言葉そのものは保存しない。任意のヒントのみ（平文）。受取人ごとの属性。
     passphraseHint: text('passphrase_hint'),
 
-    invitedAt: timestamp('invited_at', { withTimezone: true }),
-    respondedAt: timestamp('responded_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    invitedAt: integer('invited_at', { mode: 'timestamp' }),
+    respondedAt: integer('responded_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     // 相手はユーザーかメールのどちらか一方（両方nullや両方設定は不可）。
@@ -314,24 +322,26 @@ export const connections = pgTable(
 //   有効な招待 = consumedAt/revokedAt が null かつ expiresAt が未来。派生状態はアプリ層で判定。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const invitations = pgTable(
+export const invitations = sqliteTable(
   'invitations',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     token: text('token').notNull().unique(), // URLセーフ乱数（アプリ生成）
     inviterUserId: text('inviter_user_id') // 見守り者が欲しい本人（招待者）
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
     // 使い切り: 承諾で設定。誰が承諾したかも記録（監査・重複承諾の冪等化）。
-    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    consumedAt: integer('consumed_at', { mode: 'timestamp' }),
     consumedByUserId: text('consumed_by_user_id').references(() => user.id, {
       onDelete: 'set null',
     }),
-    revokedAt: timestamp('revoked_at', { withTimezone: true }), // 招待者の取消
-    createdAt: timestamp('created_at', { withTimezone: true })
+    revokedAt: integer('revoked_at', { mode: 'timestamp' }), // 招待者の取消
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     inviterIdx: index('invitations_inviter_idx').on(t.inviterUserId),
@@ -343,18 +353,20 @@ export const invitations = pgTable(
 //   オフライン時は端末側キューイング → 再接続時に同期するため、occurredAt(端末) と receivedAt(サーバ) を分離。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const signals = pgTable(
+export const signals = sqliteTable(
   'signals',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     subjectUserId: text('subject_user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    kind: signalKind('kind').notNull(),
-    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), // 端末側の発生時刻
-    receivedAt: timestamp('received_at', { withTimezone: true })
+    kind: text('kind', { enum: signalKindValues }).notNull(),
+    occurredAt: integer('occurred_at', { mode: 'timestamp' }).notNull(), // 端末側の発生時刻
+    receivedAt: integer('received_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(), // サーバ受信時刻
+      .$defaultFn(() => new Date()), // サーバ受信時刻
     source: text('source'), // 端末/アプリ情報（任意）
   },
   (t) => ({
@@ -375,18 +387,20 @@ export const signals = pgTable(
 // 本人向けプッシュ通知トークン（FCM HTTP v1）
 // ────────────────────────────────────────────────────────────────────────────
 
-export const pushTokens = pgTable(
+export const pushTokens = sqliteTable(
   'push_tokens',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     fcmToken: text('fcm_token').notNull().unique(),
     platform: text('platform').notNull().default('android'),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     userIdx: index('push_tokens_user_idx').on(t.userId),
@@ -398,28 +412,34 @@ export const pushTokens = pgTable(
 //   state が normal を離れたら 1 本 open。votes はここに紐づく。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const deathCertifications = pgTable(
+export const deathCertifications = sqliteTable(
   'death_certifications',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     subjectUserId: text('subject_user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    startedAt: timestamp('started_at', { withTimezone: true })
+    startedAt: integer('started_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    stage: monitoringState('stage').notNull().default('unresponsive'),
-    graceUntil: timestamp('grace_until', { withTimezone: true }), // 認定成立時に設定（猶予期限）
-    outcome: certificationOutcome('outcome').notNull().default('in_progress'),
+      .$defaultFn(() => new Date()),
+    stage: text('stage', { enum: monitoringStateValues })
+      .notNull()
+      .default('unresponsive'),
+    graceUntil: integer('grace_until', { mode: 'timestamp' }), // 認定成立時に設定（猶予期限）
+    outcome: text('outcome', { enum: certificationOutcomeValues })
+      .notNull()
+      .default('in_progress'),
     cancelReason: text('cancel_reason'),
-    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
-    disclosedAt: timestamp('disclosed_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    cancelledAt: integer('cancelled_at', { mode: 'timestamp' }),
+    disclosedAt: integer('disclosed_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     // 本人につき in_progress は 1 本のみ（アプリ層 + この部分ユニークで担保）。
@@ -434,20 +454,22 @@ export const deathCertifications = pgTable(
 // 死亡認定の投票（deathVotes）— 見守り者のみ。取り下げ可（不変条件B）
 // ────────────────────────────────────────────────────────────────────────────
 
-export const deathVotes = pgTable(
+export const deathVotes = sqliteTable(
   'death_votes',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    certificationId: uuid('certification_id')
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    certificationId: text('certification_id')
       .notNull()
       .references(() => deathCertifications.id, { onDelete: 'cascade' }),
     voterUserId: text('voter_user_id') // 見守り者（アプリ層で isWatcher/accepted を検証）
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }), // 取り下げ（代理確認等を見て）
+      .$defaultFn(() => new Date()),
+    withdrawnAt: integer('withdrawn_at', { mode: 'timestamp' }), // 取り下げ（代理確認等を見て）
   },
   (t) => ({
     // 1 エピソード×1 見守り者につき 1 票。
@@ -463,26 +485,28 @@ export const deathVotes = pgTable(
 //   全見守り者に可視化する監査記録。日常の汎用シグナル源にはしない。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const attestations = pgTable(
+export const attestations = sqliteTable(
   'attestations',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     subjectUserId: text('subject_user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     attesterUserId: text('attester_user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    certificationId: uuid('certification_id').references(
+    certificationId: text('certification_id').references(
       () => deathCertifications.id,
       {
         onDelete: 'set null',
       },
     ), // エスカレーション中なら紐づく
     note: text('note'), // 任意の根拠メモ（例:「14:00にDiscord投稿を確認」）
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     subjectIdx: index('attestations_subject_idx').on(
@@ -497,20 +521,22 @@ export const attestations = pgTable(
 //   見守り者のエスカレーションを起動するだけ。承認権限は与えない（ADR-0001）。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const concernFlags = pgTable(
+export const concernFlags = sqliteTable(
   'concern_flags',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     subjectUserId: text('subject_user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    raisedByConnectionId: uuid('raised_by_connection_id')
+    raisedByConnectionId: text('raised_by_connection_id')
       .notNull()
       .references(() => connections.id, { onDelete: 'cascade' }),
     note: text('note'),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     subjectIdx: index('concern_flags_subject_idx').on(
@@ -525,10 +551,12 @@ export const concernFlags = pgTable(
 //   サーバは暗号文しか持たない。復号は端末側で合言葉から。運営者は平文を読めない。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const legacyMessages = pgTable(
+export const legacyMessages = sqliteTable(
   'legacy_messages',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     subjectUserId: text('subject_user_id') // 作成者（本人）
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
@@ -539,12 +567,12 @@ export const legacyMessages = pgTable(
     // DEK を「本人自身の鍵」で包んだもの。本人が生前いつでも本文/見出しを読み書きするため（ADR-0002）。
     // 受取人向けの wrappedDek は messageRecipients 側。運営者はどの鍵も持たない＝ゼロ知識。
     authorWrappedDek: text('author_wrapped_dek').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     subjectIdx: index('legacy_messages_subject_idx').on(t.subjectUserId),
@@ -557,20 +585,22 @@ export const legacyMessages = pgTable(
 //   グループ宛はv2（質問6）。wrappedDek は合言葉由来鍵で包んだ DEK（ADR-0002）。
 // ────────────────────────────────────────────────────────────────────────────
 
-export const messageRecipients = pgTable(
+export const messageRecipients = sqliteTable(
   'message_recipients',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    messageId: uuid('message_id')
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    messageId: text('message_id')
       .notNull()
       .references(() => legacyMessages.id, { onDelete: 'cascade' }),
-    connectionId: uuid('connection_id') // 宛先の受取人（= つながり）
+    connectionId: text('connection_id') // 宛先の受取人（= つながり）
       .notNull()
       .references(() => connections.id, { onDelete: 'cascade' }),
     wrappedDek: text('wrapped_dek').notNull(), // base64。合言葉由来鍵で包んだデータ鍵
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (t) => ({
     uniqTarget: uniqueIndex('message_recipients_uniq').on(

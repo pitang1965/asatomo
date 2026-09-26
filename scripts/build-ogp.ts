@@ -228,7 +228,9 @@ async function main() {
 
   // ランディング用ヒーロー: 焼き込み見出し・ロゴを除いた「場面のみ」。
   // webp本命＋jpegフォールバック(iOS14未満やWebP非対応環境向け。<picture>で出し分け)。
-  await sceneExtract().webp({ quality: 80 }).toFile(resolve(root, 'public/hero.webp'));
+  await sceneExtract()
+    .webp({ quality: 80 })
+    .toFile(resolve(root, 'public/hero.webp'));
   await sceneExtract()
     .jpeg({ quality: 82, mozjpeg: true })
     .toFile(resolve(root, 'public/hero.jpg'));

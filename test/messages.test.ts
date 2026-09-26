@@ -321,8 +321,7 @@ describe('受取人ごとの開示解決（開示画面C・ADR-0011）', () => {
   });
 
   it('UUID書式でない connectionId も空を返す（DBへ渡さず中立化。ADR-0011 §2）', async () => {
-    // uuid 列へ 'xxx' を渡すと Postgres が例外を投げ、公開ルートがエラー画面になって
-    // 中立性が壊れる。書式段階で弾き、未知IDと同一の空応答にする。
+    // DBの型に頼らずアプリ層で書式を弾き、未知IDと同一の空応答にする（ADR-0011 §2）。
     expect(await resolveDisclosureForRecipient(db, 'xxx')).toHaveLength(0);
     expect(await resolveDisclosureForRecipient(db, '')).toHaveLength(0);
   });

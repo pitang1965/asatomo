@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, lte, or, sql } from 'drizzle-orm';
 import type { Db } from '../db';
 import { deathCertifications, subjectSettings } from '../db/schema';
+import { toEpochSeconds } from '../db/time';
 
 /**
  * 監視tick（タスク#3 / Cloudflare Cron Triggers・約15分間隔）。
@@ -16,7 +17,7 @@ import { deathCertifications, subjectSettings } from '../db/schema';
  * 使い方（Cloudflare Worker）:
  *   export default {
  *     async scheduled(_event, env, ctx) {
- *       const db = createDb(env.DATABASE_URL);
+ *       const db = createDb();
  *       ctx.waitUntil(runMonitoringTick(db, notifier, { stage1to2DelayHours: 12, batchLimit: 20 }));
  *     },
  *   };
@@ -32,7 +33,7 @@ export interface Notifier {
     subjectUserId: string,
     certificationId: string,
   ): Promise<void>;
-  /** Neon 障害時: 運営者へ「監視tickが劣化」を直送（安全システムを沈黙させない）。 */
+  /** DB 障害時: 運営者へ「監視tickが劣化」を直送（安全システムを沈黙させない）。 */
   notifyOperatorDegraded(error: unknown): Promise<void>;
 }
 
@@ -43,7 +44,7 @@ export interface TickConfig {
   batchLimit: number;
   /** テスト用に現在時刻を注入可能。既定は実時刻。 */
   now?: Date;
-  /** DB 接続のリトライ回数（コールドスタート吸収）。既定3。 */
+  /** DB 操作のリトライ回数（一過性エラー吸収）。既定3。 */
   retries?: number;
 }
 
@@ -51,7 +52,7 @@ export interface TickResult {
   disclosed: number;
   watchersAlerted: number;
   unresponsive: number;
-  /** Neon 不通でリトライも尽き、運営者へ直送した場合 true。 */
+  /** DB 不通でリトライも尽き、運営者へ直送した場合 true。 */
   degraded: boolean;
 }
 
@@ -83,7 +84,7 @@ export async function runMonitoringTick(
       config,
     );
   } catch (error) {
-    // Neon 不通などでリトライ尽き → 運営者へ直送（沈黙より通知）。
+    // DB 不通などでリトライ尽き → 運営者へ直送（沈黙より通知）。
     result.degraded = true;
     await safe(() => notifier.notifyOperatorDegraded(error));
   }
@@ -150,13 +151,16 @@ async function processWatcherAlerts(
   now: Date,
   config: TickConfig,
 ): Promise<number> {
+  const threshold = new Date(
+    now.getTime() - config.stage1to2DelayHours * 3_600_000,
+  );
   const delayed = await db
     .select({ userId: subjectSettings.userId })
     .from(subjectSettings)
     .where(
       and(
         eq(subjectSettings.state, 'unresponsive'),
-        sql`${subjectSettings.stateChangedAt} + (${config.stage1to2DelayHours} * interval '1 hour') <= ${now.toISOString()}::timestamptz`,
+        lte(subjectSettings.stateChangedAt, threshold),
       ),
     )
     .limit(config.batchLimit);
@@ -200,7 +204,7 @@ async function processUnresponsive(
   now: Date,
   config: TickConfig,
 ): Promise<number> {
-  const nowIso = sql`${now.toISOString()}::timestamptz`;
+  const nowEpoch = toEpochSeconds(now);
   const candidates = await db
     .select({ userId: subjectSettings.userId })
     .from(subjectSettings)
@@ -214,7 +218,9 @@ async function processUnresponsive(
         ),
         // 一度もシグナルが無い本人は判定対象にしない（基準時刻が無い）
         isNotNull(subjectSettings.lastSignalAt),
-        sql`${subjectSettings.lastSignalAt} + (${subjectSettings.detectionWindowHours} * interval '1 hour') < ${nowIso}`,
+        // detectionWindowHours は本人ごとに可変な列なので、行ごとの生SQL演算が必要
+        // （unix秒での比較。列は integer({mode:'timestamp'}) だが SQLite 内部表現は秒の整数）。
+        sql`${subjectSettings.lastSignalAt} + (${subjectSettings.detectionWindowHours} * 3600) < ${nowEpoch}`,
       ),
     )
     .limit(config.batchLimit);
@@ -252,7 +258,7 @@ async function processUnresponsive(
 
 // ─── ヘルパ ─────────────────────────────────────────────────────────────────
 
-/** DB 操作をバックオフ付きでリトライ（Neon コールドスタート 500ms〜2s を吸収）。 */
+/** DB 操作をバックオフ付きでリトライ（一過性エラーを吸収）。 */
 async function withRetry<T>(
   fn: () => Promise<T>,
   config: TickConfig,

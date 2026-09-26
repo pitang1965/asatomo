@@ -1,0 +1,29 @@
+# アサトモ ローカル開発のサーバーランタイム秘密情報のひな型。
+# コピーして .dev.vars にリネームし、値を埋める（.gitignore 済み・コミットしない）。
+# @cloudflare/vite-plugin（Miniflare）が process.env へ流し込む — 本番の
+# wrangler secret put に相当するローカル版。VITE_* や db:studio用の値は .env.example
+# （.env.local/.env.production）側を参照。詳細は .env.example の説明を参照。
+
+# Better Auth
+BETTER_AUTH_SECRET=（ランダムな長い文字列）
+BETTER_AUTH_URL=http://127.0.0.1:5173
+
+# 見守りWeb の公開URL（通知メールのリンク等）。未設定なら BETTER_AUTH_URL にフォールバック。
+WEB_BASE_URL=
+
+# ソーシャルログイン（OAuth）
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+LINE_CLIENT_ID=
+LINE_CLIENT_SECRET=
+
+# メール送信（Resend）。未設定なら開発はコンソール出力にフォールバック（実送信しない）。
+EMAIL_API_KEY=
+EMAIL_FROM=no-reply@over40web.club
+
+# 監視tick 縮退時の運営者通報先。
+OPERATOR_EMAIL=
+
+# 開発専用の認証バイパス（Authorization: Bearer <secret>:<userId>）。
+# ⚠ 本番には絶対に設定しない。Android 実験（OAuth 配線前）用。
+DEV_BEARER_SECRET=

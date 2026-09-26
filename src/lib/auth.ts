@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { bearer } from 'better-auth/plugins';
 import { genericOAuth, line } from 'better-auth/plugins/generic-oauth';
-import { createDb } from '../db';
+import { createDb, type Db } from '../db';
 import * as schema from '../db/schema';
 
 /**
@@ -20,7 +20,6 @@ import * as schema from '../db/schema';
  *   src/db/schema.ts のプレースホルダ auth 節を置き換えること（ADR-0003: DB分離のため自前所有）。
  */
 export interface AuthEnv {
-  DATABASE_URL: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   GOOGLE_CLIENT_ID: string;
@@ -31,9 +30,12 @@ export interface AuthEnv {
   LINE_CLIENT_SECRET: string;
 }
 
-export function createAuth(env: AuthEnv) {
-  const db = createDb(env.DATABASE_URL);
-
+/**
+ * @param db スキーマ生成専用（scripts/auth-cli-config.ts）の差し替え口。通常は省略し、
+ *   ambient な `createDb()`（D1バインディング）を使う — Workersランタイム外の
+ *   `@better-auth/cli generate` 実行時だけ、実クエリを投げないダミーDBを明示的に渡す。
+ */
+export function createAuth(env: AuthEnv, db: Db = createDb()) {
   // 資格情報が揃っているプロバイダだけ登録する（未設定分の毎リクエスト警告を避ける）。
   const socialProviders: Record<
     string,
@@ -72,7 +74,11 @@ export function createAuth(env: AuthEnv) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    database: drizzleAdapter(db, { provider: 'pg', schema }),
+    database: drizzleAdapter(db, {
+      provider: 'sqlite',
+      schema,
+      transaction: false,
+    }),
     socialProviders,
     account: {
       accountLinking: {
@@ -82,6 +88,12 @@ export function createAuth(env: AuthEnv) {
         // account_not_linked になる。accountLinking は必ず account の下に置く
         // （トップレベルだと better-auth に無視される）。
         trustedProviders: ['google', 'facebook', 'line'],
+        // ⚠ trustedProviders だけでは不十分。better-authの既定(requireLocalEmailVerified: true)は
+        // 「新しいプロバイダが信頼できるか」ではなく「紐付け先の既存ユーザー自身がemailVerified済みか」
+        // を見る（node_modules/better-auth/dist/oauth2/link-account.mjs参照）。LINE発のユーザーは
+        // 仕様上emailVerified:falseで作られるため、これがtrueのままだと後から他プロバイダ
+        // （Google等）を一切紐付けられない。明示的にfalseにする。
+        requireLocalEmailVerified: false,
       },
     },
     plugins: [

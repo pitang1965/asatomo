@@ -9,6 +9,7 @@ import {
   signals,
   subjectSettings,
 } from '../db/schema';
+import { toEpochSeconds } from '../db/time';
 
 /**
  * イベント駆動の状態遷移（タスク#4 / API ハンドラが呼ぶドメイン層）。
@@ -125,16 +126,20 @@ export async function recordSignal(
         ? 'sleeping'
         : null;
 
-  // last_signal_at は前進のみ（古いオフラインキュー分が新しい値を巻き戻さないよう greatest）。
+  // last_signal_at は前進のみ（古いオフラインキュー分が新しい値を巻き戻さないよう2引数max）。
   // stale でも前進はさせる（発生時点の真実の記録）。T1 判定は lastSignalAt 基準なので、
   // これだけで「段階の再評価」は自然に済む（窓内に戻るなら下の fresh 経路が normal 化する）。
   // アプリ発のシグナルは「ログインし直して使っている」証拠なので appLoggedOutAt を
   // クリアする（ログアウト表示の解除）。Web 発（種別問わず）はアプリのログイン状態と
   // 無関係なのでクリアしない（source で判定。kind の重複実装はしない）。
+  // ここはDB側の単一UPDATE文の中で完結させる必要がある（JS側read-then-writeにすると
+  // トランザクション無し設計の前提である楽観的並行制御にレースが入り込むため）。
   await db
     .update(subjectSettings)
     .set({
-      lastSignalAt: sql`greatest(${subjectSettings.lastSignalAt}, ${occurredAt.toISOString()}::timestamptz)`,
+      // SQLiteの2引数max()はPostgresのgreatest()と違い、いずれかがNULLなら結果もNULLになる
+      // （初回シグナルでlastSignalAtがまだnullの行を巻き戻してしまう）。coalesceで補う。
+      lastSignalAt: sql`coalesce(max(${subjectSettings.lastSignalAt}, ${toEpochSeconds(occurredAt)}), ${toEpochSeconds(occurredAt)})`,
       ...(presence && !stale
         ? { currentPresence: presence, presenceSince: now }
         : {}),
@@ -376,7 +381,7 @@ export async function attest(
         .set({
           state: 'normal',
           stateChangedAt: now,
-          lastSignalAt: sql`greatest(${subjectSettings.lastSignalAt}, ${now.toISOString()}::timestamptz)`,
+          lastSignalAt: sql`coalesce(max(${subjectSettings.lastSignalAt}, ${toEpochSeconds(now)}), ${toEpochSeconds(now)})`,
           updatedAt: now,
         })
         .where(eq(subjectSettings.userId, input.subjectUserId));
@@ -474,7 +479,7 @@ export async function cancelBySubject(
     .set({
       state: 'normal',
       stateChangedAt: now,
-      lastSignalAt: sql`greatest(${subjectSettings.lastSignalAt}, ${now.toISOString()}::timestamptz)`,
+      lastSignalAt: sql`coalesce(max(${subjectSettings.lastSignalAt}, ${toEpochSeconds(now)}), ${toEpochSeconds(now)})`,
       updatedAt: now,
     })
     .where(eq(subjectSettings.userId, subjectUserId));
@@ -654,7 +659,7 @@ export async function touchWatcherPresence(
   await db
     .update(connections)
     .set({
-      watcherLastSeenAt: sql`greatest(${connections.watcherLastSeenAt}, ${seenAt.toISOString()}::timestamptz)`,
+      watcherLastSeenAt: sql`coalesce(max(${connections.watcherLastSeenAt}, ${toEpochSeconds(seenAt)}), ${toEpochSeconds(seenAt)})`,
       updatedAt: seenAt,
     })
     .where(

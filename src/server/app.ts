@@ -1,5 +1,5 @@
 import { createHandlers } from '../api/handlers';
-import { createDb } from '../db';
+import { ConfigError, createDb } from '../db';
 import { DEFAULT_DOMAIN_CONFIG } from '../domain/monitoring';
 import { createAuth } from '../lib/auth';
 import { createNotifications } from '../notify/notifier';
@@ -15,8 +15,7 @@ import type { ServerEnv } from './env';
  * DB・認証・通知・ハンドラをここで束ね、サーバールートは createRequestApp(env) を呼ぶだけにする。
  */
 
-/** 環境変数の不足など、リクエスト側の問題ではない設定ミス。ルート層で 503 に写す。 */
-export class ConfigError extends Error {}
+export { ConfigError };
 
 // FCM はサービスアカウント署名（getAccessToken）の実装後に createFcmPushSender へ差し替える。
 const devPush: PushSender = {
@@ -32,12 +31,7 @@ const devEmail: EmailSender = {
 };
 
 export function createRequestApp(env: ServerEnv) {
-  if (!env.DATABASE_URL)
-    throw new ConfigError(
-      'DATABASE_URL が未設定です。.env（開発）または Workers のシークレット（本番）に設定してください。',
-    );
-
-  const db = createDb(env.DATABASE_URL);
+  const db = createDb();
   const auth = createAuth(env);
 
   const email =

@@ -1,7 +1,6 @@
 import { desc, eq } from 'drizzle-orm';
-import { createDb } from '../src/db';
 import { session, signals, subjectSettings, user } from '../src/db/schema';
-import { loadEnv } from './dev-db';
+import { getLocalD1Db, loadEnv } from './dev-db';
 
 /** 実機検証用（読み取り専用）: メールでユーザーを引き、セッション・シグナル・監視行を表示。 */
 loadEnv();
@@ -10,7 +9,7 @@ const fmt = (d: Date | null | undefined) =>
   d ? d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '—';
 
 async function main() {
-  const db = createDb(process.env.DATABASE_URL as string);
+  const db = getLocalD1Db();
   const email = process.argv[2];
   if (!email) throw new Error('メールアドレスを引数に指定してください');
 

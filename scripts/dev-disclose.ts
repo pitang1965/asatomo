@@ -1,4 +1,3 @@
-import { createDb } from '../src/db';
 import {
   connections,
   deathCertifications,
@@ -8,7 +7,7 @@ import {
   user,
 } from '../src/db/schema';
 import { encryptText, generateDek, wrapDek } from '../src/web/crypto';
-import { loadEnv } from './dev-db';
+import { getLocalD1Db, loadEnv } from './dev-db';
 
 /**
  * 開発用: 受取人の開示画面(C)を最短で確認する（ADR-0011）。
@@ -18,15 +17,13 @@ import { loadEnv } from './dev-db';
  *   /disclosure/{connectionId} を開いて合言葉「ポチ」で復号 → 手紙表示を確認できる。
  *
  * 実行: npx tsx scripts/dev-disclose.ts
- * 冪等（固定IDで upsert）。参照は .env.local（開発DB）のみ＝本番へは触れない。
+ * 冪等（固定IDで upsert）。参照はローカルD1（開発DB）のみ＝本番へは触れない。
  *
  * ※ 状態機械の tick 経由（certified_grace → 開示）や実メール送信まで含めた
  *   フル配線の検証は別（末尾のメモ参照）。ここは今回作った「画面C＋ゲート付きクエリ」の直接検証。
  */
 loadEnv();
-if (!process.env.DATABASE_URL)
-  throw new Error('DATABASE_URL がありません（.env.local を確認してください）');
-const db = createDb(process.env.DATABASE_URL);
+const db = getLocalD1Db();
 
 const SUBJECT_ID = 'seed-subject-disclose';
 const CONNECTION_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01';

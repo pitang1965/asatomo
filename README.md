@@ -10,7 +10,7 @@
   <img alt="React 19" src="https://img.shields.io/badge/React_19-20232A?logo=react&logoColor=61DAFB">
   <img alt="TanStack Start" src="https://img.shields.io/badge/TanStack_Start-FF4154?logo=react-query&logoColor=white">
   <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white">
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white">
+  <img alt="Cloudflare D1" src="https://img.shields.io/badge/Cloudflare_D1-003B57?logo=sqlite&logoColor=white">
   <img alt="Drizzle ORM" src="https://img.shields.io/badge/Drizzle_ORM-C5F74F?logo=drizzle&logoColor=black">
   <img alt="Android" src="https://img.shields.io/badge/Android_(Kotlin)-3DDC84?logo=android&logoColor=white">
 </p>
@@ -133,7 +133,7 @@ flowchart TD
       D["monitoring / connections /<br/>messages / invitations / account"]
     end
     N["通知<br/>（メール: Resend / Push: 抽象化済み）"]
-    DB[("PostgreSQL<br/>Neon + Drizzle ORM")]
+    DB[("Cloudflare D1<br/>SQLite + Drizzle ORM")]
 
     A -->|"Bearer / セッション"| R
     W -->|"Cookie セッション"| R
@@ -170,11 +170,11 @@ flowchart TD
 | Web フレームワーク | **TanStack Start**（React 19 / SSR / ファイルベースルーティング） | サーバー関数と型付きルーターで、認証状態に応じた SSR を簡潔に |
 | 実行環境 | **Cloudflare Workers**（`nodejs_compat`） | エッジで低レイテンシ・低運用コスト。Cron Trigger で監視tickも同居 |
 | 認証 | **Better Auth**（Google / Facebook / LINE OAuth・Bearer） | セッションと OAuth を薄く自前所有。Android はネイティブ取得の ID トークンを渡す |
-| DB / ORM | **PostgreSQL (Neon)** + **Drizzle ORM** | 型安全なクエリ。マイグレーションは drizzle-kit で管理 |
+| DB / ORM | **Cloudflare D1 (SQLite)** + **Drizzle ORM** | 型安全なクエリ。マイグレーションは drizzle-kit + wrangler d1 migrations で管理 |
 | 入力検証 | **Zod** | API 境界で検証と型変換（JSON 文字列→Date）を一元化 |
 | 暗号 | **Web Crypto API**（AES-GCM / PBKDF2） | 追加ライブラリ無しでブラウザ内ゼロ知識暗号を実現 |
 | 通知 | **Resend**（メール・稼働中）/ Push は抽象化済み（FCM 配線は準備中） | 送信チャネルをインターフェースで分離し差し替え・テスト可能に |
-| テスト | **Vitest** + **PGlite**（インメモリ Postgres） | 実 DB 相当の統合テストを CI で高速・決定論的に |
+| テスト | **Vitest** + **better-sqlite3**（インメモリ SQLite） | 実 DB 相当の統合テストを CI で高速・決定論的に |
 | 品質 | **Biome**（lint / format） | 単一ツールで高速に統一 |
 | モバイル | **Android ネイティブ（Kotlin / Gradle）** | 目覚まし・バックグラウンド動作など本人の日常の道具はネイティブで |
 
@@ -184,12 +184,12 @@ flowchart TD
 
 ドメインロジックの正しさが**人命に関わる**プロダクトのため、テストを重視しています。
 
-- **146 テストケース / 13 ファイル**（約 3,000 行）
-- **PGlite** による統合テストで、状態機械・クォーラム判定・暗号往復・認可・通知意図を実 DB 相当で検証
+- **150 テストケース / 12 ファイル**（約 3,000 行）
+- **better-sqlite3** による統合テストで、状態機械・クォーラム判定・暗号往復・認可・通知意図を実 DB 相当で検証
 - 誤爆防止の要（不変条件 A/B/D・投票の過半数・猶予・本人取消・旅行モードの自動再開など）を網羅
 
 ```bash
-npm test          # Vitest（PGlite 統合テスト）
+npm test          # Vitest（better-sqlite3 統合テスト）
 npm run typecheck # tsc --noEmit
 npm run lint      # Biome
 ```
@@ -214,7 +214,7 @@ docs/adr/      # Architecture Decision Records（11本）
 docs/design/   # 設計メモ（死亡認定フロー等）
 CONTEXT.md     # ユビキタス言語（ドメイン用語集）
 android/       # Android ネイティブアプリ（Kotlin / Gradle）
-test/          # Vitest + PGlite 統合テスト
+test/          # Vitest + better-sqlite3 統合テスト
 ```
 
 ---
@@ -223,9 +223,10 @@ test/          # Vitest + PGlite 統合テスト
 
 ```bash
 npm install
-cp .env.example .env   # DATABASE_URL / BETTER_AUTH_SECRET / OAuth クレデンシャル等を設定
-npm run db:migrate     # スキーマ適用
-npm run dev            # Vite 開発サーバー
+cp .env.example .dev.vars       # BETTER_AUTH_SECRET / OAuth クレデンシャル等を設定
+npx wrangler d1 create asatomo-db-dev   # 開発用D1を作成し、database_id を wrangler-dev.jsonc へ反映
+npm run db:migrate              # ローカルD1へスキーマ適用（wrangler d1 migrations apply --local）
+npm run dev                     # Vite 開発サーバー（@cloudflare/vite-plugin でローカルD1に接続）
 ```
 
 デプロイは Cloudflare Workers へ:
@@ -234,8 +235,9 @@ npm run dev            # Vite 開発サーバー
 npm run deploy         # build:cf → wrangler deploy
 ```
 
-> シークレット（`DATABASE_URL` / `BETTER_AUTH_SECRET` / OAuth / `EMAIL_API_KEY` 等）は
-> `wrangler secret put` で登録します。開発専用の認証バイパスは本番に設定しません。
+> シークレット（`BETTER_AUTH_SECRET` / OAuth / `EMAIL_API_KEY` 等）は `wrangler secret put` で登録します。
+> DB（Cloudflare D1）はシークレットではなくバインディングなので `wrangler.jsonc` の `d1_databases` で管理します。
+> 開発専用の認証バイパスは本番に設定しません。
 
 ---
 

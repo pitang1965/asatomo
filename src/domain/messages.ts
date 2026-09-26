@@ -237,9 +237,9 @@ export async function resolveDisclosure(db: Db, subjectUserId: string) {
     .where(eq(legacyMessages.subjectUserId, subjectUserId));
 }
 
-// connectionId は uuid 列と突き合わせる。書式不正の値を WHERE に渡すと Postgres が
-// 「invalid input syntax for type uuid」を投げ、公開ルートがエラー画面になって中立性が壊れる
-// （書式不正だけ他と区別できてしまう。ADR-0011 §2）。DB へ渡す前に書式を弾き、未知IDと同一挙動にする。
+// connectionId は id(text) 列と突き合わせる。SQLite/D1は書式不正でも例外を投げず0件を返すだけ
+// だが、DBの型に頼らずアプリ層で明示的に弾く（未知IDと同一挙動にする。ADR-0011 §2、
+// 中立応答の意図を将来の実装変更に依存させないため）。
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

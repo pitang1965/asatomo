@@ -8,6 +8,8 @@ import { getServerEnv } from './env';
  *   - fetch: TanStack Start（SSR + /api/*）へそのまま委譲。
  *   - scheduled: 監視tick（時間駆動の状態遷移 T1/T2/T5。約15分間隔の Cron Triggers）。
  * 環境変数は nodejs_compat により vars/secrets が process.env に写る（src/server/env.ts）。
+ * D1バインディングはprocess.envに現れないため別経路（cloudflare:workersのambient env、
+ * src/db/index.ts）— scheduledがenvを受け取っても使わないのはこのため。
  */
 
 interface Ctx {

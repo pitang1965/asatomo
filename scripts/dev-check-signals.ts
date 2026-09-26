@@ -1,19 +1,16 @@
 import { desc, eq } from 'drizzle-orm';
-import { createDb } from '../src/db';
 import { signals, subjectSettings } from '../src/db/schema';
-import { loadEnv } from './dev-db';
+import { getLocalD1Db, loadEnv } from './dev-db';
 
 /**
  * 実機検証用: 本人の直近シグナルと lastSignalAt を表示する。
  * 実行: npx tsx scripts/dev-check-signals.ts [subjectUserId]（既定 seed-subject-sato）
  */
 
-// 読み取り専用なので本番ガードは掛けない（loadEnv のみ）。
 loadEnv();
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL がありません');
 
 async function main() {
-  const db = createDb(process.env.DATABASE_URL as string);
+  const db = getLocalD1Db();
   const subject = process.argv[2] ?? 'seed-subject-sato';
 
   const rows = await db

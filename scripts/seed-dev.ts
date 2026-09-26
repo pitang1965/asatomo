@@ -1,5 +1,4 @@
 import { asc, inArray } from 'drizzle-orm';
-import { createDb } from '../src/db';
 import {
   connections,
   deathCertifications,
@@ -7,7 +6,7 @@ import {
   subjectSettings,
   user,
 } from '../src/db/schema';
-import { loadEnv } from './dev-db';
+import { getLocalD1Db, loadEnv } from './dev-db';
 
 /**
  * 開発用シード。最初にログインした実ユーザーを見守り者として、テストの「本人」3人と
@@ -15,12 +14,10 @@ import { loadEnv } from './dev-db';
  * 佐藤（アラート中）は再実行のたびに watchers_alerted へ戻る（「無事です」の動作確認用）。
  *
  * 実行: npx tsx scripts/seed-dev.ts
- * 参照するのは .env.local（開発DB）のみ。本番へは touch しない（file-per-env）。
+ * 参照するのはローカルD1（開発DB）のみ。本番へは touch しない（file-per-env）。
  */
 loadEnv();
-if (!process.env.DATABASE_URL)
-  throw new Error('DATABASE_URL がありません（.env.local を確認してください）');
-const db = createDb(process.env.DATABASE_URL);
+const db = getLocalD1Db();
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
 
 const SUBJECTS = [

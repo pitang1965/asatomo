@@ -1,0 +1,21 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "asatomo",
+	// 開発専用設定（デプロイには使わない）。npm run dev（vite.config.tsのcloudflareプラグイン）と
+	// npm run db:migrate（wrangler d1 migrations apply --local）がこれを見る。
+	// 本番用のwrangler.jsonc（vars/triggers/observability）とは意図的に分離している
+	// （名前付きenvブロックは配列項目が継承ではなく上書きになる罠があるため。docs/adr/0012）。
+	"main": "src/server/worker.ts",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": ["nodejs_compat"],
+	// asatomo自身の開発用D1。database_idは `npx wrangler d1 create asatomo-db-dev` の
+	// 出力を貼る（Phase 2で確定）。ローカルMiniflareエミュレーションを使う（実クラウドに繋がない）。
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "asatomo-db-dev",
+			"database_id": "1fc7e75c-ad73-4a36-a2af-e0ba08bddc12",
+			"migrations_dir": "drizzle"
+		}
+	]
+}

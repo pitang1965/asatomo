@@ -3,13 +3,15 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 /**
  * プライバシーポリシー（/privacy）。ログイン不要の静的ページ。
  * アサトモ固有の機微情報（生存シグナル・近況・E2E暗号化された最後の伝言）を正確に記す。
- * なふだの privacy を下敷きにしつつ、GPS非取得・第三者はGoogle/Neon/Cloudflare/Resendに差し替え。
+ * なふだの privacy を下敷きにしつつ、GPS非取得・第三者はGoogle/Neon/Cloudflare/Resendに差し替え
+ * （2026-09-26: NeonからCloudflare D1への移行に伴い、DBの項目をD1に更新。ホスティングの
+ * Cloudflareとは保管地域が異なる＝APAC のため項目を分けている）。
  */
 export const Route = createFileRoute('/privacy')({
   component: PrivacyPage,
 });
 
-const UPDATED = '2026年8月4日';
+const UPDATED = '2026年9月26日';
 
 // 外枠は旧 content-box 実測（maxWidth640 + 左右padding24×2 = 688px）＝max-w-172。
 const sheetCls =
@@ -171,16 +173,18 @@ function PrivacyPage() {
               </p>
             </div>
             <div>
-              <p className="font-semibold text-foreground">Neon（米国）</p>
-              <p>
-                アカウント情報・見守り関係・生存シグナル・暗号化された最後の伝言などを保管するデータベースサービスです。
-              </p>
-            </div>
-            <div>
               <p className="font-semibold text-foreground">
                 Cloudflare（米国）
               </p>
               <p>サービスのホスティング・配信を担います。</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">
+                Cloudflare D1（アジア太平洋地域）
+              </p>
+              <p>
+                アカウント情報・見守り関係・生存シグナル・暗号化された最後の伝言などを保管するデータベースです。Cloudflareのサービスの一部ですが、データの保管地域が異なるため分けて記載しています。
+              </p>
             </div>
             <div>
               <p className="font-semibold text-foreground">
@@ -215,7 +219,8 @@ function PrivacyPage() {
 
         <Section title="7. データの保管・セキュリティ">
           <p>
-            収集したデータは米国のNeonデータベースに保管されます。通信はTLS（HTTPS）で暗号化し、セッショントークンは署名付きCookieで管理しています。最後の伝言の本文は、開示条件が成立するまで運営者も読めない形で暗号化して保管します。ただし、インターネット上の通信において完全な安全性を保証することはできません。
+            収集したデータはCloudflare
+            D1データベース（アジア太平洋地域）に保管されます。通信はTLS（HTTPS）で暗号化し、セッショントークンは署名付きCookieで管理しています。最後の伝言の本文は、開示条件が成立するまで運営者も読めない形で暗号化して保管します。ただし、インターネット上の通信において完全な安全性を保証することはできません。
           </p>
         </Section>
 

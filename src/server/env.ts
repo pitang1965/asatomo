@@ -1,9 +1,11 @@
 import type { AuthEnv } from '../lib/auth';
 
 /**
- * サーバー環境変数。開発は .env（Vite が process.env に載せる値ではなく Node の環境変数）、
- * 本番は Cloudflare Workers のバインディング（nodejs_compat で process.env に写る）を想定。
+ * サーバー環境変数（文字列のvars/secretsのみ）。開発は .dev.vars、本番は Cloudflare Workers
+ * のシークレット（いずれも nodejs_compat で process.env に写る）を想定。
  * 未設定はここでは落とさず、使う側（createRequestApp）が明確なエラーにする。
+ * DB（D1バインディング）はここには含まれない — process.env に現れないオブジェクトのため、
+ * src/db/index.ts が `cloudflare:workers` の ambient env から別経路で取得する。
  */
 export interface ServerEnv extends AuthEnv {
   /**
@@ -27,7 +29,6 @@ export interface ServerEnv extends AuthEnv {
 export function getServerEnv(): ServerEnv {
   const e = process.env;
   return {
-    DATABASE_URL: e.DATABASE_URL ?? '',
     BETTER_AUTH_SECRET: e.BETTER_AUTH_SECRET ?? '',
     BETTER_AUTH_URL: e.BETTER_AUTH_URL ?? 'http://localhost:3000',
     GOOGLE_CLIENT_ID: e.GOOGLE_CLIENT_ID ?? '',
