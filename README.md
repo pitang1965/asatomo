@@ -169,7 +169,7 @@ flowchart TD
 | 言語 | **TypeScript** | フロント・バック・ドメインを型で一気通貫にし、リファクタ耐性を確保 |
 | Web フレームワーク | **TanStack Start**（React 19 / SSR / ファイルベースルーティング） | サーバー関数と型付きルーターで、認証状態に応じた SSR を簡潔に |
 | 実行環境 | **Cloudflare Workers**（`nodejs_compat`） | エッジで低レイテンシ・低運用コスト。Cron Trigger で監視tickも同居 |
-| 認証 | **Better Auth**（Google / Facebook / LINE OAuth・Bearer） | セッションと OAuth を薄く自前所有。Android はネイティブ取得の ID トークンを渡す |
+| 認証 | **Better Auth**（Google / LINE OAuth・Bearer。Facebookは実装済みだがbacklog項目17により一時非表示） | セッションと OAuth を薄く自前所有。Android はネイティブ取得の ID トークンを渡す |
 | DB / ORM | **Cloudflare D1 (SQLite)** + **Drizzle ORM** | 型安全なクエリ。マイグレーションは drizzle-kit + wrangler d1 migrations で管理 |
 | 入力検証 | **Zod** | API 境界で検証と型変換（JSON 文字列→Date）を一元化 |
 | 暗号 | **Web Crypto API**（AES-GCM / PBKDF2） | 追加ライブラリ無しでブラウザ内ゼロ知識暗号を実現 |
