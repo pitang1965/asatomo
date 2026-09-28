@@ -12,6 +12,7 @@
   <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white">
   <img alt="Cloudflare D1" src="https://img.shields.io/badge/Cloudflare_D1-003B57?logo=sqlite&logoColor=white">
   <img alt="Drizzle ORM" src="https://img.shields.io/badge/Drizzle_ORM-C5F74F?logo=drizzle&logoColor=black">
+  <img alt="Sentry" src="https://img.shields.io/badge/Sentry-362D59?logo=sentry&logoColor=white">
   <img alt="Android" src="https://img.shields.io/badge/Android_(Kotlin)-3DDC84?logo=android&logoColor=white">
 </p>
 
@@ -174,6 +175,7 @@ flowchart TD
 | 入力検証 | **Zod** | API 境界で検証と型変換（JSON 文字列→Date）を一元化 |
 | 暗号 | **Web Crypto API**（AES-GCM / PBKDF2） | 追加ライブラリ無しでブラウザ内ゼロ知識暗号を実現 |
 | 通知 | **Resend**（メール・稼働中）/ Push は抽象化済み（FCM 配線は準備中） | 送信チャネルをインターフェースで分離し差し替え・テスト可能に |
+| エラー監視 | **Sentry**（`@sentry/cloudflare`） | Workers の未処理例外とCSP違反レポートを同じ受け口に集約し、無料枠でメールアラート |
 | テスト | **Vitest** + **better-sqlite3**（インメモリ SQLite） | 実 DB 相当の統合テストを CI で高速・決定論的に |
 | 品質 | **Biome**（lint / format） | 単一ツールで高速に統一 |
 | モバイル | **Android ネイティブ（Kotlin / Gradle）** | 目覚まし・バックグラウンド動作など本人の日常の道具はネイティブで |

@@ -11,7 +11,7 @@ export const Route = createFileRoute('/privacy')({
   component: PrivacyPage,
 });
 
-const UPDATED = '2026年9月26日';
+const UPDATED = '2026年9月28日';
 
 // 外枠は旧 content-box 実測（maxWidth640 + 左右padding24×2 = 688px）＝max-w-172。
 const sheetCls =
@@ -117,6 +117,13 @@ function PrivacyPage() {
                 入力欄に打ち込んだ内容（合言葉・最後の伝言の本文など）や画面の録画は取得しません
               </strong>
             </li>
+            <li>
+              <strong className="text-foreground">エラー・不具合の記録</strong>
+              ：サービス側で不具合が発生した際の技術情報（発生した処理のスタックトレース、リクエストのURLパス、発生日時など。エラー監視ツールSentryを利用）。
+              <strong className="text-foreground">
+                氏名・メールアドレス等の個人情報や入力欄の内容は含みません
+              </strong>
+            </li>
           </ul>
           <p className="mt-3">
             アカウント情報は退会まで保管し、退会時に削除します（下記「7.
@@ -205,6 +212,22 @@ function PrivacyPage() {
                   className="text-primary hover:underline"
                 >
                   posthog.com/privacy
+                </a>
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">
+                Sentry（ドイツ/EU）
+              </p>
+              <p>
+                サービス側で不具合が発生した際のエラー監視を担います。スタックトレース・発生箇所・リクエストのURLパスなど技術情報のみを扱い、氏名・メールアドレス等の個人情報は送信しない設定です。詳細:{' '}
+                <a
+                  href="https://sentry.io/privacy/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  sentry.io/privacy
                 </a>
               </p>
             </div>
