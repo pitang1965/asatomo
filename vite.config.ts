@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { cloudflare } from '@cloudflare/vite-plugin';
+import { sentryCloudflareVitePlugin } from '@sentry/cloudflare/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react from '@vitejs/plugin-react';
@@ -24,6 +25,9 @@ export default defineConfig({
       configPath: 'wrangler-dev.jsonc',
       viteEnvironment: { name: 'ssr' },
     }),
+    // src/server/instrument.server.ts を自動検出しworker.tsをラップする（SENTRY_DSN未設定の
+    // 開発環境ではSentryは自動的に無効）。
+    sentryCloudflareVitePlugin(),
     tailwindcss(),
     tanstackStart(),
     react(),

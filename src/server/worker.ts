@@ -58,9 +58,8 @@ function withNoStore(response: Response): Response {
 
 /**
  * CSP（Report-Only）。XSS対策の多層防御として導入するが、まずは違反を壊さず観測するため
- * Enforce ではなく Report-Only から始める（ヘッダーだけ付与しブラウザは何もブロックしない。
- * 違反は DevTools の Console に出る）。しばらく様子を見て問題なければ
- * Content-Security-Policy（Enforce）に切り替える。
+ * Enforce ではなく Report-Only から始める（ヘッダーだけ付与しブラウザは何もブロックしない）。
+ * しばらく様子を見て問題なければ Content-Security-Policy（Enforce）に切り替える。
  *
  * 許可元の根拠（__root.tsx / src/web 配下を精査した結果）:
  *   - script-src: 外部 <script src> は無い。__root.tsx のインライン2本（PWAインストール
@@ -77,7 +76,7 @@ function withNoStore(response: Response): Response {
  *   - Google/LINE のOAuth遷移は window.location によるトップレベルナビゲーションであり、
  *     CSP の対象外（フォーム送信でもiframeでもない）のため許可不要。
  */
-const CSP = [
+const BASE_CSP_DIRECTIVES = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
@@ -87,14 +86,39 @@ const CSP = [
   "connect-src 'self' https://us.i.posthog.com",
   "form-action 'self'",
   "frame-ancestors 'none'",
-].join('; ');
+];
 
-function withCsp(response: Response): Response {
+/**
+ * SentryのDSNから、CSP違反レポート専用の受け口URL（Security Header Reports）を導出する。
+ * 例: https://<key>@o<org>.ingest.<region>.sentry.io/<projectId>
+ *   → https://o<org>.ingest.<region>.sentry.io/api/<projectId>/security/?sentry_key=<key>
+ */
+function sentrySecurityReportUri(dsn: string): string | undefined {
+  try {
+    const url = new URL(dsn);
+    const projectId = url.pathname.replace(/^\//, '');
+    if (!url.username || !projectId) return undefined;
+    return `https://${url.host}/api/${projectId}/security/?sentry_key=${url.username}`;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * SENTRY_DSN は wrangler.jsonc の vars にのみ設定している（instrument.server.ts と同じ方針）ため、
+ * 開発（wrangler-dev.jsonc）では report-uri 自体が付かない＝CSP違反を送らない。
+ */
+function withCsp(response: Response, env: { SENTRY_DSN?: string }): Response {
   const contentType = response.headers.get('content-type') ?? '';
   if (!contentType.includes('text/html')) return response;
 
+  const reportUri = env.SENTRY_DSN && sentrySecurityReportUri(env.SENTRY_DSN);
+  const directives = reportUri
+    ? [...BASE_CSP_DIRECTIVES, `report-uri ${reportUri}`]
+    : BASE_CSP_DIRECTIVES;
+
   const headers = new Headers(response.headers);
-  headers.set('Content-Security-Policy-Report-Only', CSP);
+  headers.set('Content-Security-Policy-Report-Only', directives.join('; '));
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -104,7 +128,10 @@ function withCsp(response: Response): Response {
 
 export default {
   fetch: async (request: Request, env: unknown, ctx: unknown) =>
-    withCsp(withNoStore(await startHandler.fetch(request, env, ctx))),
+    withCsp(
+      withNoStore(await startHandler.fetch(request, env, ctx)),
+      env as { SENTRY_DSN?: string },
+    ),
 
   async scheduled(_controller: unknown, _env: unknown, ctx: Ctx) {
     const app = createRequestApp(getServerEnv());

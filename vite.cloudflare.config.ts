@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { cloudflare } from '@cloudflare/vite-plugin';
+import { sentryCloudflareVitePlugin } from '@sentry/cloudflare/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react from '@vitejs/plugin-react';
@@ -16,6 +17,8 @@ export default defineConfig({
   },
   plugins: [
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
+    // src/server/instrument.server.ts を自動検出しworker.tsをラップする（Sentryエラー監視）。
+    sentryCloudflareVitePlugin(),
     tailwindcss(),
     tanstackStart(),
     react(),

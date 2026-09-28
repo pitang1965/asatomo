@@ -21,7 +21,10 @@
 	"vars": {
 		"BETTER_AUTH_URL": "https://asatomo.nafuda.me",
 		// メール差出人（Resend 検証済みドメイン over40web.club 上のアドレス）。非機密。
-		"EMAIL_FROM": "no-reply@over40web.club"
+		"EMAIL_FROM": "no-reply@over40web.club",
+		// Sentry（エラー監視）。DSNは公開前提の値（書き込み専用、秘匿不要）。
+		// wrangler-dev.jsonc には意図的に置かない → 開発ではSentry無効（src/server/instrument.server.ts）。
+		"SENTRY_DSN": "https://dc7f74e4a69766a21caf05b39a371d2d@o4507994894434304.ingest.de.sentry.io/4512163930898512"
 	},
 	"observability": {
 		"enabled": true
