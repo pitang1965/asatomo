@@ -56,9 +56,55 @@ function withNoStore(response: Response): Response {
   });
 }
 
+/**
+ * CSP（Report-Only）。XSS対策の多層防御として導入するが、まずは違反を壊さず観測するため
+ * Enforce ではなく Report-Only から始める（ヘッダーだけ付与しブラウザは何もブロックしない。
+ * 違反は DevTools の Console に出る）。しばらく様子を見て問題なければ
+ * Content-Security-Policy（Enforce）に切り替える。
+ *
+ * 許可元の根拠（__root.tsx / src/web 配下を精査した結果）:
+ *   - script-src: 外部 <script src> は無い。__root.tsx のインライン2本（PWAインストール
+ *     プロンプト捕捉・SW登録）だけは 'unsafe-inline' を避け sha256 ハッシュで個別許可する。
+ *     ⚠ その2本の中身を書き換えたら、このハッシュも計算し直すこと（内容が変わると不一致で
+ *     Report-Only でも違反として報告される）。
+ *   - style-src: index.tsx（LP）/ beta.tsx が <style dangerouslySetInnerHTML> で可変長CSSを
+ *     注入しており、ハッシュ運用は非現実的なため 'unsafe-inline' を許可（スタイル注入は
+ *     スクリプト注入より実害が小さい一般的な妥協）。
+ *   - img-src: OAuth プロフィール画像（Google=googleusercontent.com、LINE=line-scdn.net）。
+ *   - connect-src: PostHog（posthog-js は動的importで自ドメインにバンドルされるが、
+ *     計測イベントの送信先 api_host は us.i.posthog.com）。
+ *   - frame-ancestors: 'none'。他サイトへの埋め込み（クリックジャッキング）は不要。
+ *   - Google/LINE のOAuth遷移は window.location によるトップレベルナビゲーションであり、
+ *     CSP の対象外（フォーム送信でもiframeでもない）のため許可不要。
+ */
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "script-src 'self' 'sha256-PqZJSkwfg1zFos+vTv4jM7IKkGBsRGDwU7svZfUCUZg=' 'sha256-ERjmq+b4OE6wevDvl+VSUxKEvvc14aHmoifc8WMQDT4='",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https://*.googleusercontent.com https://*.line-scdn.net",
+  "connect-src 'self' https://us.i.posthog.com",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
+function withCsp(response: Response): Response {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('text/html')) return response;
+
+  const headers = new Headers(response.headers);
+  headers.set('Content-Security-Policy-Report-Only', CSP);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   fetch: async (request: Request, env: unknown, ctx: unknown) =>
-    withNoStore(await startHandler.fetch(request, env, ctx)),
+    withCsp(withNoStore(await startHandler.fetch(request, env, ctx))),
 
   async scheduled(_controller: unknown, _env: unknown, ctx: Ctx) {
     const app = createRequestApp(getServerEnv());
