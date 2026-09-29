@@ -61,29 +61,35 @@ function withNoStore(response: Response): Response {
  * Enforce ではなく Report-Only から始める（ヘッダーだけ付与しブラウザは何もブロックしない）。
  * しばらく様子を見て問題なければ Content-Security-Policy（Enforce）に切り替える。
  *
- * 許可元の根拠（__root.tsx / src/web 配下を精査した結果）:
+ * 許可元の根拠（__root.tsx / src/web 配下を精査した結果、および実運用のReport-Only違反ログ）:
  *   - script-src: 外部 <script src> は無い。__root.tsx のインライン2本（PWAインストール
  *     プロンプト捕捉・SW登録）だけは 'unsafe-inline' を避け sha256 ハッシュで個別許可する。
  *     ⚠ その2本の中身を書き換えたら、このハッシュも計算し直すこと（内容が変わると不一致で
  *     Report-Only でも違反として報告される）。
+ *     PostHogは posthog-js 本体こそ動的importで自ドメインにバンドルされるが、内部で追加の
+ *     拡張機能を us-assets.i.posthog.com から読み込むため許可が要る（公式推奨により
+ *     サブドメイン変更に備え https://*.posthog.com を許可: https://posthog.com/docs/advanced/content-security-policy）。
  *   - style-src: index.tsx（LP）/ beta.tsx が <style dangerouslySetInnerHTML> で可変長CSSを
  *     注入しており、ハッシュ運用は非現実的なため 'unsafe-inline' を許可（スタイル注入は
  *     スクリプト注入より実害が小さい一般的な妥協）。
  *   - img-src: OAuth プロフィール画像（Google=googleusercontent.com、LINE=line-scdn.net）。
- *   - connect-src: PostHog（posthog-js は動的importで自ドメインにバンドルされるが、
- *     計測イベントの送信先 api_host は us.i.posthog.com）。
+ *   - connect-src: PostHogの計測イベント送信先。
  *   - frame-ancestors: 'none'。他サイトへの埋め込み（クリックジャッキング）は不要。
  *   - Google/LINE のOAuth遷移は window.location によるトップレベルナビゲーションであり、
  *     CSP の対象外（フォーム送信でもiframeでもない）のため許可不要。
+ *
+ * ⚠ Cloudflareがエッジで自動注入するもの（Web Analyticsビーコン static.cloudflareinsights.com、
+ *   メールアドレス難読化のインラインdecode script）はここには含めない。アプリ側の許可では
+ *   なくCloudflareダッシュボード側の機能を無効化して止める方針（2026-09-29 判断）。
  */
 const BASE_CSP_DIRECTIVES = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
-  "script-src 'self' 'sha256-PqZJSkwfg1zFos+vTv4jM7IKkGBsRGDwU7svZfUCUZg=' 'sha256-ERjmq+b4OE6wevDvl+VSUxKEvvc14aHmoifc8WMQDT4='",
+  "script-src 'self' https://*.posthog.com 'sha256-PqZJSkwfg1zFos+vTv4jM7IKkGBsRGDwU7svZfUCUZg=' 'sha256-ERjmq+b4OE6wevDvl+VSUxKEvvc14aHmoifc8WMQDT4='",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https://*.googleusercontent.com https://*.line-scdn.net",
-  "connect-src 'self' https://us.i.posthog.com",
+  "connect-src 'self' https://*.posthog.com",
   "form-action 'self'",
   "frame-ancestors 'none'",
 ];
