@@ -9,46 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as PreviewRouteImport } from './routes/preview'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as BetaRouteImport } from './routes/beta'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as NativeLineRouteImport } from './routes/native.line'
-import { Route as NativeHandoffRouteImport } from './routes/native.handoff'
-import { Route as JoinTokenRouteImport } from './routes/join.$token'
-import { Route as DisclosureConnectionIdRouteImport } from './routes/disclosure.$connectionId'
-import { Route as ApiSplatRouteImport } from './routes/api.$'
-import { Route as AppWatchRouteImport } from './routes/_app.watch'
-import { Route as AppMessagesRouteImport } from './routes/_app.messages'
-import { Route as AppMeRouteImport } from './routes/_app.me'
-import { Route as AppConnectionsRouteImport } from './routes/_app.connections'
-import { Route as AppActivityRouteImport } from './routes/_app.activity'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as BetaRouteImport } from './routes/beta'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PreviewRouteImport } from './routes/preview'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppAccountRouteImport } from './routes/_app.account'
-import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
-import { Route as AppDeathSubjectIdRouteImport } from './routes/_app.death.$subjectId'
+import { Route as AppActivityRouteImport } from './routes/_app.activity'
+import { Route as AppConnectionsRouteImport } from './routes/_app.connections'
+import { Route as AppMeRouteImport } from './routes/_app.me'
+import { Route as AppMessagesRouteImport } from './routes/_app.messages'
+import { Route as AppWatchRouteImport } from './routes/_app.watch'
+import { Route as ApiSplatRouteImport } from './routes/api.$'
+import { Route as DisclosureConnectionIdRouteImport } from './routes/disclosure.$connectionId'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
+import { Route as NativeHandoffRouteImport } from './routes/native.handoff'
+import { Route as NativeLineRouteImport } from './routes/native.line'
 import { Route as AppAccountDeleteRouteImport } from './routes/_app.account_.delete'
+import { Route as AppDeathSubjectIdRouteImport } from './routes/_app.death.$subjectId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreviewRoute = PreviewRouteImport.update({
-  id: '/preview',
-  path: '/preview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BetaRoute = BetaRouteImport.update({
@@ -56,58 +45,29 @@ const BetaRoute = BetaRouteImport.update({
   path: '/beta',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PreviewRoute = PreviewRouteImport.update({
+  id: '/preview',
+  path: '/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NativeLineRoute = NativeLineRouteImport.update({
-  id: '/native/line',
-  path: '/native/line',
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NativeHandoffRoute = NativeHandoffRouteImport.update({
-  id: '/native/handoff',
-  path: '/native/handoff',
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JoinTokenRoute = JoinTokenRouteImport.update({
-  id: '/join/$token',
-  path: '/join/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DisclosureConnectionIdRoute = DisclosureConnectionIdRouteImport.update({
-  id: '/disclosure/$connectionId',
-  path: '/disclosure/$connectionId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSplatRoute = ApiSplatRouteImport.update({
-  id: '/api/$',
-  path: '/api/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppWatchRoute = AppWatchRouteImport.update({
-  id: '/watch',
-  path: '/watch',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMessagesRoute = AppMessagesRouteImport.update({
-  id: '/messages',
-  path: '/messages',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMeRoute = AppMeRouteImport.update({
-  id: '/me',
-  path: '/me',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppConnectionsRoute = AppConnectionsRouteImport.update({
-  id: '/connections',
-  path: '/connections',
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => AppRoute,
 } as any)
 const AppActivityRoute = AppActivityRouteImport.update({
@@ -115,25 +75,65 @@ const AppActivityRoute = AppActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAccountRoute = AppAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
+const AppConnectionsRoute = AppConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
   getParentRoute: () => AppRoute,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
+const AppMeRoute = AppMeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMessagesRoute = AppMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWatchRoute = AppWatchRouteImport.update({
+  id: '/watch',
+  path: '/watch',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DisclosureConnectionIdRoute = DisclosureConnectionIdRouteImport.update({
+  id: '/disclosure/$connectionId',
+  path: '/disclosure/$connectionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NativeHandoffRoute = NativeHandoffRouteImport.update({
+  id: '/native/handoff',
+  path: '/native/handoff',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NativeLineRoute = NativeLineRouteImport.update({
+  id: '/native/line',
+  path: '/native/line',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppAccountDeleteRoute = AppAccountDeleteRouteImport.update({
+  id: '/account_/delete',
+  path: '/account/delete',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppDeathSubjectIdRoute = AppDeathSubjectIdRouteImport.update({
   id: '/death/$subjectId',
   path: '/death/$subjectId',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAccountDeleteRoute = AppAccountDeleteRouteImport.update({
-  id: '/account_/delete',
-  path: '/account/delete',
-  getParentRoute: () => AppRoute,
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -292,39 +292,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preview': {
-      id: '/preview'
-      path: '/preview'
-      fullPath: '/preview'
-      preLoaderRoute: typeof PreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/beta': {
-      id: '/beta'
-      path: '/beta'
-      fullPath: '/beta'
-      preLoaderRoute: typeof BetaRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -334,74 +306,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/beta': {
+      id: '/beta'
+      path: '/beta'
+      fullPath: '/beta'
+      preLoaderRoute: typeof BetaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/native/line': {
-      id: '/native/line'
-      path: '/native/line'
-      fullPath: '/native/line'
-      preLoaderRoute: typeof NativeLineRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/native/handoff': {
-      id: '/native/handoff'
-      path: '/native/handoff'
-      fullPath: '/native/handoff'
-      preLoaderRoute: typeof NativeHandoffRouteImport
+    '/preview': {
+      id: '/preview'
+      path: '/preview'
+      fullPath: '/preview'
+      preLoaderRoute: typeof PreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/join/$token': {
-      id: '/join/$token'
-      path: '/join/$token'
-      fullPath: '/join/$token'
-      preLoaderRoute: typeof JoinTokenRouteImport
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/disclosure/$connectionId': {
-      id: '/disclosure/$connectionId'
-      path: '/disclosure/$connectionId'
-      fullPath: '/disclosure/$connectionId'
-      preLoaderRoute: typeof DisclosureConnectionIdRouteImport
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/$': {
-      id: '/api/$'
-      path: '/api/$'
-      fullPath: '/api/$'
-      preLoaderRoute: typeof ApiSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/watch': {
-      id: '/_app/watch'
-      path: '/watch'
-      fullPath: '/watch'
-      preLoaderRoute: typeof AppWatchRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/messages': {
-      id: '/_app/messages'
-      path: '/messages'
-      fullPath: '/messages'
-      preLoaderRoute: typeof AppMessagesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/me': {
-      id: '/_app/me'
-      path: '/me'
-      fullPath: '/me'
-      preLoaderRoute: typeof AppMeRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/connections': {
-      id: '/_app/connections'
-      path: '/connections'
-      fullPath: '/connections'
-      preLoaderRoute: typeof AppConnectionsRouteImport
+    '/_app/account': {
+      id: '/_app/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AppAccountRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/activity': {
@@ -411,19 +355,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppActivityRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/account': {
-      id: '/_app/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof AppAccountRouteImport
+    '/_app/connections': {
+      id: '/_app/connections'
+      path: '/connections'
+      fullPath: '/connections'
+      preLoaderRoute: typeof AppConnectionsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+    '/_app/me': {
+      id: '/_app/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof AppMeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/messages': {
+      id: '/_app/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AppMessagesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/watch': {
+      id: '/_app/watch'
+      path: '/watch'
+      fullPath: '/watch'
+      preLoaderRoute: typeof AppWatchRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/disclosure/$connectionId': {
+      id: '/disclosure/$connectionId'
+      path: '/disclosure/$connectionId'
+      fullPath: '/disclosure/$connectionId'
+      preLoaderRoute: typeof DisclosureConnectionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/native/handoff': {
+      id: '/native/handoff'
+      path: '/native/handoff'
+      fullPath: '/native/handoff'
+      preLoaderRoute: typeof NativeHandoffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/native/line': {
+      id: '/native/line'
+      path: '/native/line'
+      fullPath: '/native/line'
+      preLoaderRoute: typeof NativeLineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/account_/delete': {
+      id: '/_app/account_/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AppAccountDeleteRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/death/$subjectId': {
       id: '/_app/death/$subjectId'
@@ -432,12 +432,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDeathSubjectIdRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/account_/delete': {
-      id: '/_app/account_/delete'
-      path: '/account/delete'
-      fullPath: '/account/delete'
-      preLoaderRoute: typeof AppAccountDeleteRouteImport
-      parentRoute: typeof AppRoute
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
