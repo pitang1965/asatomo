@@ -57,15 +57,16 @@ function withNoStore(response: Response): Response {
 }
 
 /**
- * CSP（Report-Only）。XSS対策の多層防御として導入するが、まずは違反を壊さず観測するため
- * Enforce ではなく Report-Only から始める（ヘッダーだけ付与しブラウザは何もブロックしない）。
- * しばらく様子を見て問題なければ Content-Security-Policy（Enforce）に切り替える。
+ * CSP（Enforce）。2026-09-29頃にReport-Onlyで導入し、しばらく観測した結果、
+ * 自ドメインに起因する違反は出なかったため2026-10-19にEnforceへ切り替えた
+ * （唯一の違反ログは出所不明のinlineスクリプト1件で、デバイス情報が不自然だったため
+ * ボット/拡張機能由来と判断し許可リストには反映していない）。
  *
- * 許可元の根拠（__root.tsx / src/web 配下を精査した結果、および実運用のReport-Only違反ログ）:
+ * 許可元の根拠（__root.tsx / src/web 配下を精査した結果、および運用中のCSP違反ログ）:
  *   - script-src: 外部 <script src> は無い。__root.tsx のインライン2本（PWAインストール
  *     プロンプト捕捉・SW登録）だけは 'unsafe-inline' を避け sha256 ハッシュで個別許可する。
- *     ⚠ その2本の中身を書き換えたら、このハッシュも計算し直すこと（内容が変わると不一致で
- *     Report-Only でも違反として報告される）。
+ *     ⚠ その2本の中身を書き換えたら、このハッシュも計算し直すこと（Enforceのため、内容が
+ *     変わってハッシュが不一致になると実際にブロックされ機能が壊れる）。
  *     PostHogは posthog-js 本体こそ動的importで自ドメインにバンドルされるが、内部で追加の
  *     拡張機能を us-assets.i.posthog.com から読み込むため許可が要る（公式推奨により
  *     サブドメイン変更に備え https://*.posthog.com を許可: https://posthog.com/docs/advanced/content-security-policy）。
@@ -124,7 +125,7 @@ function withCsp(response: Response, env: { SENTRY_DSN?: string }): Response {
     : BASE_CSP_DIRECTIVES;
 
   const headers = new Headers(response.headers);
-  headers.set('Content-Security-Policy-Report-Only', directives.join('; '));
+  headers.set('Content-Security-Policy', directives.join('; '));
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
