@@ -1,4 +1,5 @@
 import { createRouter } from '@tanstack/react-router';
+import { getGlobalStartContext } from '@tanstack/react-start';
 import { Spinner } from './components/ui/spinner';
 import { routeTree } from './routeTree.gen';
 
@@ -15,10 +16,17 @@ function RoutePending() {
   );
 }
 
-/** TanStack Start が要求するルーターファクトリ（リクエスト/クライアントごとに生成）。 */
+/**
+ * TanStack Start が要求するルーターファクトリ（リクエスト/クライアントごとに生成）。
+ * ssr.nonce: src/start.ts のCSPミドルウェアがリクエストごとに発行したnonceを
+ * getGlobalStartContext() 経由で受け取る（サーバーのみ。クライアントでは常にundefinedを
+ * 返す実装のため安全）。Reactのストリーミングレンダラー・<meta property="csp-nonce">・
+ * TanStack Start内部のハイドレーションスクリプトの3箇所に自動で配線される。
+ */
 export function getRouter() {
   return createRouter({
     routeTree,
+    ssr: { nonce: getGlobalStartContext()?.nonce },
     scrollRestoration: true,
     defaultPreload: 'intent',
     // 遷移が 150ms を超えたらローディングを出す（速い遷移では出さずチラつかせない）。

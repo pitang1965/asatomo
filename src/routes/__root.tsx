@@ -102,7 +102,10 @@ function RootDocument({ children }: { children: ReactNode }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="アサトモWeb" />
         {/* beforeinstallprompt はハイドレーション前に発火するため早期キャプチャ
-            （usePwaInstall が window.__pwaPrompt を読む。ADR-0010）。 */}
+            （usePwaInstall が window.__pwaPrompt を読む。ADR-0010）。
+            ⚠ このインラインスクリプトの中身を変更したら、src/start.ts の
+            STATIC_SCRIPT_SRC_HASHES もハッシュを計算し直して更新すること
+            （更新しないとEnforceのCSPでブロックされ機能が壊れる）。 */}
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: 早期実行のインラインが必要
           dangerouslySetInnerHTML={{
@@ -116,7 +119,10 @@ function RootDocument({ children }: { children: ReactNode }) {
         {/* PostHog（プロダクト解析）。本番ビルドかつキーがある時だけ init する。 */}
         <Analytics />
         <Scripts />
-        {/* サービスワーカー登録（ADR-0010: network-only の最小SW）。 */}
+        {/* サービスワーカー登録（ADR-0010: network-only の最小SW）。
+            ⚠ このインラインスクリプトの中身を変更したら、src/start.ts の
+            STATIC_SCRIPT_SRC_HASHES もハッシュを計算し直して更新すること
+            （更新しないとEnforceのCSPでブロックされ機能が壊れる）。 */}
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: SW 登録のインラインが必要
           dangerouslySetInnerHTML={{
