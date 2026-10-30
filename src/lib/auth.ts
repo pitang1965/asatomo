@@ -4,6 +4,8 @@ import { bearer } from 'better-auth/plugins';
 import { genericOAuth, line } from 'better-auth/plugins/generic-oauth';
 import { createDb, type Db } from '../db';
 import * as schema from '../db/schema';
+import type { EmailSender } from '../notify/senders';
+import { notifyOnAdditionalLink } from './account-link-notify';
 
 /**
  * Better Auth のリクエストごとファクトリ。
@@ -34,8 +36,14 @@ export interface AuthEnv {
  * @param db スキーマ生成専用（scripts/auth-cli-config.ts）の差し替え口。通常は省略し、
  *   ambient な `createDb()`（D1バインディング）を使う — Workersランタイム外の
  *   `@better-auth/cli generate` 実行時だけ、実クエリを投げないダミーDBを明示的に渡す。
+ * @param email アカウント紐付け通知用（下記 notifyOnAdditionalLink）。省略時は何もしない
+ *   （スキーマ生成専用スクリプトなどメール送信が不要な呼び出し向け）。
  */
-export function createAuth(env: AuthEnv, db: Db = createDb()) {
+export function createAuth(
+  env: AuthEnv,
+  db: Db = createDb(),
+  email: EmailSender = { send: async () => {} },
+) {
   // 資格情報が揃っているプロバイダだけ登録する（未設定分の毎リクエスト警告を避ける）。
   const socialProviders: Record<
     string,
@@ -94,6 +102,15 @@ export function createAuth(env: AuthEnv, db: Db = createDb()) {
         // 仕様上emailVerified:falseで作られるため、これがtrueのままだと後から他プロバイダ
         // （Google等）を一切紐付けられない。明示的にfalseにする。
         requireLocalEmailVerified: false,
+      },
+    },
+    databaseHooks: {
+      account: {
+        create: {
+          // trustedProviders+requireLocalEmailVerified:false で自動紐付けが素通りする
+          // ことへの安全網。乗っ取り自体は防げないが、本人が気づけるようにする。
+          after: notifyOnAdditionalLink(db, email),
+        },
       },
     },
     plugins: [

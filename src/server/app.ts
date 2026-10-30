@@ -32,7 +32,6 @@ const devEmail: EmailSender = {
 
 export function createRequestApp(env: ServerEnv) {
   const db = createDb();
-  const auth = createAuth(env);
 
   const email =
     env.EMAIL_API_KEY && env.EMAIL_FROM
@@ -42,6 +41,9 @@ export function createRequestApp(env: ServerEnv) {
           from: `アサトモ <${env.EMAIL_FROM}>`,
         })
       : devEmail;
+
+  // auth のアカウント紐付け通知（src/lib/auth.ts）にも同じ送信チャネルを渡す。
+  const auth = createAuth(env, db, email);
 
   const notify = createNotifications(
     db,
