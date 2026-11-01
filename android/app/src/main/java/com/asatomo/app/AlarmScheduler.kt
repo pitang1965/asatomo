@@ -41,17 +41,21 @@ object AlarmScheduler {
      * 保存済みの時刻で次の発火をセットする。未設定なら何もしない。
      * 発火済み時刻は自動的に翌日へ送られる。
      */
-    fun scheduleNext(context: Context): Boolean {
+    fun scheduleNext(context: Context, promptIfDenied: Boolean = true): Boolean {
         val settings = Settings(context)
         if (!settings.hasAlarm) return false
 
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
             // USE_EXACT_ALARM 宣言済みなら通常ここへ来ないが、来たら設定画面へ誘導。
-            context.startActivity(
-                Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
+            // ただし防御的な張り直し（画面復帰時など）では誘導しない。API 31-32 は許可を後から
+            // 取り消せるため、誘導するとその度に設定画面が開き、取り消した人が永久に戻れなくなる。
+            if (promptIfDenied) {
+                context.startActivity(
+                    Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
             return false
         }
 

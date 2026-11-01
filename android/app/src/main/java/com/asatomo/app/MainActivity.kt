@@ -176,6 +176,11 @@ private fun MainScreen() {
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
+                    // 強制停止やOEMの省電力機能で裏で解除されたアラームを復帰時に張り直す。
+                    // 許可画面には誘導しない（理由は AlarmScheduler.scheduleNext 側）。
+                    if (AlarmScheduler.scheduleNext(context, promptIfDenied = false)) {
+                        settings.skippedAlarmRescheduleFailed = false
+                    }
                     alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
                     canSkipAlarmToday = AlarmScheduler.canSkipToday(context)
                     val skippedToday = AlarmScheduler.isAlarmSkippedToday(context)
