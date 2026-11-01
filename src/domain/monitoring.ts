@@ -551,17 +551,15 @@ async function evaluateQuorum(
   now: Date,
   config: DomainConfig,
 ): Promise<boolean> {
-  const living = await countLivingWatchers(db, subjectUserId, now, config);
-  const votes = await countActiveVotes(db, cert.id);
-
   // 床: 段階2（≒ startedAt + stage1to2Delay）から voteFloor 経過（Cron粒度15分の誤差は無視できる近似）。
   const floorMs =
     (config.stage1to2DelayHours + config.voteFloorHours) * HOUR_MS;
   const floorPassed = now.getTime() - cert.startedAt.getTime() >= floorMs;
+  if (!floorPassed) return false;
 
-  // 2票以上 かつ 生存見守り者の過半数（votes*2 > living）かつ 床経過。
-  if (!(votes >= 2 && votes * 2 > living && floorPassed)) return false;
-
+  const dormantCutoff = toEpochSeconds(
+    new Date(now.getTime() - config.dormantDays * DAY_MS),
+  );
   const graceUntil = new Date(now.getTime() + graceHours * HOUR_MS);
   const upd = await db
     .update(deathCertifications)
@@ -571,6 +569,19 @@ async function evaluateQuorum(
         eq(deathCertifications.id, cert.id),
         eq(deathCertifications.outcome, 'in_progress'),
         eq(deathCertifications.stage, 'voting'),
+        // 投票数は読んでから書くまでに取り下げられ得るため、UPDATE自体で再確認する（不変条件・唯一の判定箇所）。
+        // 必要票数 = max(2, floor(生存見守り者数/2)+1) は「2票以上かつ過半数」と同値。
+        sql`(
+          select count(*) from ${deathVotes}
+          where ${deathVotes.certificationId} = ${cert.id} and ${deathVotes.withdrawnAt} is null
+        ) >= max(2, (
+          select count(*) from ${connections}
+          where ${connections.subjectUserId} = ${subjectUserId}
+            and ${connections.isWatcher} = 1
+            and ${connections.watcherStatus} = 'accepted'
+            and ${connections.watcherLastSeenAt} is not null
+            and ${connections.watcherLastSeenAt} >= ${dormantCutoff}
+        ) / 2 + 1)`,
       ),
     )
     .returning({ id: deathCertifications.id });
@@ -728,7 +739,10 @@ export function isWatcherLiving(
   );
 }
 
-/** 承諾済み かつ 休眠しきい値以内の見守り者数（定足数の分母）。 */
+/**
+ * 承諾済み かつ 休眠しきい値以内の見守り者数（定足数の分母）。
+ * evaluateQuorum のUPDATE内に同じ条件を生SQLで重複定義している。休眠の定義を変える際は両方直すこと。
+ */
 export async function countLivingWatchers(
   db: Db,
   subjectUserId: string,
