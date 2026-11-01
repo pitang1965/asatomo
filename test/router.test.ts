@@ -23,6 +23,7 @@ const notify = {
   async notifyWatchers() {},
   async notifySubjectDisclosureLocked() {},
   async notifySubjectWatcherLeft() {},
+  async notifySubjectDeparted() {},
   async notifyWatchInvite() {},
   async notifyInviteAccepted(inviter, accepter, mutual) {
     inviteAcceptedCalls.push({ inviter, accepter, mutual });

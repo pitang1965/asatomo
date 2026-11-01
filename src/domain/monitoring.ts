@@ -740,26 +740,33 @@ export function isWatcherLiving(
 }
 
 /**
- * 承諾済み かつ 休眠しきい値以内の見守り者数（定足数の分母）。
+ * 生存見守り者（承諾済み かつ 休眠しきい値以内）のエッジ条件。定足数の分母・開示ラインの共通定義。
  * evaluateQuorum のUPDATE内に同じ条件を生SQLで重複定義している。休眠の定義を変える際は両方直すこと。
  */
+export function isLivingWatcherEdge(now: Date, config: DomainConfig) {
+  const dormantCutoff = new Date(now.getTime() - config.dormantDays * DAY_MS);
+  return and(
+    eq(connections.isWatcher, true),
+    eq(connections.watcherStatus, 'accepted'),
+    isNotNull(connections.watcherLastSeenAt),
+    gte(connections.watcherLastSeenAt, dormantCutoff),
+  );
+}
+
+/** 生存見守り者数（定足数の分母）。 */
 export async function countLivingWatchers(
   db: Db,
   subjectUserId: string,
   now: Date,
   config: DomainConfig,
 ): Promise<number> {
-  const dormantCutoff = new Date(now.getTime() - config.dormantDays * DAY_MS);
   const [row] = await db
     .select({ n: count() })
     .from(connections)
     .where(
       and(
         eq(connections.subjectUserId, subjectUserId),
-        eq(connections.isWatcher, true),
-        eq(connections.watcherStatus, 'accepted'),
-        isNotNull(connections.watcherLastSeenAt),
-        gte(connections.watcherLastSeenAt, dormantCutoff),
+        isLivingWatcherEdge(now, config),
       ),
     );
   return row?.n ?? 0;

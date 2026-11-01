@@ -1,4 +1,14 @@
-import { and, count, eq, isNull, ne } from 'drizzle-orm';
+import {
+  and,
+  count,
+  eq,
+  exists,
+  inArray,
+  isNull,
+  ne,
+  notExists,
+  sql,
+} from 'drizzle-orm';
 import type { Db } from '../db';
 import {
   connections,
@@ -8,13 +18,44 @@ import {
   user,
 } from '../db/schema';
 import { getAcceptedWatcherEmails, getUserName } from '../notify/resolver';
-import { leaveWatch } from './connections';
 import {
-  countLivingWatchers,
   type DomainConfig,
+  isLivingWatcherEdge,
   isWatcherLiving,
-  withdrawVote,
 } from './monitoring';
+
+/**
+ * userId が accepted 見守り者を務める本人ごとの、いまの生存見守り者数（userId を含む）。
+ * 見守り相手が多くても1クエリ（相手ごとの往復で D1 のクエリ上限に達しないように）。
+ */
+async function livingWatcherCountsForWatchedBy(
+  db: Db,
+  userId: string,
+  now: Date,
+  config: DomainConfig,
+): Promise<Map<string, number>> {
+  const mySubjects = db
+    .select({ id: connections.subjectUserId })
+    .from(connections)
+    .where(
+      and(
+        eq(connections.otherUserId, userId),
+        eq(connections.isWatcher, true),
+        eq(connections.watcherStatus, 'accepted'),
+      ),
+    );
+  const rows = await db
+    .select({ subjectUserId: connections.subjectUserId, n: count() })
+    .from(connections)
+    .where(
+      and(
+        isLivingWatcherEdge(now, config),
+        inArray(connections.subjectUserId, mySubjects),
+      ),
+    )
+    .groupBy(connections.subjectUserId);
+  return new Map(rows.map((r) => [r.subjectUserId, r.n]));
+}
 
 /**
  * アカウント削除（[[アカウント削除]]。ADR-0007）。
@@ -87,14 +128,15 @@ export async function previewAccountDeletion(
       ),
     );
 
+  const livingCounts = await livingWatcherCountsForWatchedBy(
+    db,
+    userId,
+    now,
+    config,
+  );
   const watchedSubjects: WatchedSubjectImpact[] = [];
   for (const w of watched) {
-    const currentLiving = await countLivingWatchers(
-      db,
-      w.subjectUserId,
-      now,
-      config,
-    );
+    const currentLiving = livingCounts.get(w.subjectUserId) ?? 0;
     const iAmLiving = isWatcherLiving(w.myLastSeenAt, now, config);
     const resulting = currentLiving - (iAmLiving ? 1 : 0);
     watchedSubjects.push({
@@ -201,14 +243,15 @@ export async function planAccountDeletion(
         eq(connections.watcherStatus, 'accepted'),
       ),
     );
+  const livingCounts = await livingWatcherCountsForWatchedBy(
+    db,
+    userId,
+    now,
+    config,
+  );
   const subjectsToNotify: WatcherLeftNotice[] = [];
   for (const w of watched) {
-    const currentLiving = await countLivingWatchers(
-      db,
-      w.subjectUserId,
-      now,
-      config,
-    );
+    const currentLiving = livingCounts.get(w.subjectUserId) ?? 0;
     const iAmLiving = isWatcherLiving(w.myLastSeenAt, now, config);
     const resulting = currentLiving - (iAmLiving ? 1 : 0);
     subjectsToNotify.push({
@@ -240,7 +283,9 @@ export async function planAccountDeletion(
  *   4. user 行を削除 → cascade で全関連が消える（ハード削除。§Q5）。
  *
  * 注: 既存コード同様、明示トランザクションは張らない。安全の要（通知）は plan 側で先に済むため、
- * ここでの部分失敗は「本人の網が黙って縮む」不変条件を破らない（再実行で収束）。
+ * ここでの部分失敗は「本人の網が黙って縮む」不変条件を破らない（再実行で収束）。部分失敗は
+ * ルート層が「再試行してください」として返す。各段は相手の数によらず定数個のクエリで済ませ、
+ * 見守り相手が多いユーザーでも D1 の1リクエストあたりのクエリ上限に達しないようにする。
  */
 export async function finalizeAccountDeletion(
   db: Db,
@@ -275,32 +320,79 @@ export async function finalizeAccountDeletion(
     );
 
   // 2. 他者の進行中認定に投じた自分の票を明示取り下げ → 定足数を再計算（§5b）。
-  const votedSubjects = await db
-    .selectDistinct({ subjectUserId: deathCertifications.subjectUserId })
-    .from(deathVotes)
-    .innerJoin(
-      deathCertifications,
-      eq(deathVotes.certificationId, deathCertifications.id),
-    )
+  //    withdrawVote と同義を、相手の数によらず定数個の UPDATE で行う（D1 のクエリ上限対策）。
+  const othersActiveCerts = db
+    .select({ id: deathCertifications.id })
+    .from(deathCertifications)
+    .where(
+      and(
+        eq(deathCertifications.outcome, 'in_progress'),
+        ne(deathCertifications.subjectUserId, userId),
+      ),
+    );
+  await db
+    .update(deathVotes)
+    .set({ withdrawnAt: now })
     .where(
       and(
         eq(deathVotes.voterUserId, userId),
         isNull(deathVotes.withdrawnAt),
-        eq(deathCertifications.outcome, 'in_progress'),
+        inArray(deathVotes.certificationId, othersActiveCerts),
       ),
     );
-  for (const v of votedSubjects) {
-    if (v.subjectUserId === userId) continue; // 自分宛は 1 で処理済み。
-    await withdrawVote(
-      db,
-      { subjectUserId: v.subjectUserId, voterUserId: userId },
-      config,
+  // 自分が票を投じていて、有効票が0になった他者の進行中認定（＝定足数割れ）。
+  const quorumLost = and(
+    eq(deathCertifications.outcome, 'in_progress'),
+    ne(deathCertifications.subjectUserId, userId),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(deathVotes)
+        .where(
+          and(
+            eq(deathVotes.certificationId, deathCertifications.id),
+            eq(deathVotes.voterUserId, userId),
+          ),
+        ),
+    ),
+    notExists(
+      db
+        .select({ one: sql`1` })
+        .from(deathVotes)
+        .where(
+          and(
+            eq(deathVotes.certificationId, deathCertifications.id),
+            isNull(deathVotes.withdrawnAt),
+          ),
+        ),
+    ),
+  );
+  // voting → watchers_alerted へ戻す（normal へは飛ばさない。不変条件B）。
+  await db
+    .update(subjectSettings)
+    .set({ state: 'watchers_alerted', stateChangedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(subjectSettings.state, 'voting'),
+        inArray(
+          subjectSettings.userId,
+          db
+            .select({ id: deathCertifications.subjectUserId })
+            .from(deathCertifications)
+            .where(quorumLost),
+        ),
+      ),
     );
-  }
+  await db
+    .update(deathCertifications)
+    .set({ stage: 'watchers_alerted', updatedAt: now })
+    .where(and(quorumLost, eq(deathCertifications.stage, 'voting')));
 
-  // 3. あなたが見守る各本人を一括で見守り解除（開示可否を再計算。§1）。
-  const watchedSubjects = await db
-    .select({ subjectUserId: connections.subjectUserId })
+  // 3. あなたが見守る各本人の開示可否を「あなた抜き」で再計算し、一括で見守り解除する
+  //    （leaveWatch と同義。§1・不変条件D）。対象は今 accepted の相手だけ（plan で通知済みの相手）。
+  //    再計算を解除より先に行うので、間で落ちても再実行で同じ結果に収束する。
+  const mySubjects = db
+    .select({ id: connections.subjectUserId })
     .from(connections)
     .where(
       and(
@@ -309,13 +401,35 @@ export async function finalizeAccountDeletion(
         eq(connections.watcherStatus, 'accepted'),
       ),
     );
-  for (const s of watchedSubjects) {
-    await leaveWatch(
-      db,
-      { watcherUserId: userId, subjectUserId: s.subjectUserId },
-      config,
+  const enabled = sql<boolean>`((${db
+    .select({ n: count() })
+    .from(connections)
+    .where(
+      and(
+        eq(connections.subjectUserId, subjectSettings.userId),
+        ne(connections.otherUserId, userId),
+        isLivingWatcherEdge(now, config),
+      ),
+    )}) >= 2)`;
+  await db
+    .update(subjectSettings)
+    .set({ disclosureEnabled: enabled, updatedAt: now })
+    .where(
+      and(
+        inArray(subjectSettings.userId, mySubjects),
+        ne(subjectSettings.disclosureEnabled, enabled),
+      ),
     );
-  }
+  await db
+    .update(connections)
+    .set({ watcherStatus: 'revoked', updatedAt: now })
+    .where(
+      and(
+        eq(connections.otherUserId, userId),
+        eq(connections.isWatcher, true),
+        eq(connections.watcherStatus, 'accepted'),
+      ),
+    );
 
   // 4. user 行を削除 → cascade で全関連が消える（ハード削除。§Q5）。
   await db.delete(user).where(eq(user.id, userId));

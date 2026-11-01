@@ -148,7 +148,14 @@ export function createHandlers(ctx: ApiContext) {
           plan.hadActiveAlertOnYou,
         ),
       );
-      await finalizeAccountDeletion(db, actor, config);
+      try {
+        await finalizeAccountDeletion(db, actor, config);
+      } catch (e) {
+        // 途中失敗で user 行が残ると「離脱通知済みなのに未削除」になる。黙って 500 にせず、
+        // 再試行を促す明示エラーで返す（finalize は冪等なので再実行で収束する）。
+        console.error('account deletion incomplete', e);
+        return { ok: false, status: 503, error: 'deletion_incomplete' };
+      }
       return { ok: true, data: {} };
     },
 

@@ -38,12 +38,14 @@ function makeCtx() {
       calls.locked.push(id);
     },
     async notifySubjectWatcherLeft() {},
+    async notifySubjectDeparted() {},
+    async notifyInviteAccepted() {},
     async notifyWatchInvite(id: string, invitee: string) {
       calls.invites.push({ id, invitee });
     },
   } satisfies Notifications;
   const ctx = { db, notify, config: { ...DEFAULT_DOMAIN_CONFIG, now: NOW } };
-  return { handlers: createHandlers(ctx), calls };
+  return { handlers: createHandlers(ctx), calls, notify };
 }
 
 const content = {
@@ -205,5 +207,25 @@ describe('メッセージの本人所有', () => {
       ciphertext: 'eA==',
     });
     expect(foreign).toEqual({ ok: false, status: 404, error: 'not_found' });
+  });
+});
+
+describe('アカウント削除の途中失敗', () => {
+  it('撤去が途中で失敗したら、再試行を促す明示エラーを返す（成功扱いにしない）', async () => {
+    const s = await seedSubject(db);
+    const ctx = makeCtx();
+    // user 行の削除（最終段）で一時的な DB エラーが起きた想定。
+    const failing = Object.assign(Object.create(db), {
+      delete: () => {
+        throw new Error('transient');
+      },
+    }) as Db;
+    const handlers = createHandlers({
+      db: failing,
+      notify: ctx.notify,
+      config: { ...DEFAULT_DOMAIN_CONFIG, now: NOW },
+    });
+    const r = await handlers.deleteAccount(s);
+    expect(r).toEqual({ ok: false, status: 503, error: 'deletion_incomplete' });
   });
 });

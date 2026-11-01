@@ -85,7 +85,18 @@ function Confirm({
         headers: { 'content-type': 'application/json' },
         body: '{}',
       });
-      if (!res.ok) throw new Error(`delete failed: ${res.status}`);
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        // 撤去の途中で失敗（アカウントはまだ残っている）。再実行で完了する。
+        if (body.error === 'deletion_incomplete') {
+          setError(
+            '削除が最後まで完了しませんでした。アカウントはまだ残っています。もう一度「アカウントを削除する」を押してください。',
+          );
+          setBusy(false);
+          return;
+        }
+        throw new Error(`delete failed: ${res.status}`);
+      }
       // セッションはサーバー側で消えている。クライアントの Cookie も念のためクリア。
       await authClient.signOut().catch(() => {});
       setDone(true);

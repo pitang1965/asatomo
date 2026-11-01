@@ -203,6 +203,88 @@ describe('削除の実行: 進行中の死亡認定', () => {
   });
 });
 
+describe('削除の実行: 見守り相手が多くても一括で後片付け', () => {
+  async function disclosureOf(subjectUserId: string) {
+    const [r] = await db
+      .select({ v: schema.subjectSettings.disclosureEnabled })
+      .from(schema.subjectSettings)
+      .where(eq(schema.subjectSettings.userId, subjectUserId))
+      .limit(1);
+    return r?.v;
+  }
+  async function enableDisclosure(subjectUserId: string) {
+    await db
+      .update(schema.subjectSettings)
+      .set({ disclosureEnabled: true })
+      .where(eq(schema.subjectSettings.userId, subjectUserId));
+  }
+
+  it('抜けて2人を割る本人だけ開示を止め、2人以上残る本人は開いたまま', async () => {
+    const alice = await seedUser(db, 'alice');
+    const others = [await seedUser(db, 'o'), await seedUser(db, 'o')];
+    const pair = await seedSubject(db);
+    await watch(pair, alice);
+    await watch(pair, others[0]);
+    const trio = await seedSubject(db);
+    await watch(trio, alice);
+    await watch(trio, others[0]);
+    await watch(trio, others[1]);
+    await enableDisclosure(pair);
+    await enableDisclosure(trio);
+
+    await finalizeAccountDeletion(db, alice, cfg);
+
+    expect(await disclosureOf(pair)).toBe(false);
+    expect(await disclosureOf(trio)).toBe(true);
+  });
+
+  it('過去に見守りをやめた本人の開示フラグには触れない（通知していない相手を黙って止めない）', async () => {
+    const alice = await seedUser(db, 'alice');
+    const former = await seedSubject(db);
+    await watch(former, alice);
+    await db
+      .update(schema.connections)
+      .set({ watcherStatus: 'revoked' })
+      .where(eq(schema.connections.subjectUserId, former));
+    await enableDisclosure(former); // 生存1人未満だが、再計算イベント待ちで true のまま
+
+    await finalizeAccountDeletion(db, alice, cfg);
+
+    expect(await disclosureOf(former)).toBe(true);
+  });
+
+  it('票の取り下げは自分の票だけで、他に有効票が残る認定は voting のまま', async () => {
+    const dave = await seedUser(db, 'dave');
+    const erin = await seedUser(db, 'erin');
+    const lost = await seedSubject(db, { state: 'voting' });
+    const lostCid = await seedCertification(db, lost, { stage: 'voting' });
+    const kept = await seedSubject(db, { state: 'voting' });
+    const keptCid = await seedCertification(db, kept, { stage: 'voting' });
+    for (const s of [lost, kept]) await watch(s, dave);
+    await watch(kept, erin);
+    await db.insert(schema.deathVotes).values([
+      { certificationId: lostCid, voterUserId: dave },
+      { certificationId: keptCid, voterUserId: dave },
+      { certificationId: keptCid, voterUserId: erin },
+    ]);
+
+    await finalizeAccountDeletion(db, dave, cfg);
+
+    expect(await stateOf(lost)).toBe('watchers_alerted');
+    expect(await stateOf(kept)).toBe('voting');
+    const stages = await db
+      .select({
+        id: schema.deathCertifications.id,
+        stage: schema.deathCertifications.stage,
+      })
+      .from(schema.deathCertifications);
+    expect(stages.find((c) => c.id === lostCid)?.stage).toBe(
+      'watchers_alerted',
+    );
+    expect(stages.find((c) => c.id === keptCid)?.stage).toBe('voting');
+  });
+});
+
 describe('削除の実行: ハード削除の cascade', () => {
   it('本人側の最後のメッセージ・宛先・シグナル・設定・user が消える', async () => {
     const erin = await seedSubject(db);
