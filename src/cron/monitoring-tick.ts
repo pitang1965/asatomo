@@ -132,13 +132,17 @@ async function processDisclosures(
 
     if (updated.length === 0) continue; // 競合で先に取消/開示済み
 
+    // 開示ゲート（messages.ts）は death_certifications.outcome='disclosed' のみを見るため、
+    // 上のUPDATEが通った時点で通知してよい。safe() は例外を投げないので、2本目のUPDATE
+    // （subjectSettings の追随）が失敗しても通知だけは必ず実行される。2本目が失敗したら
+    // 例外は withRetry に伝わり、尽きれば notifyOperatorDegraded で運営者に届く。
+    await safe(() => notifier.discloseMessages(row.subjectUserId, row.id));
+
     await db
       .update(subjectSettings)
       .set({ state: 'disclosed', stateChangedAt: now, updatedAt: now })
       .where(eq(subjectSettings.userId, row.subjectUserId));
 
-    // 開示は不可逆（不変条件C）。通知失敗は握りつぶさず、要ハードニング（下記 NOTE）。
-    await safe(() => notifier.discloseMessages(row.subjectUserId, row.id));
     count += 1;
   }
   return count;
@@ -180,6 +184,12 @@ async function processWatcherAlerts(
 
     if (updated.length === 0) continue; // 本人シグナル等で先に normal 化
 
+    // castVote等のゲートは subjectSettings.state（上のUPDATEで確定済み）を見るため、
+    // ここで通知してよい。safe() は例外を投げないので、2本目のUPDATE（エピソードの
+    // stage 追随）が失敗しても通知だけは必ず実行される。2本目が失敗したら例外は
+    // withRetry に伝わり、尽きれば notifyOperatorDegraded で運営者に届く。
+    await safe(() => notifier.notifyWatchersAlert(row.userId));
+
     // エピソードの stage も進める。
     await db
       .update(deathCertifications)
@@ -191,7 +201,6 @@ async function processWatcherAlerts(
         ),
       );
 
-    await safe(() => notifier.notifyWatchersAlert(row.userId));
     count += 1;
   }
   return count;

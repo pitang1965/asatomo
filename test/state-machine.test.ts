@@ -559,4 +559,45 @@ describe('Cron 監視tick', () => {
     expect((await latestCert(s))?.outcome).toBe('disclosed');
     expect(calls.disclose).toEqual([{ id: s, cid: cert.id }]);
   });
+
+  it('T5: 確定後の2本目UPDATE失敗でも通知は両方の行に届く（通知は1本目のUPDATE直後に実行される）', async () => {
+    const s1 = await seedSubject(db, { state: 'certified_grace' });
+    const s2 = await seedSubject(db, { state: 'certified_grace' });
+    await db.insert(schema.deathCertifications).values({
+      subjectUserId: s1,
+      stage: 'certified_grace',
+      graceUntil: hoursAgo(1, NOW),
+    });
+    await db.insert(schema.deathCertifications).values({
+      subjectUserId: s2,
+      stage: 'certified_grace',
+      graceUntil: hoursAgo(1, NOW),
+    });
+
+    // 1回目の subjectSettings 更新（確定後の2本目の書き込み）だけを一過性障害として失敗させる。
+    const realUpdate = db.update.bind(db);
+    let subjectSettingsUpdateCalls = 0;
+    db.update = ((table: unknown) => {
+      if (table === schema.subjectSettings) {
+        subjectSettingsUpdateCalls += 1;
+        if (subjectSettingsUpdateCalls === 1) {
+          throw new Error('boom: 一過性DB障害');
+        }
+      }
+      return realUpdate(table as never);
+    }) as typeof db.update;
+
+    const { calls, notifier } = mockNotifier();
+    const res = await runMonitoringTick(db, notifier, cronCfg);
+    db.update = realUpdate;
+
+    // tick全体は落ちない（一過性障害はwithRetryが吸収）。通知は2件とも届く。
+    expect(res.degraded).toBe(false);
+    expect(calls.disclose.map((c) => c.id).sort()).toEqual([s1, s2].sort());
+
+    // 1本目のUPDATE（開示確定・開示ゲートが見る列）は両方成功している。
+    const [c1, c2] = await Promise.all([latestCert(s1), latestCert(s2)]);
+    expect(c1?.outcome).toBe('disclosed');
+    expect(c2?.outcome).toBe('disclosed');
+  });
 });
