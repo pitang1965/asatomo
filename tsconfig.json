@@ -14,5 +14,5 @@
     "verbatimModuleSyntax": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "scripts", "drizzle.config.ts"]
+  "include": ["src", "test", "scripts", "drizzle.config.ts"]
 }
