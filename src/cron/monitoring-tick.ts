@@ -1,4 +1,13 @@
-import { and, eq, isNotNull, lte, or, sql } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  inArray,
+  isNotNull,
+  lte,
+  notExists,
+  or,
+  sql,
+} from 'drizzle-orm';
 import type { Db } from '../db';
 import { deathCertifications, subjectSettings } from '../db/schema';
 import { toEpochSeconds } from '../db/time';
@@ -249,20 +258,64 @@ async function processUnresponsive(
 
     if (updated.length === 0) continue; // 競合で先に別状態へ
 
-    // エピソードを open（本人につき in_progress は 1 本 = 部分ユニークが保証）。
-    // 稀な競合で重複した場合はユニーク違反 → 握りつぶして続行。
-    await safe(() =>
-      db.insert(deathCertifications).values({
-        subjectUserId: row.userId,
-        stage: 'unresponsive',
-        startedAt: now,
-      }),
-    );
-
+    // エピソード挿入の失敗は伝播させる（リトライ尽きで degraded → 運営者へ）。
+    // 状態だけ進んで残っても、下の自己修復が次の試行で拾う。
+    await openEpisode(db, row.userId, now);
     await safe(() => notifier.notifySubjectUnresponsive(row.userId));
     count += 1;
   }
+
+  // 自己修復: 「unresponsive/watchers_alerted なのに in_progress エピソードが無い」本人へ
+  // エピソードを補う（無いと見守り者が永久に投票できない）。主に挿入失敗で生じるが、シグナル受信等の
+  // 2 本の UPDATE の部分失敗でも生じうるため、判定窓超過の人だけを拾う（生存中は除外）。
+  // 障害が 12h 超続くと T2 がエピソード無しのまま watchers_alerted へ進めるため、そちらも拾う。
+  const orphans = await db
+    .select({
+      userId: subjectSettings.userId,
+      state: subjectSettings.state,
+    })
+    .from(subjectSettings)
+    .where(
+      and(
+        inArray(subjectSettings.state, ['unresponsive', 'watchers_alerted']),
+        sql`${subjectSettings.lastSignalAt} + (${subjectSettings.detectionWindowHours} * 3600) < ${nowEpoch}`,
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(deathCertifications)
+            .where(
+              and(
+                eq(deathCertifications.subjectUserId, subjectSettings.userId),
+                eq(deathCertifications.outcome, 'in_progress'),
+              ),
+            ),
+        ),
+      ),
+    )
+    .limit(config.batchLimit);
+  for (const row of orphans) {
+    // startedAt は修復時刻にする（古い時刻だと evaluateQuorum の投票床を飛ばせてしまう）
+    await openEpisode(db, row.userId, now, row.state);
+    // 元の挿入失敗で本人通知も飛んでいないので送る（見守り者へは T2 で通知済み）
+    if (row.state === 'unresponsive') {
+      await safe(() => notifier.notifySubjectUnresponsive(row.userId));
+    }
+    count += 1; // リトライで直った tick も件数に出す
+  }
   return count;
+}
+
+/** エピソードを open（本人につき in_progress は 1 本 = 部分ユニーク）。競合の重複だけ吸収。 */
+async function openEpisode(
+  db: Db,
+  subjectUserId: string,
+  startedAt: Date,
+  stage: (typeof deathCertifications.$inferInsert)['stage'] = 'unresponsive',
+): Promise<void> {
+  await db
+    .insert(deathCertifications)
+    .values({ subjectUserId, stage, startedAt })
+    .onConflictDoNothing();
 }
 
 // ─── ヘルパ ─────────────────────────────────────────────────────────────────

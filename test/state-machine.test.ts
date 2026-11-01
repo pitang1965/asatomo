@@ -1,5 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Notifier, runMonitoringTick } from '../src/cron/monitoring-tick';
 import type { Db } from '../src/db';
 import * as schema from '../src/db/schema';
@@ -479,6 +479,79 @@ describe('Cron 監視tick', () => {
     expect((await stateOf(s))?.state).toBe('unresponsive');
     expect((await latestCert(s))?.outcome).toBe('in_progress');
     expect(calls.unresponsive).toEqual([s]);
+  });
+
+  it('T1: 既に in_progress がある競合は重複を吸収して続行（degraded にしない）', async () => {
+    const s = await seedSubject(db, {
+      state: 'normal',
+      lastSignalAt: hoursAgo(40, NOW),
+    });
+    await seedCertification(db, s, { stage: 'unresponsive' });
+    const { notifier } = mockNotifier();
+    const res = await runMonitoringTick(db, notifier, cronCfg);
+    expect(res).toMatchObject({ unresponsive: 1, degraded: false });
+    expect((await stateOf(s))?.state).toBe('unresponsive');
+  });
+
+  it('T1: エピソード挿入が失敗し続けたら degraded で運営者へ', async () => {
+    const s = await seedSubject(db, {
+      state: 'normal',
+      lastSignalAt: hoursAgo(40, NOW),
+    });
+    vi.spyOn(db, 'insert').mockImplementation(() => {
+      throw new Error('db down');
+    });
+    const { notifier } = mockNotifier();
+    const res = await runMonitoringTick(db, notifier, cronCfg);
+    expect(res.degraded).toBe(true);
+    expect((await stateOf(s))?.state).toBe('unresponsive');
+    expect(await latestCert(s)).toBeUndefined();
+  });
+
+  it('T1: エピソード無しの unresponsive は次の tick で自己修復（投票不能で詰ませない）', async () => {
+    const changedAt = hoursAgo(1, NOW);
+    const s = await seedSubject(db, {
+      state: 'unresponsive',
+      lastSignalAt: hoursAgo(40, NOW),
+      stateChangedAt: changedAt,
+    });
+    const { calls, notifier } = mockNotifier();
+    const res = await runMonitoringTick(db, notifier, cronCfg);
+    expect(res.degraded).toBe(false);
+    const cert = await latestCert(s);
+    expect(cert).toMatchObject({
+      outcome: 'in_progress',
+      stage: 'unresponsive',
+    });
+    expect(cert?.startedAt).toEqual(NOW); // 投票床は修復時刻から数える
+    expect(calls.unresponsive).toEqual([s]);
+  });
+
+  it('T1: エピソード無しのまま watchers_alerted へ進んだ本人も自己修復（本人へは再通知しない）', async () => {
+    const s = await seedSubject(db, {
+      state: 'watchers_alerted',
+      lastSignalAt: hoursAgo(60, NOW),
+      stateChangedAt: hoursAgo(1, NOW),
+    });
+    const { calls, notifier } = mockNotifier();
+    const res = await runMonitoringTick(db, notifier, cronCfg);
+    expect(res.degraded).toBe(false);
+    expect(await latestCert(s)).toMatchObject({
+      outcome: 'in_progress',
+      stage: 'watchers_alerted',
+    });
+    expect(calls.unresponsive).toEqual([]);
+  });
+
+  it('T1: 自己修復は判定窓内（生存中）の本人を拾わない', async () => {
+    const s = await seedSubject(db, {
+      state: 'unresponsive',
+      lastSignalAt: hoursAgo(1, NOW),
+    });
+    const { calls, notifier } = mockNotifier();
+    await runMonitoringTick(db, notifier, cronCfg);
+    expect(await latestCert(s)).toBeUndefined();
+    expect(calls.unresponsive).toEqual([]);
   });
 
   it('T1: 旅行モード中は検知しない', async () => {
