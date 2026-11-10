@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.0
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # 本番ビルドが通り、かつ本番D1を向いていること（開発DB接続のままデプロイする事故の防止）。
+      - run: npm run build:cf
+      - run: npm run verify:build
+
+  # master への push のみ。手元のビルドを本番に上げない唯一の経路にする（README参照）。
+  # 事前設定: Secrets に CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID、
+  #           Variables に VITE_POSTHOG_KEY / VITE_POSTHOG_HOST（ビルド時に埋め込む公開値）。
+  # DBマイグレーション（npm run db:migrate:prod）は自動化しない。必要な変更は先に手動で適用する。
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    concurrency: deploy-production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+      VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.0
+          cache: npm
+      - run: npm ci
+      # 未設定だと解析が黙って無効のまま本番に出るため、ここで止める。
+      - run: test -n "$VITE_POSTHOG_KEY" && test -n "$CLOUDFLARE_API_TOKEN"
+      # build:cf → verify:build → wrangler deploy（手元と同じ手順を package.json に一本化）
+      - run: npm run deploy

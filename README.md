@@ -234,8 +234,14 @@ npm run dev                     # Vite 開発サーバー（@cloudflare/vite-plu
 デプロイは Cloudflare Workers へ:
 
 ```bash
-npm run deploy         # build:cf → wrangler deploy
+npm run deploy         # build:cf → verify:build（本番D1を向いているか検査）→ wrangler deploy
 ```
+
+> ⚠ デプロイは必ず `npm run deploy` で行います。`npm run build`（開発用・開発D1向け）の出力を
+> `wrangler deploy` へ直接渡すと、本番が開発DBに繋がりログインが全員壊れます（実際に発生した事故）。
+> master へ push すると CI（`.github/workflows/ci.yml`）が検査のうえ自動デプロイします（手元のビルドは使いません）。
+> 初回のみ GitHub の Secrets（`CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`）と
+> Variables（`VITE_POSTHOG_KEY` / `VITE_POSTHOG_HOST`）の登録が必要。DBマイグレーションは自動化していません。
 
 > シークレット（`BETTER_AUTH_SECRET` / OAuth / `EMAIL_API_KEY` 等）は `wrangler secret put` で登録します。
 > DB（Cloudflare D1）はシークレットではなくバインディングなので `wrangler.jsonc` の `d1_databases` で管理します。
