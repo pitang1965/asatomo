@@ -8,8 +8,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -35,8 +35,8 @@ jobs:
       VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
       VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
