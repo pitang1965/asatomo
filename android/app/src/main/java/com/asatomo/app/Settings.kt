@@ -1,19 +1,63 @@
 package com.asatomo.app
 
 import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 /**
  * ログイン状態と毎日アラームの永続化（SharedPreferences）。
+ * このファイル（asatomo.xml）はバックアップ・端末間移行の対象外（res/xml/data_extraction_rules.xml）。
  * サーバーURLはビルド種別で固定（BuildConfig.BASE_URL。debug=adb reverse 経由の
  * 127.0.0.1:5173 / release=本番Workers）。実行時の接続設定は持たない。
  */
 class Settings(context: Context) {
     private val prefs = context.getSharedPreferences("asatomo", Context.MODE_PRIVATE)
 
-    /** Better Auth のセッショントークン（Googleログイン後に保存。空 = 未ログイン）。 */
+    /**
+     * Better Auth のセッショントークン（ログイン後に保存。空 = 未ログイン）。
+     * Android Keystore の鍵（端末から取り出せない）で暗号化して保存する。復号できない
+     * （鍵が無い端末へ復元された等）ときは未ログイン扱い。
+     */
     var sessionToken: String
-        get() = prefs.getString("sessionToken", "") ?: ""
-        set(v) = prefs.edit().putString("sessionToken", v).apply()
+        get() {
+            cachedToken?.let { return it }
+            // 旧版が平文で保存したトークンを暗号化へ移す（更新で既存ユーザーをログアウトさせない）。
+            prefs.getString(LEGACY_TOKEN, null)?.let {
+                sessionToken = it
+                return it
+            }
+            val token =
+                prefs.getString(ENC_TOKEN, null)
+                    ?.let { runCatching { decrypt(it) }.getOrNull() } ?: ""
+            cachedToken = token
+            return token
+        }
+        set(v) {
+            cachedToken = v
+            val enc = runCatching { encrypt(v) }.getOrNull()
+            prefs.edit()
+                .apply {
+                    if (enc != null) {
+                        putString(ENC_TOKEN, enc).remove(LEGACY_TOKEN)
+                    } else {
+                        // shortcut: Keystore が壊れた端末では平文で保存する（ログイン不能＝見守り停止の
+                        // 方が害が大きい。アプリ専用領域＋バックアップ対象外）。実機で発生報告が出たら見直す。
+                        putString(LEGACY_TOKEN, v).remove(ENC_TOKEN)
+                    }
+                }
+                .apply()
+        }
+
+    /** LINE ログイン中だけ持つ PKCE verifier（AuthClient.startLineLogin → finishLineLogin）。 */
+    var lineVerifier: String
+        get() = prefs.getString("lineVerifier", "") ?: ""
+        set(v) = prefs.edit().putString("lineVerifier", v).apply()
 
     /** 表示用のユーザー名（ログイン応答から）。 */
     var userName: String
@@ -70,8 +114,11 @@ class Settings(context: Context) {
      * （グリル決定: シグナルを送れない目覚ましは「見守りが生きている」錯覚を与えるため）。
      */
     fun clearForLogout() {
+        cachedToken = ""
         prefs.edit()
-            .remove("sessionToken")
+            .remove(LEGACY_TOKEN)
+            .remove(ENC_TOKEN)
+            .remove("lineVerifier")
             .remove("userName")
             .remove("userEmail")
             .remove("alarmHour")
@@ -82,5 +129,50 @@ class Settings(context: Context) {
             .remove("travelUntilMs")
             .remove("hasWatchers")
             .apply()
+    }
+
+    private companion object {
+        const val LEGACY_TOKEN = "sessionToken"
+        const val ENC_TOKEN = "sessionTokenEnc"
+        const val KEY_ALIAS = "asatomo_session"
+        const val IV_BYTES = 12
+
+        /** Keystore 復号を API 呼び出しや画面描画のたびに繰り返さないためのプロセス内キャッシュ。 */
+        @Volatile var cachedToken: String? = null
+
+        fun key(): SecretKey {
+            val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            (ks.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+            return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+                .apply {
+                    init(
+                        KeyGenParameterSpec.Builder(
+                            KEY_ALIAS,
+                            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+                        )
+                            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                            .build(),
+                    )
+                }
+                .generateKey()
+        }
+
+        /** AES-GCM。出力は base64(IV 12バイト ‖ 暗号文＋タグ)。IV は Keystore が毎回ランダム生成。 */
+        fun encrypt(plain: String): String {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key())
+            return Base64.encodeToString(
+                cipher.iv + cipher.doFinal(plain.toByteArray()),
+                Base64.NO_WRAP,
+            )
+        }
+
+        fun decrypt(encoded: String): String {
+            val bytes = Base64.decode(encoded, Base64.NO_WRAP)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes, 0, IV_BYTES))
+            return String(cipher.doFinal(bytes, IV_BYTES, bytes.size - IV_BYTES))
+        }
     }
 }

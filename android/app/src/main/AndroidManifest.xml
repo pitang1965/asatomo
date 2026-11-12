@@ -50,9 +50,12 @@
 
         <!-- ネイティブ LINE ログインの復帰口（Custom Tab → asatomo://auth ディープリンク）。
              singleTask: Custom Tab から戻る際にインスタンスを積み増さない。
-             exported=true: 外部（ブラウザ）からの VIEW インテントを受けるため必須。 -->
+             exported=true: 外部（ブラウザ）からの VIEW インテントを受けるため必須。
+             configChanges: コード交換の通信中に回転等で作り直されると、消費済みの verifier で
+             2回目が走って「失敗」と誤表示されるため、作り直させない。 -->
         <activity
             android:name=".AuthCallbackActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
             android:noHistory="true"

@@ -1,19 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+   Android 12+ のバックアップ／端末間移行ルール。
+   asatomo.xml（Settings.kt）はログイン情報（セッショントークン・氏名・メール）を含むので、
+   Google のクラウドバックアップにも端末間移行にも載せない。新しい端末ではログインし直す
+   （アラーム時刻も同じファイルなので移らない。ログイン無しで鳴るだけの目覚ましを残さない方針と整合）。
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="asatomo.xml" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="asatomo.xml" />
     </device-transfer>
-    -->
 </data-extraction-rules>
