@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { fetchInvitePreview } from '../server/functions';
 import { authClient } from '../web/auth-client';
+import { InAppBrowserNotice } from '../web/InAppBrowserNotice';
 
 /**
  * 招待の承諾ランディング（ADR-0005）。まだアカウントの無い相手でも踏める入口。
@@ -143,6 +144,7 @@ function JoinPage() {
           <br />
           まずはお使いのアカウントでログインしてください。
         </p>
+        <InAppBrowserNotice />
         <div className="mt-5 flex flex-col gap-2.5">
           <Button
             type="button"

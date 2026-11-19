@@ -1,22 +1,11 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { fetchShell } from '../server/functions';
 import { track } from '../web/analytics';
 import { authClient } from '../web/auth-client';
-
-/**
- * アプリ内ブラウザ（WebView）判定。LINE・Instagram 等の中で開かれると Cookie が隔離され、
- * OAuth の state Cookie が戻り時に読めず「状態不一致」でログインが失敗する（Google も
- * 埋め込み WebView を disallowed_useragent で拒否する。業界共通の制約）。UA で既知の
- * アプリ内ブラウザを検知し、通常ブラウザで開き直すよう案内する。
- */
-function isInAppBrowser(ua: string): boolean {
-  return /\bLine\/|FBAN|FBAV|FB_IAB|Instagram|Twitter|TikTok|musical_ly|Bytedance|KAKAOTALK|MicroMessenger/i.test(
-    ua,
-  );
-}
+import { InAppBrowserNotice } from '../web/InAppBrowserNotice';
 
 /**
  * ログイン画面（/login）。ADR-0008（トップはランディング、ログインは分離）に伴い、
@@ -45,16 +34,9 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const { redirect: back = '/' } = Route.useSearch();
 
-  // アプリ内ブラウザ判定はクライアントでのみ行う（SSR に navigator が無い）。初期 false で
-  // SSR と一致させ、マウント後に true へ切り替える（ハイドレーション不整合を避ける）。
-  const [inApp, setInApp] = useState(false);
-  const [copied, setCopied] = useState(false);
   // 押下からプロバイダへ遷移するまで無反応の間があるので、その間ボタンにスピナーを出す。
   // 遷移が成功すればページごと離れるので解除は不要。失敗時のみ catch で元に戻す。
   const [pending, setPending] = useState<'google' | 'line' | null>(null);
-  useEffect(() => {
-    setInApp(isInAppBrowser(navigator.userAgent));
-  }, []);
 
   async function signInWith(provider: 'google' | 'line') {
     if (pending) return; // 二重押下・別プロバイダの同時押しを防ぐ
@@ -78,23 +60,6 @@ function LoginPage() {
     }
   }
 
-  const copyUrl = () => {
-    const url = window.location.href;
-    navigator.clipboard?.writeText(url).then(
-      () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      },
-      () => {
-        // クリップボード不可の環境では選択できるよう prompt で提示。
-        window.prompt(
-          'このURLをコピーして、ChromeやSafariで開いてください',
-          url,
-        );
-      },
-    );
-  };
-
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6">
       {/* 外枠幅は master と同一に保つ。旧実装は content-box で maxWidth:380 + 左右
@@ -116,23 +81,7 @@ function LoginPage() {
           <br />
           お使いのアカウントでログインしてください。
         </p>
-        {inApp && (
-          <div className="mt-4 rounded-xl border border-[#fdba74] bg-[#fff7ed] px-3.5 py-3 text-left text-[13px] leading-[1.7] text-[#9a3412]">
-            <strong>アプリ内の画面で開かれています。</strong>
-            <br />
-            このままだとログイン（特にLINE）が「状態不一致」で失敗することがあります。右上のメニュー（⋮
-            や … ）から
-            <strong>「ブラウザで開く」/「既定のブラウザで開く」</strong>
-            を選び、Chrome や Safari で開き直してください。
-            <button
-              type="button"
-              onClick={copyUrl}
-              className="mt-2.5 w-full cursor-pointer rounded-[10px] border border-[#fdba74] bg-white px-3 py-2 text-[13px] font-semibold text-[#9a3412]"
-            >
-              {copied ? '✓ URLをコピーしました' : 'このページのURLをコピー'}
-            </button>
-          </div>
-        )}
+        <InAppBrowserNotice />
         <div className="mt-5 flex flex-col gap-2.5">
           <Button
             type="button"
