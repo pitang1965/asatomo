@@ -41,6 +41,7 @@ import kotlinx.coroutines.launch
 /**
  * 設定画面。ログアウトは最下部（グリル決定: 一等地に置かない）。
  * ログアウトの流れ:
+ *   0. 未送信シグナルを送り切る（送れない分があれば件数を見せて本人に確認）
  *   1. サーバーへ「ログアウトした」事実を記録（見守り者への状態可視化。ベストエフォート）
  *   2. Better Auth セッションを失効（ベストエフォート）
  *   3. アラーム解除 + 送信キュー破棄 + 端末のログイン状態クリア
@@ -78,6 +79,19 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
     val scope = rememberCoroutineScope()
     var confirming by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    // 送り切れなかった「元気」があれば、その結果（非 null で「それでもログアウト」を確認する）。
+    var unsent by remember { mutableStateOf<SignalQueue.FlushResult?>(null) }
+
+    suspend fun finishLogout() {
+        // 1. 事実の記録 → 2. セッション失効（どちらもベストエフォート）。
+        ApiClient.recordLogout(settings)
+        ApiClient.signOut(settings)
+        // 3. 端末側の後片付け。古いトークンで再送し続けないようキューも破棄。
+        AlarmScheduler.cancel(context)
+        WorkManager.getInstance(context).cancelAllWork()
+        settings.clearForLogout()
+        loggedOut()
+    }
 
     Scaffold(
         topBar = {
@@ -179,14 +193,14 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
                         confirming = false
                         busy = true
                         scope.launch {
-                            // 1. 事実の記録 → 2. セッション失効（どちらもベストエフォート）。
-                            ApiClient.recordLogout(settings)
-                            ApiClient.signOut(settings)
-                            // 3. 端末側の後片付け。古いトークンで再送し続けないようキューも破棄。
-                            AlarmScheduler.cancel(context)
-                            WorkManager.getInstance(context).cancelAllWork()
-                            settings.clearForLogout()
-                            loggedOut()
+                            // 0. 未送信の「元気」を今のログインで送り切る（黙って消さない）。
+                            val result = SignalQueue.flushBeforeLogout(context, settings)
+                            if (result.unsent > 0) {
+                                unsent = result
+                                busy = false
+                            } else {
+                                finishLogout()
+                            }
                         }
                     },
                 ) {
@@ -195,6 +209,42 @@ private fun SettingsScreen(back: () -> Unit, loggedOut: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { confirming = false }) { Text("やめる") }
+            },
+        )
+    }
+
+    unsent?.let { result ->
+        AlertDialog(
+            onDismissRequest = { unsent = null },
+            title = { Text("まだ届いていない「元気」があります") },
+            text = {
+                // ログイン切れは電波を変えても直らない。ログイン中に再ログインする導線もないため、
+                // 直し方を約束せず事実だけ伝える。
+                val howToFix =
+                    if (result.authExpired) {
+                        "ログインの有効期限が切れているため、送ることができません。"
+                    } else {
+                        "通信できる場所でもう一度試すと、届けてからログアウトできることがあります。"
+                    }
+                Text(
+                    "${result.unsent}件の「元気」を見守ってくれる人へ送れませんでした。\n" +
+                        "$howToFix\n" +
+                        "今ログアウトすると、この分は届きません。",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        unsent = null
+                        busy = true
+                        scope.launch { finishLogout() }
+                    },
+                ) {
+                    Text("それでもログアウト", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { unsent = null }) { Text("やめる") }
             },
         )
     }
