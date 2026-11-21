@@ -1,5 +1,6 @@
 import {
   and,
+  asc,
   eq,
   inArray,
   isNotNull,
@@ -122,6 +123,8 @@ async function processDisclosures(
         lte(deathCertifications.graceUntil, now),
       ),
     )
+    // 滞留が batchLimit を超えても、最も待たされている対象から処理する（以下の各 SELECT も同様）
+    .orderBy(asc(deathCertifications.graceUntil))
     .limit(config.batchLimit);
 
   let count = 0;
@@ -176,6 +179,7 @@ async function processWatcherAlerts(
         lte(subjectSettings.stateChangedAt, threshold),
       ),
     )
+    .orderBy(asc(subjectSettings.stateChangedAt))
     .limit(config.batchLimit);
 
   let count = 0;
@@ -245,6 +249,10 @@ async function processUnresponsive(
         sql`${subjectSettings.lastSignalAt} + (${subjectSettings.detectionWindowHours} * 3600) < ${nowEpoch}`,
       ),
     )
+    // 窓の期限（lastSignalAt + 窓）が古い順＝最も長く沈黙を超過している本人から
+    .orderBy(
+      sql`${subjectSettings.lastSignalAt} + (${subjectSettings.detectionWindowHours} * 3600)`,
+    )
     .limit(config.batchLimit);
 
   let count = 0;
@@ -296,6 +304,7 @@ async function processUnresponsive(
         ),
       ),
     )
+    .orderBy(asc(subjectSettings.stateChangedAt))
     .limit(config.batchLimit);
   for (const row of orphans) {
     // startedAt は修復時刻にする（古い時刻だと evaluateQuorum の投票床を飛ばせてしまう）

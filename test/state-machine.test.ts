@@ -690,4 +690,100 @@ describe('Cron 監視tick', () => {
     expect(c1?.outcome).toBe('disclosed');
     expect(c2?.outcome).toBe('disclosed');
   });
+  // 滞留が batchLimit を超えたとき、最も待たされている対象から処理する。
+  // 同じ2行に古い/新しい時刻を入れ替えて両方試す（暗黙の並びは時刻と無関係なので、ORDER BY が無ければ片方は必ず落ちる）
+  describe('batchLimit 超過時は古い順', () => {
+    const one = { ...cronCfg, batchLimit: 1 };
+    const pair = (swap: boolean, older: number, newer: number) =>
+      swap ? [older, newer] : [newer, older];
+
+    it.each([
+      false,
+      true,
+    ])('T5: 猶予期限が古い方から開示 (swap=%s)', async (swap) => {
+      const [hA, hB] = pair(swap, 5, 1);
+      const a = await seedSubject(db, { state: 'certified_grace' });
+      const b = await seedSubject(db, { state: 'certified_grace' });
+      for (const [id, h] of [
+        [a, hA],
+        [b, hB],
+      ] as const) {
+        await db.insert(schema.deathCertifications).values({
+          subjectUserId: id,
+          stage: 'certified_grace',
+          graceUntil: hoursAgo(h, NOW),
+        });
+      }
+      const { calls, notifier } = mockNotifier();
+      await runMonitoringTick(db, notifier, one);
+      expect(calls.disclose.map((c) => c.id)).toEqual([swap ? a : b]);
+    });
+
+    it.each([
+      false,
+      true,
+    ])('T2: 未応答になったのが古い方から見守り者へ (swap=%s)', async (swap) => {
+      const [hA, hB] = pair(swap, 20, 13);
+      const a = await seedSubject(db, {
+        state: 'unresponsive',
+        stateChangedAt: hoursAgo(hA, NOW),
+      });
+      const b = await seedSubject(db, {
+        state: 'unresponsive',
+        stateChangedAt: hoursAgo(hB, NOW),
+      });
+      await seedCertification(db, a, { stage: 'unresponsive' });
+      await seedCertification(db, b, { stage: 'unresponsive' });
+      const { calls, notifier } = mockNotifier();
+      await runMonitoringTick(db, notifier, one);
+      expect(calls.watchersAlert).toEqual([swap ? a : b]);
+    });
+
+    it.each([
+      false,
+      true,
+    ])('T1: 沈黙の超過が長い方から検知 (swap=%s)', async (swap) => {
+      // 期限超過が長い方（40h前・窓30h＝10h超過）は、最終シグナルだけ見ると新しい方（46h前・窓45h＝1h超過より後）。
+      // lastSignalAt のインデックス順に頼ると逆になるので、期限（lastSignalAt+窓）で並べていることを確かめられる
+      const overdue = {
+        lastSignalAt: hoursAgo(40, NOW),
+        detectionWindowHours: 30,
+      };
+      const lessOverdue = {
+        lastSignalAt: hoursAgo(46, NOW),
+        detectionWindowHours: 45,
+      };
+      const a = await seedSubject(db, {
+        state: 'normal',
+        ...(swap ? overdue : lessOverdue),
+      });
+      const b = await seedSubject(db, {
+        state: 'normal',
+        ...(swap ? lessOverdue : overdue),
+      });
+      const { calls, notifier } = mockNotifier();
+      await runMonitoringTick(db, notifier, one);
+      expect(calls.unresponsive).toEqual([swap ? a : b]);
+    });
+
+    it.each([
+      false,
+      true,
+    ])('自己修復: 取り残されたのが古い方から (swap=%s)', async (swap) => {
+      const [hA, hB] = pair(swap, 5, 1);
+      const a = await seedSubject(db, {
+        state: 'unresponsive',
+        lastSignalAt: hoursAgo(40, NOW),
+        stateChangedAt: hoursAgo(hA, NOW),
+      });
+      const b = await seedSubject(db, {
+        state: 'unresponsive',
+        lastSignalAt: hoursAgo(40, NOW),
+        stateChangedAt: hoursAgo(hB, NOW),
+      });
+      const { calls, notifier } = mockNotifier();
+      await runMonitoringTick(db, notifier, one);
+      expect(calls.unresponsive).toEqual([swap ? a : b]);
+    });
+  });
 });
