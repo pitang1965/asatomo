@@ -5,6 +5,7 @@ import {
   encryptText,
   generateDek,
   openMessage,
+  recipientPassIssue,
   wrapDek,
 } from '../src/web/crypto';
 
@@ -72,5 +73,16 @@ describe('最後のメッセージの暗号（ADR-0002）', () => {
     expect(await decryptPacked(packed, dek)).toBe('みなみへ');
     // 同じ平文でも毎回異なる（iv がランダムに内包される）。
     expect(await encryptPacked('みなみへ', dek)).not.toBe(packed);
+  });
+});
+
+describe('受取人の合言葉チェック', () => {
+  it('8文字未満とヒントに答えが含まれる場合は不可', () => {
+    expect(recipientPassIssue('インコのピーコ', '')).toMatch(/8文字/);
+    expect(recipientPassIssue('インコのピーコちゃん', '鳥は？ 例: インコの ピーコちゃん')).toMatch(/ヒント/);
+    expect(recipientPassIssue('ABCDEFGH', 'abcdefgh')).toMatch(/ヒント/);
+    expect(recipientPassIssue('🐦🐦🐦🐦', '')).toMatch(/8文字/); // UTF-16 では8単位
+    expect(recipientPassIssue('        ', '')).toMatch(/8文字/); // 空白だけ
+    expect(recipientPassIssue('インコのピーコちゃん', '鳥は？ 例: カラスのガーちゃん')).toBeNull();
   });
 });

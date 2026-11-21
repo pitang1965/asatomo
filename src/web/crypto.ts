@@ -13,6 +13,22 @@ const enc = new TextEncoder();
 const dec = new TextDecoder();
 const PBKDF2_ITERATIONS = 200_000;
 
+/** 受取人の合言葉の最低文字数。開示リンクを持つ人は端末内で試行し放題なので、合言葉だけが防御になる。 */
+export const RECIPIENT_PASS_MIN = 8;
+
+const norm = (s: string) => s.normalize('NFKC').toLowerCase().replace(/\s/g, '');
+
+/** 受取人の合言葉の問題点（なければ null）。ヒントは開示ページに平文で出るため、答えが含まれていたら不可。 */
+export function recipientPassIssue(pass: string, hint: string): string | null {
+  const p = norm(pass);
+  // 空白を除いた文字数（コードポイント）で数える。絵文字1つ＝1文字。
+  if ([...p].length < RECIPIENT_PASS_MIN)
+    return `合言葉を${RECIPIENT_PASS_MIN}文字以上にしてください`;
+  if (norm(hint).includes(p))
+    return 'ヒントに合言葉がそのまま含まれています。ヒントの例はダミーにしてください';
+  return null;
+}
+
 function toB64(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)));
 }

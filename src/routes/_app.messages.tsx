@@ -14,6 +14,8 @@ import {
   encryptPacked,
   encryptText,
   generateDek,
+  RECIPIENT_PASS_MIN,
+  recipientPassIssue,
   unwrapDek,
   wrapDek,
 } from '../web/crypto';
@@ -342,10 +344,15 @@ function RecipientEditor({
   const dirty =
     Object.keys(sel).length !== msg.recipients.length ||
     msg.recipients.some((r) => !(r.connectionId in sel));
-  const canSave =
-    !busy &&
-    dirty &&
-    Object.values(sel).every((v) => v === null || v.length >= 4);
+  const issues = Object.entries(sel).flatMap(([id, v]) => {
+    if (v === null) return [];
+    const c = connections.find((x) => x.id === id);
+    const issue = recipientPassIssue(v, c?.passphraseHint ?? '');
+    return issue
+      ? [{ id, text: `${c?.displayName ?? '宛先'}さん: ${issue}` }]
+      : [];
+  });
+  const canSave = !busy && dirty && issues.length === 0;
 
   async function save() {
     setBusy(true);
@@ -410,7 +417,7 @@ function RecipientEditor({
               className="mt-1.5 ml-6.5 w-[calc(100%-26px)]"
               type="text"
               autoComplete="off"
-              placeholder="合言葉＝答え（例: インコのピーコ・4文字以上）"
+              placeholder={`合言葉＝答え（例: インコのピーコちゃん・${RECIPIENT_PASS_MIN}文字以上）`}
               value={sel[c.id] ?? ''}
               onChange={(e) =>
                 setSel((s) => ({ ...s, [c.id]: e.target.value }))
@@ -419,6 +426,13 @@ function RecipientEditor({
           ) : null}
         </div>
       ))}
+      {issues.length > 0 ? (
+        <ul className="mt-2 list-disc pl-4.5 text-[11px] text-(--ink-3)">
+          {issues.map((u) => (
+            <li key={u.id}>{u.text}</li>
+          ))}
+        </ul>
+      ) : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
       <div className="mt-3 flex gap-2">
         <Button
@@ -488,8 +502,8 @@ function CreateForm({
   if (masterPass.length < 4)
     unmet.push('ページ上部の「編集用パスワード」を4文字以上で入力してください');
   for (const id of selectedIds) {
-    if ((recips[id] ?? '').length < 4)
-      unmet.push(`${nameOf(id)}さんの合言葉を4文字以上にしてください`);
+    const issue = recipientPassIssue(recips[id] ?? '', hints[id] ?? '');
+    if (issue) unmet.push(`${nameOf(id)}さん: ${issue}`);
   }
   const canSubmit = unmet.length === 0 && !busy;
 
@@ -612,7 +626,7 @@ function CreateForm({
                   className="mt-1.5"
                   type={hidePass ? 'password' : 'text'}
                   autoComplete="off"
-                  placeholder="合言葉＝答え（例: インコのピーコ・4文字以上）"
+                  placeholder={`合言葉＝答え（例: インコのピーコちゃん・${RECIPIENT_PASS_MIN}文字以上）`}
                   value={recips[c.id] ?? ''}
                   onChange={(e) =>
                     setRecips((r) => ({ ...r, [c.id]: e.target.value }))
@@ -656,8 +670,9 @@ function CreateForm({
       </Button>
       {!canSubmit && !busy && unmet.length > 0 ? (
         <ul className="mt-2 list-disc pl-4.5 text-[11px] text-(--ink-3)">
-          {unmet.map((u) => (
-            <li key={u}>{u}</li>
+          {unmet.map((u, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: 毎回作り直すだけで並び替えない一覧。同名の宛先で文が重なるため
+            <li key={i}>{u}</li>
           ))}
         </ul>
       ) : null}
