@@ -1,11 +1,14 @@
 package com.asatomo.app
 
 import android.Manifest
+import android.app.ActivityManager
 import android.app.TimePickerDialog
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings as AndroidSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,6 +76,12 @@ import kotlinx.coroutines.launch
  */
 /** 姉妹アプリ「なおったメモ」（連携なし・リンクのみ。CONTEXT.md 姉妹アプリ）。 */
 private const val NAOTTA_URL = "https://naotta.over40web.club/"
+
+// 「最適化」は標準 Android の既定で setAlarmClock も鳴るため対象外。確実に止められる「制限」だけ拾う。
+// shortcut: メーカー独自の省電力（Xiaomi の自動起動など）はアプリから判定できない、要望が出たら機種別案内を検討。
+private fun isBackgroundRestricted(context: Context): Boolean =
+    Build.VERSION.SDK_INT >= 28 &&
+        context.getSystemService(ActivityManager::class.java).isBackgroundRestricted
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -171,6 +180,9 @@ private fun MainScreen() {
     // 前面復帰のたびに読み直す（サウンド設定から戻った時・別アプリで音量を変えた時も鮮度を保つ）。
     var alarmMuted by
         remember { mutableStateOf(settings.hasAlarm && AlarmAudio.isMuted(context)) }
+    // 電池の設定が「制限」＝裏の動作が止められる状態の警告。音量と同じく復帰時に読み直す。
+    var batteryRestricted by
+        remember { mutableStateOf(settings.hasAlarm && isBackgroundRestricted(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -182,6 +194,7 @@ private fun MainScreen() {
                         settings.skippedAlarmRescheduleFailed = false
                     }
                     alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
+                    batteryRestricted = settings.hasAlarm && isBackgroundRestricted(context)
                     canSkipAlarmToday = AlarmScheduler.canSkipToday(context)
                     val skippedToday = AlarmScheduler.isAlarmSkippedToday(context)
                     alarmSkippedToday = skippedToday
@@ -329,6 +342,26 @@ private fun MainScreen() {
                         Text("アラームの音を出せるようにする")
                     }
                 }
+                if (batteryRestricted) {
+                    Text(
+                        "⚠ 電池の設定が「制限」になっていて、このアプリの動きが止められることがあります。\n「アプリ情報」の「電池（バッテリー）」で「制限なし」にしてください。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    // REQUEST_IGNORE_BATTERY_OPTIMIZATIONS（直接ダイアログ）は Play の審査対象のため使わず、アプリ情報を開く。
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(
+                                    AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.fromParts("package", context.packageName, null),
+                                ),
+                            )
+                        },
+                    ) {
+                        Text("アプリ情報を開く")
+                    }
+                }
                 Button(
                     onClick = {
                         val now = Calendar.getInstance()
@@ -341,6 +374,7 @@ private fun MainScreen() {
                                 tomorrowAlarmFailed = false
                                 // セット直後の教育の瞬間: 今セットしたのに音が0なら即警告する。
                                 alarmMuted = settings.hasAlarm && AlarmAudio.isMuted(context)
+                                batteryRestricted = settings.hasAlarm && isBackgroundRestricted(context)
                             },
                             if (settings.hasAlarm) settings.alarmHour else now.get(Calendar.HOUR_OF_DAY),
                             if (settings.hasAlarm) settings.alarmMinute else now.get(Calendar.MINUTE),
