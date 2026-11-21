@@ -302,6 +302,8 @@ export const connections = sqliteTable(
       'connections_party_ck',
       sql`(${t.otherUserId} is not null) <> (${t.externalEmail} is not null)`,
     ),
+    // 自分自身とのつながり（otherUserId = subjectUserId）は DB トリガーで拒否する
+    // （drizzle/0002_connections_not_self.sql。表を作り直さないため check() ではない）。
     // 同じ本人×同じユーザーの重複つながりを禁止。
     uniqUserParty: uniqueIndex('connections_subject_other_uniq')
       .on(t.subjectUserId, t.otherUserId)

@@ -450,3 +450,27 @@ describe('受取人（つながり）の追加', () => {
     expect(r.ok).toBe(true);
   });
 });
+
+describe('DB の二重防御: 自分自身とのつながり', () => {
+  it('直接の INSERT / UPDATE でも自分自身を相手にできない', async () => {
+    const me = await seedUser(db);
+    const other = await seedUser(db);
+    await expect(
+      db.insert(schema.connections).values({
+        subjectUserId: me,
+        otherUserId: me,
+        displayName: 'me',
+      }),
+    ).rejects.toThrow(/connections_not_self/);
+
+    await db
+      .insert(schema.connections)
+      .values({ subjectUserId: me, otherUserId: other, displayName: 'x' });
+    await expect(
+      db
+        .update(schema.connections)
+        .set({ otherUserId: me })
+        .where(eq(schema.connections.subjectUserId, me)),
+    ).rejects.toThrow(/connections_not_self/);
+  });
+});
