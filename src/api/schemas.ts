@@ -50,21 +50,11 @@ export const SCHEMAS: Record<keyof Handlers, z.ZodType> = {
   attest: z.object({ subjectUserId: id, note: z.string().optional() }),
   respondToInvite: z.object({ subjectUserId: id, accept: z.boolean() }),
   raiseConcern: z.object({ subjectUserId: id, note: z.string().optional() }),
-  inviteWatcher: z.object({
-    watcherUserId: id,
-    displayName: z.string().optional(),
-  }),
   revokeWatcher: z.object({ connectionId: id }),
   leaveWatch: z.object({ subjectUserId: id }),
   createInvitation: z.object({}),
   acceptInvitation: z.object({ token: id, mutual: z.boolean() }),
   revokeInvitation: z.object({ token: id }),
-  addContact: z.object({
-    displayName: z.string().min(1),
-    email: z.string().optional(),
-    userId: z.string().optional(),
-    passphraseHint: z.string().optional(),
-  }),
   setPassphraseHint: z.object({
     connectionId: id,
     hint: z.string().nullable(),

@@ -5,8 +5,6 @@ import {
   planAccountDeletion,
 } from '../domain/account';
 import {
-  addContact,
-  inviteWatcher,
   leaveWatch,
   respondToWatchInvite,
   revokeWatcher,
@@ -300,32 +298,8 @@ export function createHandlers(ctx: ApiContext) {
     },
 
     // ── つながり管理（本人） ──
-    async inviteWatcher(
-      actor: string,
-      input: { watcherUserId: string; displayName?: string },
-    ): Promise<ApiResult<{ connectionId: string; status: string }>> {
-      const r = await inviteWatcher(
-        db,
-        {
-          subjectUserId: actor,
-          watcherUserId: input.watcherUserId,
-          displayName: input.displayName,
-        },
-        config,
-      );
-      if (!r.ok)
-        return {
-          ok: false,
-          status: r.reason === 'self' ? 400 : 404,
-          error: r.reason,
-        };
-      await safe(() => notify.notifyWatchInvite(actor, input.watcherUserId));
-      return {
-        ok: true,
-        data: { connectionId: r.connectionId, status: r.status },
-      };
-    },
-
+    // 見守り者・受取人の追加は招待リンク経由のみ（ADR-0005）。相手の同意なしに
+    // 実在ユーザーを足せる inviteWatcher/addContact の公開エンドポイントは廃止した。
     async revokeWatcher(
       actor: string,
       input: { connectionId: string },
@@ -401,24 +375,6 @@ export function createHandlers(ctx: ApiContext) {
       );
       if (!r.ok) return { ok: false, status: 404, error: r.reason ?? 'error' };
       return { ok: true, data: {} };
-    },
-
-    async addContact(
-      actor: string,
-      input: {
-        displayName: string;
-        email?: string;
-        userId?: string;
-        passphraseHint?: string;
-      },
-    ): Promise<ApiResult<{ connectionId: string }>> {
-      const r = await addContact(
-        db,
-        { subjectUserId: actor, ...input },
-        config,
-      );
-      if (!r.ok) return { ok: false, status: 400, error: r.reason };
-      return { ok: true, data: { connectionId: r.connectionId } };
     },
 
     async setPassphraseHint(

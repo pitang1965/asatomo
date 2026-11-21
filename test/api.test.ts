@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createHandlers } from '../src/api/handlers';
+import { dispatch } from '../src/api/router';
 import type { Db } from '../src/db';
 import { addContact } from '../src/domain/connections';
 import { DEFAULT_DOMAIN_CONFIG } from '../src/domain/monitoring';
@@ -23,7 +24,6 @@ beforeEach(async () => {
 function makeCtx() {
   const calls = {
     watchers: [] as { id: string; event: WatcherEvent }[],
-    invites: [] as { id: string; invitee: string }[],
     locked: [] as string[],
   };
   const notify = {
@@ -40,9 +40,6 @@ function makeCtx() {
     async notifySubjectWatcherLeft() {},
     async notifySubjectDeparted() {},
     async notifyInviteAccepted() {},
-    async notifyWatchInvite(id: string, invitee: string) {
-      calls.invites.push({ id, invitee });
-    },
   } satisfies Notifications;
   const ctx = { db, notify, config: { ...DEFAULT_DOMAIN_CONFIG, now: NOW } };
   return { handlers: createHandlers(ctx), calls, notify };
@@ -177,13 +174,12 @@ describe('受取人の懸念フラグ', () => {
 });
 
 describe('つながり管理', () => {
-  it('inviteWatcher: 招待通知が飛ぶ', async () => {
-    const s = await seedSubject(db);
-    const w = await seedUser(db, 'invitee');
-    const { handlers, calls } = makeCtx();
-    const r = await handlers.inviteWatcher(s, { watcherUserId: w });
-    expect(r.ok).toBe(true);
-    expect(calls.invites).toEqual([{ id: s, invitee: w }]);
+  it('同意なしの追加エンドポイントは公開しない（招待リンク経由のみ）', async () => {
+    const { handlers } = makeCtx();
+    for (const path of ['/connections/invite', '/connections/contact']) {
+      const res = await dispatch(handlers, 'POST', path, 'someone', {});
+      expect(res.status).toBe(404);
+    }
   });
 });
 

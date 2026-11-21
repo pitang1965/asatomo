@@ -49,11 +49,6 @@ export interface Notifications extends Notifier {
     watcherEmails: string[],
     hadActiveAlert: boolean,
   ): Promise<void>;
-  /** ルート層: 見守り招待を受けた相手へ。 */
-  notifyWatchInvite(
-    subjectUserId: string,
-    inviteeUserId: string,
-  ): Promise<void>;
   /** ルート層: 招待リンクが承諾され、相手が見守りに加わったことを招待者へ（ADR-0005）。 */
   notifyInviteAccepted(
     inviterUserId: string,
@@ -226,16 +221,6 @@ export function createNotifications(
           senders.email.send(e, { subject: tag('お知らせ'), text: body }),
         ),
       );
-    },
-
-    async notifyWatchInvite(subjectUserId, inviteeUserId) {
-      const name = (await getUserName(db, subjectUserId)) ?? '知り合い';
-      const email = await getUserEmail(db, inviteeUserId);
-      if (!email) return;
-      await senders.email.send(email, {
-        subject: tag('見守りのお願い'),
-        text: `${name}さんが、あなたに見守りをお願いしています。\n${config.webBaseUrl}`,
-      });
     },
 
     async notifyInviteAccepted(inviterUserId, accepterUserId, mutual) {

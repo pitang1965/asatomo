@@ -10,13 +10,13 @@ import { type DomainConfig, recomputeDisclosureEnabled } from './monitoring';
  * 相互見守りは 2 本のつながりで表現（各本人がそれぞれ相手を招待）。
  *
  * 承諾・取消のたびに開示可否（見守り者2人以上か）を再計算する（不変条件D / ADR-0001）。
- * なふだからの「昇格」も、この inviteWatcher → respondToWatchInvite の明示同意を通す（ADR-0003）。
+ * 見守り者の追加は招待リンクの承諾（invitations.ts → upsertWatcherConnection）のみ（ADR-0005）。
  */
 
 // ─── 見守りエッジの作成/昇格（共通） ────────────────────────────────────────
 /**
  * 見守りエッジ（isWatcher=true）を作る/昇格する共通処理。
- *   - inviteWatcher: status='pending'（相手の承諾待ち）
+ *   - inviteWatcher: status='pending'（相手の承諾待ち。公開APIは廃止済みでテスト用）
  *   - 招待リンクの承諾: status='accepted'（承諾者が今まさに同意。ADR-0005）
  * 既に accepted の見守り者なら no-op（冪等）。displayName 未指定なら相手の user.name を使う。
  * accepted で作る時は watcherLastSeenAt/respondedAt を now にする（休眠判定・定足数の起点）。
@@ -113,6 +113,7 @@ export async function upsertWatcherConnection(
 }
 
 // ─── 見守り者の招待（isWatcher=true, pending） ──────────────────────────────
+// 本番コードからは呼ばれない（公開APIは同意なし追加の穴として廃止）。pending を作るテスト用。
 export async function inviteWatcher(
   db: Db,
   input: { subjectUserId: string; watcherUserId: string; displayName?: string },
