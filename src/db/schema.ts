@@ -427,6 +427,8 @@ export const deathCertifications = sqliteTable(
     stage: text('stage', { enum: monitoringStateValues })
       .notNull()
       .default('unresponsive'),
+    // 実際に見守り者へ警告した時刻（投票床の起点。Cron遅延で床が縮まないよう理想値ではなく実測を残す）
+    watchersAlertedAt: integer('watchers_alerted_at', { mode: 'timestamp' }),
     graceUntil: integer('grace_until', { mode: 'timestamp' }), // 認定成立時に設定（猶予期限）
     outcome: text('outcome', { enum: certificationOutcomeValues })
       .notNull()

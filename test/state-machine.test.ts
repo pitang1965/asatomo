@@ -336,6 +336,21 @@ describe('§4 クォーラム', () => {
     expect(r).toEqual({ ok: true, certified: false });
   });
 
+  it('床は実際の警告時刻から数える（Cronが遅れて警告した分だけ待つ）', async () => {
+    const { s, watchers } = await setupAlerted(3); // startedAt は48h前
+    await db
+      .update(schema.deathCertifications)
+      .set({ watchersAlertedAt: hoursAgo(1, NOW) }) // 警告は実際には1h前
+      .where(eq(schema.deathCertifications.subjectUserId, s));
+    await castVote(db, { subjectUserId: s, voterUserId: watchers[0] }, cfg);
+    const r = await castVote(
+      db,
+      { subjectUserId: s, voterUserId: watchers[1] },
+      cfg,
+    );
+    expect(r).toEqual({ ok: true, certified: false });
+  });
+
   it('休眠見守り者は分母から除外（4人中2休眠・2票で成立）', async () => {
     const { s, watchers } = await setupAlerted(4, { dormant: 2 });
     // 生存見守り者は2人。そのうち2票 → 2*2 > 2 で過半数成立。
@@ -539,6 +554,7 @@ describe('Cron 監視tick', () => {
     expect(await latestCert(s)).toMatchObject({
       outcome: 'in_progress',
       stage: 'watchers_alerted',
+      watchersAlertedAt: NOW, // 床は修復時刻から（実際の警告はそれ以前なので保守側）
     });
     expect(calls.unresponsive).toEqual([]);
   });
@@ -613,6 +629,7 @@ describe('Cron 監視tick', () => {
     expect(res.watchersAlerted).toBe(1);
     expect((await stateOf(s))?.state).toBe('watchers_alerted');
     expect(calls.watchersAlert).toEqual([s]);
+    expect((await latestCert(s))?.watchersAlertedAt).toEqual(NOW);
   });
 
   it('T5: 猶予期限超過で certified_grace → disclosed・受取人通知', async () => {

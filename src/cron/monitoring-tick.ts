@@ -202,7 +202,11 @@ async function processWatcherAlerts(
     // エピソードの stage も進める。
     await db
       .update(deathCertifications)
-      .set({ stage: 'watchers_alerted', updatedAt: now })
+      .set({
+        stage: 'watchers_alerted',
+        watchersAlertedAt: now,
+        updatedAt: now,
+      })
       .where(
         and(
           eq(deathCertifications.subjectUserId, row.userId),
@@ -314,7 +318,13 @@ async function openEpisode(
 ): Promise<void> {
   await db
     .insert(deathCertifications)
-    .values({ subjectUserId, stage, startedAt })
+    .values({
+      subjectUserId,
+      stage,
+      startedAt,
+      // 修復で watchers_alerted から作る場合、床は修復時刻から（保守側）
+      watchersAlertedAt: stage === 'watchers_alerted' ? startedAt : null,
+    })
     .onConflictDoNothing();
 }
 

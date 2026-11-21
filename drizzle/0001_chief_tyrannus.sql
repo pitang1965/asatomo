@@ -1,0 +1,1 @@
+ALTER TABLE `death_certifications` ADD `watchers_alerted_at` integer;

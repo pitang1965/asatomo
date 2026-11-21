@@ -546,15 +546,18 @@ export async function recomputeDisclosureEnabled(
 async function evaluateQuorum(
   db: Db,
   subjectUserId: string,
-  cert: { id: string; startedAt: Date },
+  cert: { id: string; startedAt: Date; watchersAlertedAt: Date | null },
   graceHours: number,
   now: Date,
   config: DomainConfig,
 ): Promise<boolean> {
-  // 床: 段階2（≒ startedAt + stage1to2Delay）から voteFloor 経過（Cron粒度15分の誤差は無視できる近似）。
-  const floorMs =
-    (config.stage1to2DelayHours + config.voteFloorHours) * HOUR_MS;
-  const floorPassed = now.getTime() - cert.startedAt.getTime() >= floorMs;
+  // 床: 実際に見守り者へ警告した時刻から voteFloor 経過。
+  // 列追加前のエピソード（または T2 の2本目UPDATE失敗）は null なので従来の近似 startedAt + stage1to2Delay で代用。
+  const alertedMs =
+    cert.watchersAlertedAt?.getTime() ??
+    cert.startedAt.getTime() + config.stage1to2DelayHours * HOUR_MS;
+  const floorPassed =
+    now.getTime() - alertedMs >= config.voteFloorHours * HOUR_MS;
   if (!floorPassed) return false;
 
   const dormantCutoff = toEpochSeconds(
@@ -688,12 +691,14 @@ async function getActiveCertification(
 ): Promise<{
   id: string;
   startedAt: Date;
+  watchersAlertedAt: Date | null;
   stage: (typeof deathCertifications.stage.enumValues)[number];
 } | null> {
   const [row] = await db
     .select({
       id: deathCertifications.id,
       startedAt: deathCertifications.startedAt,
+      watchersAlertedAt: deathCertifications.watchersAlertedAt,
       stage: deathCertifications.stage,
     })
     .from(deathCertifications)
