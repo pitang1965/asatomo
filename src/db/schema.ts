@@ -241,8 +241,13 @@ export const subjectSettings = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (t) => ({
-    // 「未シグナルscan」用: state が normal で、lastSignalAt が古い本人を効率よく拾う。
-    scanIdx: index('subject_settings_scan_idx').on(t.state, t.lastSignalAt),
+    // 「未シグナルscan」用: 判定窓の期限（lastSignalAt + 窓）の式インデックス。窓が本人ごとに可変でも
+    // cron が期限超過の人だけを範囲scanで拾え、全件scanにならない。式は monitoring-tick.ts の
+    // WHERE/ORDER BY と構造一致させること（ずれると SQLite が使わず全件scanに戻る。テストで検査）。
+    scanIdx: index('subject_settings_due_idx').on(
+      t.state,
+      sql`${t.lastSignalAt} + (${t.detectionWindowHours} * 3600)`,
+    ),
   }),
 );
 

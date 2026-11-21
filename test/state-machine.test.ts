@@ -1,4 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Notifier, runMonitoringTick } from '../src/cron/monitoring-tick';
 import type { Db } from '../src/db';
@@ -785,5 +786,32 @@ describe('Cron 監視tick', () => {
       await runMonitoringTick(db, notifier, one);
       expect(calls.unresponsive).toEqual([swap ? a : b]);
     });
+  });
+});
+
+describe('Cron 監視tick: 判定窓の期限インデックス', () => {
+  it('T1 と自己修復の SELECT が subject_settings_due_idx を使う（全件scanに戻らない）', async () => {
+    const client = (
+      db as unknown as { $client: import('better-sqlite3').Database }
+    ).$client;
+    const queries: { sql: string; params: unknown[] }[] = [];
+    const logged = drizzle(client, {
+      schema,
+      logger: { logQuery: (sql, params) => queries.push({ sql, params }) },
+    }) as unknown as Db;
+    await runMonitoringTick(logged, mockNotifier().notifier, cronCfg);
+
+    const scans = queries.filter(
+      (q) =>
+        q.sql.startsWith('select') && q.sql.includes('detection_window_hours'),
+    );
+    expect(scans).toHaveLength(2);
+    for (const q of scans) {
+      const plan = client
+        .prepare(`explain query plan ${q.sql}`)
+        .all(...q.params) as { detail: string }[];
+      const details = plan.map((p) => p.detail).join('\n');
+      expect(details).toMatch(/SEARCH .*subject_settings_due_idx .*<expr></);
+    }
   });
 });
