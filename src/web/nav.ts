@@ -24,3 +24,14 @@ export function activeTab(pathname: string): TabId | null {
   // /account, /account/delete などはヘッダーのみ（管理系はタブに載せない）。
   return null;
 }
+
+/**
+ * ログイン後の戻り先（`?redirect=`）の検証。オープンリダイレクト防止: 自サイト内の絶対パスのみ許可。
+ * 先頭は '/'、2文字目は '/' でも '\' でもない（//evil.com・/\evil.com を弾く。
+ * ブラウザは Location の '\' を '/' に正規化するため \ も別オリジンになりうる）。
+ */
+export function safeRedirect(value: unknown): string | undefined {
+  return typeof value === 'string' && /^\/[^/\\]/.test(value)
+    ? value
+    : undefined;
+}

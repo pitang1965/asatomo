@@ -6,6 +6,7 @@ import { fetchShell } from '../server/functions';
 import { track } from '../web/analytics';
 import { authClient } from '../web/auth-client';
 import { InAppBrowserNotice } from '../web/InAppBrowserNotice';
+import { safeRedirect } from '../web/nav';
 
 /**
  * ログイン画面（/login）。ADR-0008（トップはランディング、ログインは分離）に伴い、
@@ -16,13 +17,7 @@ import { InAppBrowserNotice } from '../web/InAppBrowserNotice';
  */
 export const Route = createFileRoute('/login')({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
-    // オープンリダイレクト防止: 自サイト内の絶対パスのみ許可。
-    // 先頭は '/'、2文字目は '/' でも '\' でもない（//evil.com・/\evil.com を弾く。
-    // ブラウザは Location の '\' を '/' に正規化するため \ も別オリジンになりうる）。
-    redirect:
-      typeof search.redirect === 'string' && /^\/[^/\\]/.test(search.redirect)
-        ? search.redirect
-        : undefined,
+    redirect: safeRedirect(search.redirect),
   }),
   beforeLoad: async ({ search }) => {
     const shell = await fetchShell();
